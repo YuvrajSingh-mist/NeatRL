@@ -1,6 +1,28 @@
-# OpenRL Leaderboard
+# NeatRL
 
-A production-ready, containerized leaderboard system for evaluating Reinforcement Learning (RL) agents. It provides a FastAPI backend, a Celery worker that safely evaluates submissions inside a locked-down Docker container, real-time leaderboards powered by Redis, persistent results in PostgreSQL, and a Gradio-based frontend.
+A comprehensive Reinforcement Learning platform featuring a model hub for sharing trained agents and an arena for competitive battles. Built with FastAPI, Celery, Redis, and PostgreSQL, providing a production-ready environment for RL enthusiasts to upload, evaluate, and compete with their trained models.
+
+## 🚀 New Features
+
+### 🏠 RL Hub
+- **Model Upload**: Upload your trained RL models using standardized libraries
+- **Model Sharing**: Share models publicly or keep them private
+- **Model Discovery**: Browse and discover models from other users
+- **Model Management**: Delete and manage your uploaded models
+
+### ⚔️ RL Arena
+- **Competitive Battles**: Battle your models against others in real-time
+- **Multiplayer Support**: Support for any Gymnasium environment
+- **Real-time Updates**: WebSocket-based real-time battle updates
+- **Ranking System**: Track model performance with win/loss statistics
+- **Low Latency**: Optimized for minimal communication delays
+- **Docker Environment**: Battles run in isolated Docker containers
+
+### 🎮 Interactive Features
+- **Keyboard Control**: Control agents through keyboard input
+- **Real-time Visualization**: Watch battles as they happen
+- **Informative End Screens**: Detailed battle results with opponent information
+- **Ranking Charts**: Beautiful popup rankings and statistics
 
 ---
 
@@ -10,6 +32,8 @@ A production-ready, containerized leaderboard system for evaluating Reinforcemen
 - [Quickstart](#quickstart)
 - [Environment Variables](#environment-variables)
 - [Usage](#usage)
+  - [RL Hub - Model Upload](#rl-hub---model-upload)
+  - [RL Arena - Competitive Battles](#rl-arena---competitive-battles)
   - [Using the Gradio Frontend](#using-the-gradio-frontend)
   - [Submitting via API](#submitting-via-api)
   - [Checking Results](#checking-results)
@@ -24,13 +48,15 @@ A production-ready, containerized leaderboard system for evaluating Reinforcemen
 ---
 
 ## Features
-- **Real-time leaderboard**: Redis-sorted sets with DB durability fallback.
-- **Asynchronous evaluation**: Celery worker executes user submissions in an isolated Docker container.
-- **Safe execution**: Containers run with no network, memory/CPU/pids limits, and capability drops.
-- **Persistent storage**: PostgreSQL for submissions and durable leaderboard entries.
-- **Object storage**: Supabase Storage for user-submitted scripts.
-- **Gradio UI**: Simple web app to submit agents, check status, and view leaderboards.
-- **Dockerized**: One command to bring up the full stack.
+- **RL Hub**: Upload and share your trained RL models with standardized library support
+- **RL Arena**: Competitive multiplayer battles between user-uploaded models
+- **Real-time leaderboard**: Redis-sorted sets with DB durability fallback
+- **Asynchronous evaluation**: Celery worker executes user submissions in an isolated Docker container
+- **Safe execution**: Containers run with no network, memory/CPU/pids limits, and capability drops
+- **Persistent storage**: PostgreSQL for submissions and durable leaderboard entries
+- **Object storage**: Supabase Storage for user-submitted scripts and models
+- **Gradio UI**: Simple web app to submit agents, check status, view leaderboards, and battle in the arena
+- **Dockerized**: One command to bring up the full stack
 
 ---
 
@@ -163,6 +189,18 @@ These are consumed by the services (see `docker-compose.yml` and `app/core/confi
 ---
 
 ## Usage
+
+### RL Hub - Model Upload
+1. Go to `http://localhost:7860`.
+2. In the Submit tab, choose an environment (e.g., `CartPole-v1`), provide optional user/algorithm labels, and upload your `.py` file.
+3. Copy the shown Submission ID and check its status in the Check Status tab.
+4. View the Leaderboard tab for real-time rankings.
+
+### RL Arena - Competitive Battles
+1. Go to `http://localhost:7860`.
+2. In the Arena tab, you can select two models to battle.
+3. The battle will run asynchronously, and you can check the results in the Check Status tab.
+4. View the Leaderboard tab for real-time rankings.
 
 ### Using the Gradio Frontend
 1. Go to `http://localhost:7860`.

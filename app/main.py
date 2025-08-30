@@ -8,6 +8,7 @@ from app.api import submissions, leaderboard
 from app.api import alerts
 from app.api import visitor
 from app.api import metrics_endpoint, prometheus_metrics
+from app.api import rlhub, rlarena
 from app.db.session import init_db
 from app.core.config import settings
 from app.services.leaderboard import redis_leaderboard
@@ -22,8 +23,8 @@ from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 setup_logging()
 
 app = FastAPI(
-    title="SimpleRL Leaderboard",
-    description="API for evaluating and ranking RL agents",
+    title="NeatRL",
+    description="A comprehensive Reinforcement Learning platform featuring a model hub for sharing trained agents and an arena for competitive battles",
     version="1.0.0"
 )
 
@@ -212,6 +213,8 @@ app.include_router(alerts.router, prefix="/api", tags=["alerts"])
 app.include_router(visitor.router, prefix="/api", tags=["visitor"])
 app.include_router(metrics_endpoint.router, prefix="/api", tags=["metrics"])
 app.include_router(prometheus_metrics.router, prefix="/api", tags=["prometheus"])
+app.include_router(rlhub.router, tags=["RL Hub"])
+app.include_router(rlarena.router, tags=["RL Arena"])
 
 # --- Basic SEO endpoints ---
 @app.get("/robots.txt", response_class=PlainTextResponse)

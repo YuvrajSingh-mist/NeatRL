@@ -84,135 +84,23 @@ def submit_script(file, env_id, algorithm, user_id):
             _last_submission_id = result.get('id', client_id)
             sid = _last_submission_id
             html = f"""
-            <div class=\"status-box success\">
-              <div class=\"status-header\">
+            <div class="status-box success">
+              <div class="status-header">
                 <span>✅</span>
                 <span>Submission queued</span>
-                <span class=\"status-pill\">Waiting to evaluate</span>
+                <span class="status-pill">Waiting to evaluate</span>
               </div>
-              <div class=\"status-id\">
+              <div class="status-id">
                 <b>ID:</b> <code>{sid}</code>
-                <button class=\"copy-btn\" onclick=\"navigator.clipboard.writeText('{sid}'); this.innerText='Copied'; setTimeout(()=>{{ this.innerText='Copy ID'; }}, 1600);\">Copy ID</button>
+                <button class="copy-btn" onclick="navigator.clipboard.writeText('{sid}'); this.innerText='Copied'; setTimeout(()=>{{ this.innerText='Copy ID'; }}, 1600);">Copy ID</button>
               </div>
-              <div class=\"status-kv\">
-                <div class=\"label\">Environment</div><div class=\"value\">{result['env_id']}</div>
-                <div class=\"label\">Algorithm</div><div class=\"value\">{result['algorithm']}</div>
+              <div class="status-kv">
+                <div class="label">Environment</div><div class="value">{result['env_id']}</div>
+                <div class="label">Algorithm</div><div class="value">{result['algorithm']}</div>
               </div>
-              <div class=\"status-foot\"><b>Keep your Submission ID safe!</b> You'll need it in the <i>Check Status</i> tab to view progress and error logs.</div>
+              <div class="status-foot"><b>Your model is now available in the RL Arena!</b> Other users can battle against it.</div>
             </div>
             """
-            return html
-        else:
-            error_detail = response.json().get('detail', 'Unknown error')
-            return f"❌ Error {response.status_code}: {error_detail}"
-            
-    except Exception as e:
-        return f"❌ Error: {str(e)}"
-
-def upload_model_to_hub(file, model_name, description, algorithm, env_id, user_id, is_public):
-    """Upload a model to the RL Hub"""
-    if not file:
-        return "⚠️ Please upload a Python script (.py)"
-
-    try:
-        if not str(file.name).lower().endswith('.py'):
-            return "⚠️ Only .py files are accepted"
-        
-        submit_files = {'file': (file.name, open(file.name, 'rb'), 'text/plain')}
-        data = {
-            'model_name': model_name,
-            'description': description or "",
-            'algorithm': algorithm,
-            'env_id': env_id,
-            'user_id': user_id or "anonymous",
-            'is_public': is_public
-        }
-
-        response = requests.post(f"{API_URL}/api/rlhub/upload", files=submit_files, data=data)
-        
-        if response.status_code == 200:
-            result = response.json()
-            html = f"""
-            <div class=\"status-box success\">
-              <div class=\"status-header\">
-                <span>✅</span>
-                <span>Model uploaded to RL Hub</span>
-                <span class=\"status-pill\">Success</span>
-              </div>
-              <div class=\"status-id\">
-                <b>Model ID:</b> <code>{result['id']}</code>
-                <button class=\"copy-btn\" onclick=\"navigator.clipboard.writeText('{result['id']}'); this.innerText='Copied'; setTimeout(()=>{{ this.innerText='Copy ID'; }}, 1600);\">Copy ID</button>
-              </div>
-              <div class=\"status-kv\">
-                <div class=\"label\">Model Name</div><div class=\"value\">{result['model_name']}</div>
-                <div class=\"label\">Algorithm</div><div class=\"value\">{result['algorithm']}</div>
-                <div class=\"label\">Environment</div><div class=\"value\">{result['env_id']}</div>
-              </div>
-              <div class=\"status-foot\"><b>Your model is now available in the RL Arena!</b> Other users can battle against it.</div>
-            </div>
-            """
-            return html
-        else:
-            error_detail = response.json().get('detail', 'Unknown error')
-            return f"❌ Error {response.status_code}: {error_detail}"
-            
-    except Exception as e:
-        return f"❌ Error: {str(e)}"
-
-def list_hub_models(env_id, algorithm, user_id):
-    """List models in the RL Hub"""
-    try:
-        params = {}
-        if env_id:
-            params['env_id'] = env_id
-        if algorithm:
-            params['algorithm'] = algorithm
-        if user_id:
-            params['user_id'] = user_id
-
-        response = requests.get(f"{API_URL}/api/rlhub/models", params=params)
-        
-        if response.status_code == 200:
-            result = response.json()
-            models = result.get('models', [])
-            
-            if not models:
-                return "No models found matching your criteria."
-            
-            html = "<div class='models-grid'>"
-            for model in models:
-                win_rate_pct = f"{model['win_rate'] * 100:.1f}%" if model['win_rate'] > 0 else "N/A"
-                html += f"""
-                <div class="model-card">
-                    <div class="model-header">
-                        <h3>{model['model_name']}</h3>
-                        <span class="algorithm-tag">{model['algorithm']}</span>
-                    </div>
-                    <div class="model-details">
-                        <p><strong>Environment:</strong> {model['env_id']}</p>
-                        <p><strong>Creator:</strong> {model['user_id']}</p>
-                        <p><strong>Created:</strong> {model['created_at'][:10]}</p>
-                    </div>
-                    <div class="model-stats">
-                        <div class="stat">
-                            <span class="stat-label">Battles</span>
-                            <span class="stat-value">{model['total_battles']}</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-label">Wins</span>
-                            <span class="stat-value">{model['wins']}</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-label">Win Rate</span>
-                            <span class="stat-value">{win_rate_pct}</span>
-                        </div>
-                    </div>
-                    <div class="model-actions">
-                        <button class="battle-btn" onclick="selectModelForBattle('{model['id']}', '{model['model_name']}')">Battle</button>
-                    </div>
-                </div>
-                """
-            html += "</div>"
             return html
         else:
             error_detail = response.json().get('detail', 'Unknown error')
@@ -232,39 +120,38 @@ def create_battle(player_model_id, opponent_model_id, env_id):
         if opponent_model_id:
             data['opponent_model_id'] = opponent_model_id
 
-        response = requests.post(f"{API_URL}/api/rlarena/battle", json=data)
+        response = requests.post(f"{API_URL}/api/rlarena/battles", json=data)
         
         if response.status_code == 200:
             result = response.json()
             battle_id = result['battle_id']
             
             html = f"""
-            <div class=\"status-box success\">
-              <div class=\"status-header\">
+            <div class="status-box success">
+              <div class="status-header">
                 <span>⚔️</span>
                 <span>Battle Created</span>
-                <span class=\"status-pill\">In Progress</span>
+                <span class="status-pill">Ready</span>
               </div>
-              <div class=\"status-id\">
+              <div class="status-id">
                 <b>Battle ID:</b> <code>{battle_id}</code>
-                <button class=\"copy-btn\" onclick=\"navigator.clipboard.writeText('{battle_id}'); this.innerText='Copied'; setTimeout(()=>{{ this.innerText='Copy ID'; }}, 1600);\">Copy ID</button>
+                <button class="copy-btn" onclick="navigator.clipboard.writeText('{battle_id}'); this.innerText='Copied'; setTimeout(()=>{{ this.innerText='Copy ID'; }}, 1600);">Copy ID</button>
               </div>
-              <div class=\"battle-details\">
-                <div class=\"battle-player\">
+              <div class="battle-details">
+                <div class="battle-player">
                   <h4>Player</h4>
-                  <p><strong>Model:</strong> {result['player_model']['name']}</p>
-                  <p><strong>Algorithm:</strong> {result['player_model']['algorithm']}</p>
-                  <p><strong>Creator:</strong> {result['player_model']['user_id']}</p>
+                  <p><strong>Model:</strong> {player_model_id}</p>
+                  <p><strong>Environment:</strong> {env_id}</p>
                 </div>
-                <div class=\"battle-vs\">VS</div>
-                <div class=\"battle-opponent\">
+                <div class="battle-vs">VS</div>
+                <div class="battle-opponent">
                   <h4>Opponent</h4>
-                  <p><strong>Model:</strong> {result['opponent_model']['name']}</p>
-                  <p><strong>Algorithm:</strong> {result['opponent_model']['algorithm']}</p>
-                  <p><strong>Creator:</strong> {result['opponent_model']['user_id']}</p>
+                  <p><strong>Model:</strong> {opponent_model_id or 'Random AI'}</p>
                 </div>
               </div>
-              <div class=\"status-foot\"><b>Battle is running!</b> Check the Battle Status tab for real-time updates.</div>
+              <div class="status-foot">
+                <b>Battle is ready!</b> Use the Battle ID to check status and view results.
+              </div>
             </div>
             """
             return html, battle_id
@@ -299,37 +186,37 @@ def create_human_vs_ai_battle(opponent_model_id, env_id):
                     controls_text += f"{key}: {action}<br>"
             
             html = f"""
-            <div class=\"status-box success\">
-              <div class=\"status-header\">
+            <div class="status-box success">
+              <div class="status-header">
                 <span>🎮</span>
                 <span>Human vs AI Battle Ready</span>
-                <span class=\"status-pill\">Ready to Play</span>
+                <span class="status-pill">Ready to Play</span>
               </div>
-              <div class=\"status-id\">
+              <div class="status-id">
                 <b>Battle ID:</b> <code>{battle_id}</code>
-                <button class=\"copy-btn\" onclick=\"navigator.clipboard.writeText('{battle_id}'); this.innerText='Copied'; setTimeout(()=>{{ this.innerText='Copy ID'; }}, 1600);\">Copy ID</button>
+                <button class="copy-btn" onclick="navigator.clipboard.writeText('{battle_id}'); this.innerText='Copied'; setTimeout(()=>{{ this.innerText='Copy ID'; }}, 1600);">Copy ID</button>
               </div>
-              <div class=\"battle-details\">
-                <div class=\"battle-player\">
+              <div class="battle-details">
+                <div class="battle-player">
                   <h4>You (Human)</h4>
                   <p><strong>Environment:</strong> {result['environment'].title()}</p>
                   <p><strong>Description:</strong> {controls.get('description', 'ALE Environment')}</p>
                 </div>
-                <div class=\"battle-vs\">VS</div>
-                <div class=\"battle-opponent\">
+                <div class="battle-vs">VS</div>
+                <div class="battle-opponent">
                   <h4>AI Opponent</h4>
                   <p><strong>Model:</strong> {result['opponent_model']['name']}</p>
                   <p><strong>Algorithm:</strong> {result['opponent_model']['algorithm']}</p>
                   <p><strong>Creator:</strong> {result['opponent_model']['user_id']}</p>
                 </div>
               </div>
-              <div class=\"keyboard-controls\">
+              <div class="keyboard-controls">
                 <h4>🎯 Keyboard Controls:</h4>
-                <div class=\"controls-grid\">
+                <div class="controls-grid">
                   {controls_text}
                 </div>
               </div>
-              <div class=\"status-foot\">
+              <div class="status-foot">
                 <b>Ready to play!</b> The game will start in a new window. Use the keyboard controls to play against the AI.
               </div>
             </div>
@@ -435,28 +322,30 @@ def get_battle_status(battle_id):
                 winner_text = "Player" if winner == "player" else "Opponent" if winner == "opponent" else "Draw"
                 
                 html = f"""
-                <div class=\"status-box {'success' if winner == 'player' else 'warning' if winner == 'draw' else 'error'}\">
-                  <div class=\"status-header\">
+                <div class="status-box {'success' if winner == 'player' else 'warning' if winner == 'draw' else 'error'}">
+                  <div class="status-header">
                     <span>🏆</span>
                     <span>Battle Complete</span>
-                    <span class=\"status-pill\">{winner_text}</span>
+                    <span class="status-pill">{winner_text}</span>
                   </div>
-                  <div class=\"battle-result\">
-                    <div class=\"score-display\">
-                      <div class=\"score\">
-                        <span class=\"score-label\">Player</span>
-                        <span class=\"score-value\">{battle_result['player_score']:.2f}</span>
+                  <div class="battle-result">
+                    <div class="result-stats">
+                      <div class="stat">
+                        <span class="label">Player Score</span>
+                        <span class="value">{battle_result.get('player_score', 0)}</span>
                       </div>
-                      <div class=\"score-separator\">-</div>
-                      <div class=\"score\">
-                        <span class=\"score-label\">Opponent</span>
-                        <span class=\"score-value\">{battle_result['opponent_score']:.2f}</span>
+                      <div class="stat">
+                        <span class="label">Opponent Score</span>
+                        <span class="value">{battle_result.get('opponent_score', 0)}</span>
+                      </div>
+                      <div class="stat">
+                        <span class="label">Duration</span>
+                        <span class="value">{battle_result.get('duration', 0):.2f}s</span>
                       </div>
                     </div>
-                    <div class=\"battle-info\">
-                      <p><strong>Winner:</strong> {winner_text}</p>
-                      <p><strong>Duration:</strong> {battle_result['duration_seconds']:.1f}s</p>
-                    </div>
+                  </div>
+                  <div class="status-foot">
+                    <b>Battle finished!</b> {winner_text} won the match.
                   </div>
                 </div>
                 """
@@ -465,11 +354,11 @@ def get_battle_status(battle_id):
                 return """
                 <div class="status-box info">
                   <div class="status-header">
-                    <span>⚔️</span>
-                    <span>Battle in Progress</span>
-                    <span class="status-pill">Processing</span>
+                    <span>⚙️</span>
+                    <span>Processing</span>
+                    <span class="status-pill">Running</span>
                   </div>
-                  <div class="status-foot">The battle is currently running. Please wait...</div>
+                  <div class="status-foot">Battle is in progress...</div>
                 </div>
                 """
             elif status == "pending":
@@ -477,23 +366,14 @@ def get_battle_status(battle_id):
                 <div class="status-box info">
                   <div class="status-header">
                     <span>⏳</span>
-                    <span>Battle Queued</span>
-                    <span class="status-pill">Pending</span>
+                    <span>Queued</span>
+                    <span class="status-pill">Waiting</span>
                   </div>
                   <div class="status-foot">Battle is waiting to start...</div>
                 </div>
                 """
             else:
-                return f"""
-                <div class="status-box error">
-                  <div class="status-header">
-                    <span>❌</span>
-                    <span>Battle Failed</span>
-                    <span class="status-pill">Error</span>
-                  </div>
-                  <div class="status-foot">Battle encountered an error.</div>
-                </div>
-                """
+                return f"Unknown status: {status}"
         else:
             error_detail = response.json().get('detail', 'Unknown error')
             return f"❌ Error {response.status_code}: {error_detail}"
@@ -501,47 +381,42 @@ def get_battle_status(battle_id):
     except Exception as e:
         return f"❌ Error: {str(e)}"
 
-def get_arena_rankings(env_id):
-    """Get arena rankings"""
+def get_arena_rankings(environment):
+    """Get arena rankings for a specific environment"""
     try:
         params = {}
-        if env_id:
-            params['env_id'] = env_id
-
+        if environment and environment != "All":
+            params['environment'] = environment
+            
         response = requests.get(f"{API_URL}/api/rlarena/rankings", params=params)
         
         if response.status_code == 200:
-            result = response.json()
-            rankings = result.get('rankings', [])
+            data = response.json()
+            rankings = data.get('rankings', [])
             
             if not rankings:
-                return "No rankings available."
+                return "No rankings available for this environment."
             
             html = "<div class='rankings-table'>"
             html += """
             <div class="rankings-header">
                 <div class="rank-col">Rank</div>
                 <div class="model-col">Model</div>
-                <div class="creator-col">Creator</div>
-                <div class="stats-col">Battles</div>
-                <div class="stats-col">Wins</div>
-                <div class="stats-col">Win Rate</div>
+                <div class="wins-col">Wins</div>
+                <div class="losses-col">Losses</div>
+                <div class="winrate-col">Win Rate</div>
             </div>
             """
             
-            for rank in rankings:
-                win_rate_pct = f"{rank['win_rate'] * 100:.1f}%" if rank['win_rate'] > 0 else "N/A"
+            for i, ranking in enumerate(rankings, 1):
+                win_rate = (ranking.get('wins', 0) / max(ranking.get('total_games', 1), 1)) * 100
                 html += f"""
-                <div class="ranking-row">
-                    <div class="rank-col">#{rank['rank']}</div>
-                    <div class="model-col">
-                        <strong>{rank['model_name']}</strong>
-                        <br><span class="algorithm-tag">{rank['algorithm']}</span>
-                    </div>
-                    <div class="creator-col">{rank['user_id']}</div>
-                    <div class="stats-col">{rank['total_battles']}</div>
-                    <div class="stats-col">{rank['wins']}</div>
-                    <div class="stats-col">{win_rate_pct}</div>
+                <div class="rankings-row">
+                    <div class="rank-col">#{i}</div>
+                    <div class="model-col">{ranking.get('model_name', 'Unknown')}</div>
+                    <div class="wins-col">{ranking.get('wins', 0)}</div>
+                    <div class="losses-col">{ranking.get('losses', 0)}</div>
+                    <div class="winrate-col">{win_rate:.1f}%</div>
                 </div>
                 """
             html += "</div>"
@@ -553,61 +428,78 @@ def get_arena_rankings(env_id):
     except Exception as e:
         return f"❌ Error: {str(e)}"
 
-def get_leaderboard(env_id, id_query, user_query, algorithm_query, score_min, score_max, sort_order):
-    """Fetch leaderboard from API using server-side filters/sorting and render rows."""
+def list_hub_models(env_id, algorithm, user_id):
+    """List models from the RL Hub"""
     try:
-        # Map UI sort order to API sort values
-        sort_map = {
-            "Date (newest)": "date_desc",
-            "Date (oldest)": "date_asc",
-            "Score (desc)": "score_desc",
-        }
-        sort = sort_map.get((sort_order or "Score (desc)").strip(), "score_desc")
-
-        def _date_to_str(d):
-            if d is None:
-                return None
-            # Accept either a date object or a string in YYYY-MM-DD
-            try:
-                return d.strftime("%Y-%m-%d")
-            except Exception:
-                pass
-            try:
-                ds = str(d).strip()[:10]
-                # strict validation
-                _ = datetime.strptime(ds, "%Y-%m-%d")
-                return ds
-            except Exception:
-                return None
-
-        params = {"env_id": env_id, "limit": 200, "sort": sort}
+        params = {}
+        if env_id:
+            params['env_id'] = env_id
+        if algorithm:
+            params['algorithm'] = algorithm
+        if user_id:
+            params['user_id'] = user_id
+            
+        response = requests.get(f"{API_URL}/api/rlhub/models", params=params)
         
-        # Add filters if provided
-        if id_query and id_query.strip():
-            params["id"] = id_query.strip()
-        if user_query and user_query.strip():
-            params["user_id"] = user_query.strip()
-        if algorithm_query and algorithm_query.strip():
-            params["algorithm"] = algorithm_query.strip()
-        if score_min is not None and score_min != "":
-            try:
-                params["score_min"] = float(score_min)
-            except ValueError:
-                pass
-        if score_max is not None and score_max != "":
-            try:
-                params["score_max"] = float(score_max)
-            except ValueError:
-                pass
-
-        response = requests.get(f"{API_URL}/api/leaderboard/", params=params)
-
         if response.status_code == 200:
             data = response.json()
-            entries = data.get("entries", [])
+            models = data.get('models', [])
             
-        if not entries:
-            return "No entries found matching your criteria."
+            if not models:
+                return "No models found matching your criteria."
+            
+            html = "<div class='models-table'>"
+            html += """
+            <div class="models-header">
+                <div class="model-id-col">Model ID</div>
+                <div class="name-col">Name</div>
+                <div class="user-col">User</div>
+                <div class="algorithm-col">Algorithm</div>
+                <div class="env-col">Environment</div>
+                <div class="date-col">Created</div>
+            </div>
+            """
+            
+            for model in models:
+                date_str = model.get("created_at", "")[:10] if model.get("created_at") else "N/A"
+                html += f"""
+                <div class="models-row">
+                    <div class="model-id-col"><code>{model.get('id', 'N/A')}</code></div>
+                    <div class="name-col">{model.get('name', 'N/A')}</div>
+                    <div class="user-col">{model.get('user_id', 'N/A')}</div>
+                    <div class="algorithm-col">{model.get('algorithm', 'N/A')}</div>
+                    <div class="env-col">{model.get('env_id', 'N/A')}</div>
+                    <div class="date-col">{date_str}</div>
+                </div>
+                """
+            html += "</div>"
+            return html
+        else:
+            error_detail = response.json().get('detail', 'Unknown error')
+            return f"❌ Error {response.status_code}: {error_detail}"
+            
+    except Exception as e:
+        return f"❌ Error: {str(e)}"
+
+def get_leaderboard(env_id, algorithm, user_id):
+    """Get leaderboard entries"""
+    try:
+        params = {}
+        if env_id:
+            params['env_id'] = env_id
+        if algorithm:
+            params['algorithm'] = algorithm
+        if user_id:
+            params['user_id'] = user_id
+            
+        response = requests.get(f"{API_URL}/api/leaderboard", params=params)
+        
+        if response.status_code == 200:
+            data = response.json()
+            entries = data.get('entries', [])
+            
+            if not entries:
+                return "No entries found matching your criteria."
             
             html = "<div class='leaderboard-table'>"
             html += """
@@ -649,7 +541,7 @@ def check_status(submission_id):
         response = requests.get(f"{API_URL}/api/results/{submission_id}")
         
         if response.status_code == 200:
-        result = response.json()
+            result = response.json()
             status = result.get('status', 'unknown')
             
             if status == "completed":
@@ -666,8 +558,8 @@ def check_status(submission_id):
                     <div class="label">Score</div><div class="value">{score}</div>
                     <div class="label">Duration</div><div class="value">{duration}s</div>
                   </div>
-</div>
-"""
+                </div>
+                """
                 return html
             elif status == "processing":
                 return """
@@ -703,7 +595,7 @@ def check_status(submission_id):
                   <div class="status-foot">Error: {error}</div>
                 </div>
                 """
-        else:
+            else:
                 return f"Unknown status: {status}"
         else:
             error_detail = response.json().get('detail', 'Unknown error')
@@ -722,29 +614,29 @@ custom_css = """
 
 /* Status boxes */
 .status-box {
-  border-radius: 12px;
+    border-radius: 12px;
     padding: 20px;
     margin: 10px 0;
     border-left: 4px solid;
 }
 
 .status-box.success {
-    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    background: linear-gradient(135deg, #d4edda, #c3e6cb);
     border-left-color: #28a745;
 }
 
 .status-box.error {
-    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    background: linear-gradient(135deg, #f8d7da, #f5c6cb);
     border-left-color: #dc3545;
 }
 
 .status-box.info {
-    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+    background: linear-gradient(135deg, #d1ecf1, #bee5eb);
     border-left-color: #17a2b8;
 }
 
 .status-box.warning {
-    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
     border-left-color: #ffc107;
 }
 
@@ -757,7 +649,7 @@ custom_css = """
 }
 
 .status-pill {
-    background: rgba(255,255,255,0.8);
+    background: rgba(255, 255, 255, 0.8);
     padding: 4px 12px;
     border-radius: 20px;
     font-size: 0.8em;
@@ -765,7 +657,7 @@ custom_css = """
 }
 
 .status-id {
-    background: rgba(0,0,0,0.05);
+    background: rgba(255, 255, 255, 0.5);
     padding: 10px;
     border-radius: 8px;
     margin: 10px 0;
@@ -778,14 +670,10 @@ custom_css = """
     background: #007bff;
     color: white;
     border: none;
-    padding: 4px 12px;
-    border-radius: 6px;
+    padding: 4px 8px;
+    border-radius: 4px;
     cursor: pointer;
     font-size: 0.8em;
-}
-
-.copy-btn:hover {
-    background: #0056b3;
 }
 
 .status-kv {
@@ -795,116 +683,20 @@ custom_css = """
     margin: 15px 0;
 }
 
-.label {
-    font-weight: 600;
+.status-kv .label {
+    font-weight: 500;
     color: #666;
 }
 
-.value {
-    color: #333;
+.status-kv .value {
+    font-weight: 600;
 }
 
 .status-foot {
     margin-top: 15px;
     padding-top: 15px;
-    border-top: 1px solid rgba(0,0,0,0.1);
-    font-style: italic;
-    color: #666;
-}
-
-/* Model cards */
-.models-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
-    margin: 20px 0;
-}
-
-.model-card {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    border: 1px solid #e9ecef;
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.model-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 15px rgba(0,0,0,0.15);
-}
-
-.model-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-}
-
-.model-header h3 {
-    margin: 0;
-    color: #333;
-}
-
-.algorithm-tag {
-    background: #e9ecef;
-    color: #495057;
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 0.8em;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
     font-weight: 500;
-}
-
-.model-details p {
-    margin: 5px 0;
-    color: #666;
-}
-
-.model-stats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    margin: 15px 0;
-    padding: 15px 0;
-    border-top: 1px solid #e9ecef;
-    border-bottom: 1px solid #e9ecef;
-}
-
-.stat {
-    text-align: center;
-}
-
-.stat-label {
-    display: block;
-    font-size: 0.8em;
-    color: #666;
-    margin-bottom: 5px;
-}
-
-.stat-value {
-    display: block;
-    font-size: 1.2em;
-    font-weight: 600;
-    color: #333;
-}
-
-.model-actions {
-    text-align: center;
-}
-
-.battle-btn {
-    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-    color: white;
-    border: none;
-    padding: 8px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: transform 0.2s;
-}
-
-.battle-btn:hover {
-    transform: translateY(-1px);
 }
 
 /* Battle details */
@@ -914,8 +706,8 @@ custom_css = """
     gap: 20px;
     align-items: center;
     margin: 15px 0;
-    padding: 20px;
-    background: rgba(255,255,255,0.5);
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.5);
     border-radius: 8px;
 }
 
@@ -923,171 +715,93 @@ custom_css = """
     text-align: center;
 }
 
-.battle-player h4, .battle-opponent h4 {
-    margin: 0 0 10px 0;
-    color: #333;
-}
-
 .battle-vs {
     font-size: 1.5em;
     font-weight: bold;
-    color: #dc3545;
-}
-
-/* Battle result */
-.battle-result {
-    text-align: center;
-}
-
-.score-display {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 20px;
-    margin: 20px 0;
-}
-
-.score {
-    text-align: center;
-}
-
-.score-label {
-    display: block;
-    font-size: 0.9em;
     color: #666;
-    margin-bottom: 5px;
-}
-
-.score-value {
-    display: block;
-    font-size: 2em;
-    font-weight: bold;
-    color: #333;
-}
-
-.score-separator {
-    font-size: 1.5em;
-    font-weight: bold;
-    color: #666;
-}
-
-.battle-info {
-    margin-top: 15px;
-}
-
-.battle-info p {
-    margin: 5px 0;
-    color: #666;
-}
-
-/* Keyboard controls */
-.keyboard-controls {
-    margin: 20px 0;
-    padding: 15px;
-    background: rgba(0,0,0,0.05);
-    border-radius: 8px;
-}
-
-.keyboard-controls h4 {
-    margin: 0 0 10px 0;
-    color: #333;
-}
-
-.controls-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 8px;
-    font-family: monospace;
-}
-
-.controls-grid div {
-    padding: 5px 10px;
-    background: rgba(255,255,255,0.8);
-    border-radius: 4px;
-    font-size: 0.9em;
 }
 
 /* Tables */
-.leaderboard-table, .rankings-table {
-    background: white;
-    border-radius: 12px;
+.leaderboard-table, .rankings-table, .models-table {
+    border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    margin: 20px 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.leaderboard-header, .rankings-header {
+.leaderboard-header, .rankings-header, .models-header {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
     display: grid;
-    grid-template-columns: 80px 1fr 120px 120px 100px;
-    gap: 15px;
-    padding: 15px 20px;
-    background: #f8f9fa;
+    grid-template-columns: 0.5fr 1fr 1fr 1fr 1fr;
+    padding: 12px;
     font-weight: 600;
-    color: #495057;
-    border-bottom: 2px solid #dee2e6;
 }
 
 .rankings-header {
-    grid-template-columns: 80px 1fr 120px 100px 100px 100px;
+    grid-template-columns: 0.5fr 1fr 1fr 1fr 1fr;
 }
 
-.leaderboard-row, .ranking-row {
+.models-header {
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+}
+
+.leaderboard-row, .rankings-row, .models-row {
     display: grid;
-    grid-template-columns: 80px 1fr 120px 120px 100px;
-    gap: 15px;
-    padding: 12px 20px;
-    border-bottom: 1px solid #e9ecef;
+    grid-template-columns: 0.5fr 1fr 1fr 1fr 1fr;
+    padding: 10px 12px;
+    border-bottom: 1px solid #eee;
     transition: background-color 0.2s;
 }
 
-.ranking-row {
-    grid-template-columns: 80px 1fr 120px 100px 100px 100px;
+.rankings-row {
+    grid-template-columns: 0.5fr 1fr 1fr 1fr 1fr;
 }
 
-.leaderboard-row:hover, .ranking-row:hover {
+.models-row {
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+}
+
+.leaderboard-row:hover, .rankings-row:hover, .models-row:hover {
     background-color: #f8f9fa;
 }
 
-.rank-col {
+.leaderboard-row:nth-child(even), .rankings-row:nth-child(even), .models-row:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+/* Web game launch button */
+.launch-button {
+    display: inline-block;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 25px;
+    text-decoration: none;
     font-weight: 600;
-    color: #007bff;
+    transition: transform 0.2s;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
 
-.score-col {
-    font-weight: 600;
-    color: #28a745;
+.launch-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
 }
 
-.user-col, .creator-col {
-    color: #495057;
+.web-game-info {
+    background: rgba(255, 255, 255, 0.5);
+    padding: 15px;
+    border-radius: 8px;
+    margin: 15px 0;
 }
 
-.algorithm-col {
-    color: #6c757d;
-}
-
-.date-col {
-    color: #6c757d;
-    font-size: 0.9em;
-}
-
-.stats-col {
+.web-game-launch {
     text-align: center;
-    color: #495057;
-}
-
-/* Form styling */
-.gradio-form {
-    background: white;
-    border-radius: 12px;
-    padding: 25px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     margin: 20px 0;
 }
 
 /* Responsive design */
 @media (max-width: 768px) {
-    .models-grid {
+    .status-kv {
         grid-template-columns: 1fr;
     }
     
@@ -1096,79 +810,64 @@ custom_css = """
         gap: 10px;
     }
     
-    .score-display {
-        flex-direction: column;
-        gap: 10px;
-    }
-    
     .leaderboard-header, .leaderboard-row,
-    .rankings-header, .ranking-row {
+    .rankings-header, .rankings-row,
+    .models-header, .models-row {
         grid-template-columns: 1fr;
-        gap: 5px;
+        text-align: center;
     }
 }
 </style>
-
-<script>
-function selectModelForBattle(modelId, modelName) {
-    // This function would be used to populate the battle form
-    console.log('Selected model for battle:', modelId, modelName);
-    // In a real implementation, you'd update form fields here
-}
-</script>
 """
 
 # Create the Gradio interface
-with gr.Blocks(css=custom_css, title="NeatRL - RL Hub & Arena") as demo:
-    gr.Markdown("""
-    # 🚀 NeatRL - Reinforcement Learning Hub & Arena
-    
-    A comprehensive platform for sharing trained RL models and competing in battles!
-    """)
+with gr.Blocks(css=custom_css, title="NeatRL - Reinforcement Learning Platform") as demo:
+    gr.Markdown(
+        f"""
+        # 🧠 NeatRL - Reinforcement Learning Platform
+        
+        Welcome to **NeatRL**, a comprehensive platform for evaluating and competing with reinforcement learning agents!
+        
+        [![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?style=flat&logo=github)]({GITHUB_URL})
+        [![API](https://img.shields.io/badge/API-Documentation-green?style=flat)]({SITE_URL}/docs)
+        """
+    )
     
     with gr.Tabs():
         # RL Hub Tab
         with gr.Tab("🏠 RL Hub", id=0):
-            gr.Markdown("### Upload and Share Your Trained Models")
+            gr.Markdown("### Upload and Manage Your Models")
             
-        with gr.Row():
+            with gr.Row():
                 with gr.Column(scale=1):
                     gr.Markdown("#### Upload Model")
-                    model_file = gr.File(label="Model File (.py)", file_types=[".py"])
-                    model_name = gr.Textbox(label="Model Name", placeholder="My Awesome DQN Agent")
-                    description = gr.Textbox(label="Description (Optional)", placeholder="A DQN agent trained on CartPole...")
-                    algorithm = gr.Textbox(label="Algorithm", placeholder="DQN", value="DQN")
+                    file = gr.File(label="Python Script (.py)", file_types=[".py"])
                     env_id = gr.Dropdown(
                         choices=ALL_ENVIRONMENTS,
                         label="Environment",
                         value="CartPole-v1"
                     )
-                    refresh_env_btn = gr.Button("🔄 Refresh Environments", variant="secondary", size="sm")
-                    user_id = gr.Textbox(label="User ID", placeholder="your-username")
-                    is_public = gr.Checkbox(label="Make Public", value=True)
-                    upload_btn = gr.Button("🚀 Upload to RL Hub", variant="primary")
+                    algorithm = gr.Textbox(label="Algorithm", placeholder="e.g., PPO, DQN, A2C")
+                    user_id = gr.Textbox(label="User ID", placeholder="Your name or ID")
+                    submit_btn = gr.Button("📤 Submit Model", variant="primary")
+                    submit_output = gr.HTML(label="Submission Status")
                 
                 with gr.Column(scale=1):
                     gr.Markdown("#### Browse Models")
                     browse_env = gr.Dropdown(
                         choices=["All"] + ALL_ENVIRONMENTS,
-                        label="Filter by Environment",
+                        label="Environment Filter",
                         value="All"
                     )
-                    browse_algorithm = gr.Textbox(label="Filter by Algorithm", placeholder="DQN, PPO, etc.")
-                    browse_user = gr.Textbox(label="Filter by Creator", placeholder="username")
+                    browse_algorithm = gr.Textbox(label="Algorithm Filter", placeholder="Filter by algorithm")
+                    browse_user = gr.Textbox(label="User Filter", placeholder="Filter by user")
                     browse_btn = gr.Button("🔍 Browse Models", variant="secondary")
-                    models_output = gr.HTML(label="Available Models")
+                    models_output = gr.HTML(label="Models")
             
-            upload_btn.click(
-                upload_model_to_hub,
-                inputs=[model_file, model_name, description, algorithm, env_id, user_id, is_public],
-                outputs=models_output
-            )
-            
-            refresh_env_btn.click(
-                refresh_environments,
-                outputs=[env_id]
+            submit_btn.click(
+                submit_script,
+                inputs=[file, env_id, algorithm, user_id],
+                outputs=[submit_output]
             )
             
             browse_btn.click(
@@ -1184,7 +883,7 @@ with gr.Blocks(css=custom_css, title="NeatRL - RL Hub & Arena") as demo:
             with gr.Tabs():
                 # AI vs AI Battles
                 with gr.Tab("🤖 AI vs AI"):
-        with gr.Row():
+                    with gr.Row():
                         with gr.Column(scale=1):
                             gr.Markdown("#### Create AI Battle")
                             player_model = gr.Textbox(label="Your Model ID", placeholder="Enter your model ID")
@@ -1216,7 +915,7 @@ with gr.Blocks(css=custom_css, title="NeatRL - RL Hub & Arena") as demo:
                 
                 # Human vs AI Battles
                 with gr.Tab("🎮 Human vs AI"):
-            with gr.Row():
+                    with gr.Row():
                         with gr.Column(scale=1):
                             gr.Markdown("#### Create Human vs AI Battle")
                             gr.Markdown("**Play against AI models in ALE environments!**")
@@ -1313,9 +1012,10 @@ with gr.Blocks(css=custom_css, title="NeatRL - RL Hub & Arena") as demo:
                         label="Environment",
                         value="CartPole-v1"
                     )
-                    algorithm = gr.Textbox(label="Algorithm", placeholder="DQN", value="DQN")
-                    user_id = gr.Textbox(label="User ID", placeholder="your-username")
-                    submit_btn = gr.Button("🚀 Submit", variant="primary")
+                    algorithm = gr.Textbox(label="Algorithm", placeholder="e.g., PPO, DQN, A2C")
+                    user_id = gr.Textbox(label="User ID", placeholder="Your name or ID")
+                    submit_btn = gr.Button("📤 Submit", variant="primary")
+                    submit_output = gr.HTML(label="Submission Status")
                 
                 with gr.Column(scale=1):
                     gr.Markdown("#### Check Status")
@@ -1326,44 +1026,56 @@ with gr.Blocks(css=custom_css, title="NeatRL - RL Hub & Arena") as demo:
             submit_btn.click(
                 submit_script,
                 inputs=[file, env_id, algorithm, user_id],
-                outputs=[status_output]
+                outputs=[submit_output]
             )
             
-        check_btn.click(
+            check_btn.click(
                 check_status,
                 inputs=[submission_id],
                 outputs=[status_output]
             )
             
-            gr.Markdown("### 📈 Leaderboard")
-            with gr.Row():
-                with gr.Column(scale=1):
-                    leaderboard_env = gr.Dropdown(
-                        choices=ALL_ENVIRONMENTS,
-                        label="Environment",
-                        value="CartPole-v1"
-                    )
-                    id_query = gr.Textbox(label="Filter by ID", placeholder="Submission ID")
-                    user_query = gr.Textbox(label="Filter by User", placeholder="username")
-                    algorithm_query = gr.Textbox(label="Filter by Algorithm", placeholder="DQN, PPO, etc.")
-                
-                with gr.Column(scale=1):
-                    score_min = gr.Number(label="Min Score", placeholder="0")
-                    score_max = gr.Number(label="Max Score", placeholder="1000")
-                    sort_order = gr.Dropdown(
-                        choices=["Score (desc)", "Date (newest)", "Date (oldest)"],
-                        label="Sort Order",
-                        value="Score (desc)"
-                    )
-                    leaderboard_btn = gr.Button("📊 View Leaderboard", variant="secondary")
-            
+            gr.Markdown("### 📈 View Leaderboard")
+            leaderboard_env = gr.Dropdown(
+                choices=["All"] + ALL_ENVIRONMENTS,
+                label="Environment",
+                value="All"
+            )
+            leaderboard_algorithm = gr.Textbox(label="Algorithm Filter", placeholder="Filter by algorithm")
+            leaderboard_user = gr.Textbox(label="User Filter", placeholder="Filter by user")
+            leaderboard_btn = gr.Button("📊 View Leaderboard", variant="secondary")
             leaderboard_output = gr.HTML(label="Leaderboard")
             
             leaderboard_btn.click(
                 get_leaderboard,
-                inputs=[leaderboard_env, id_query, user_query, algorithm_query, score_min, score_max, sort_order],
+                inputs=[leaderboard_env, leaderboard_algorithm, leaderboard_user],
                 outputs=[leaderboard_output]
             )
+        
+        # Settings Tab
+        with gr.Tab("⚙️ Settings", id=3):
+            gr.Markdown("### Platform Configuration")
+            
+            with gr.Row():
+                with gr.Column(scale=1):
+                    gr.Markdown("#### Environment Management")
+                    refresh_env_btn = gr.Button("🔄 Refresh Environments", variant="secondary")
+                    env_status = gr.Textbox(label="Environment Status", value="Ready", interactive=False)
+                
+                with gr.Column(scale=1):
+                    gr.Markdown("#### System Information")
+                    gr.Markdown(f"""
+                    **API URL:** {API_URL}
+                    **Site URL:** {SITE_URL}
+                    **Port:** {PORT}
+                    **GitHub:** {GITHUB_URL}
+                    """)
+            
+            refresh_env_btn.click(
+                refresh_environments,
+                outputs=[env_status]
+            )
 
+# Launch the interface
 if __name__ == "__main__":
     demo.launch(server_name="0.0.0.0", server_port=PORT, share=False)

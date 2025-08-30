@@ -1,0 +1,102 @@
+{
+  "successful_imports": [],
+  "failed_imports": [
+    {
+      "env": "basketball_pong",
+      "error": "No module named 'multi_agent_ale_py'"
+    },
+    {
+      "env": "boxing",
+      "error": "No module named 'pettingzoo.atari.boxing_v3'"
+    },
+    {
+      "env": "combat_plane",
+      "error": "No module named 'pettingzoo.atari.combat_plane_v3'"
+    },
+    {
+      "env": "combat_tank",
+      "error": "No module named 'pettingzoo.atari.combat_tank_v3'"
+    },
+    {
+      "env": "double_dunk",
+      "error": "No module named 'multi_agent_ale_py'"
+    },
+    {
+      "env": "entombed_competitive",
+      "error": "No module named 'multi_agent_ale_py'"
+    },
+    {
+      "env": "entombed_cooperative",
+      "error": "No module named 'multi_agent_ale_py'"
+    },
+    {
+      "env": "flag_capture",
+      "error": "No module named 'pettingzoo.atari.flag_capture_v3'"
+    },
+    {
+      "env": "foozpong",
+      "error": "No module named 'multi_agent_ale_py'"
+    },
+    {
+      "env": "ice_hockey",
+      "error": "No module named 'pettingzoo.atari.ice_hockey_v3'"
+    },
+    {
+      "env": "joust",
+      "error": "No module named 'multi_agent_ale_py'"
+    },
+    {
+      "env": "mario_bros",
+      "error": "No module named 'multi_agent_ale_py'"
+    },
+    {
+      "env": "maze_craze",
+      "error": "No module named 'multi_agent_ale_py'"
+    },
+    {
+      "env": "othello",
+      "error": "No module named 'multi_agent_ale_py'"
+    },
+    {
+      "env": "pong",
+      "error": "No module named 'multi_agent_ale_py'"
+    },
+    {
+      "env": "quadrapong",
+      "error": "No module named 'pettingzoo.atari.quadrapong_v3'"
+    },
+    {
+      "env": "space_invaders",
+      "error": "No module named 'pettingzoo.atari.space_invaders_v3'"
+    },
+    {
+      "env": "space_war",
+      "error": "No module named 'pettingzoo.atari.space_war_v3'"
+    },
+    {
+      "env": "surround",
+      "error": "No module named 'pettingzoo.atari.surround_v3'"
+    },
+    {
+      "env": "tennis",
+      "error": "No module named 'multi_agent_ale_py'"
+    },
+    {
+      "env": "video_checkers",
+      "error": "No module named 'pettingzoo.atari.video_checkers_v3'"
+    },
+    {
+      "env": "volleyball_pong",
+      "error": "No module named 'multi_agent_ale_py'"
+    },
+    {
+      "env": "warlords",
+      "error": "No module named 'multi_agent_ale_py'"
+    },
+    {
+      "env": "wizard_of_wor",
+      "error": "No module named 'multi_agent_ale_py'"
+    }
+  ],
+  "total_environments": 24
+}

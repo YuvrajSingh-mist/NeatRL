@@ -1,0 +1,54 @@
+# Core dependencies for RL Arena
+fastapi[all]
+uvicorn[standard]
+websockets
+asyncio-mqtt
+redis
+celery[redis]
+
+# RL and ML libraries
+gymnasium[all]
+stable-baselines3
+torch
+torchvision
+torchaudio
+opencv-python
+pygame
+pyglet
+
+# Data processing and visualization
+matplotlib
+seaborn
+pandas
+numpy
+scipy
+scikit-learn
+
+# Monitoring and logging
+wandb
+tensorboard
+prometheus-client
+
+# Utilities
+python-multipart
+aiofiles
+httpx
+pydantic
+python-dotenv
+
+# Performance optimization
+numba
+cython
+
+# Additional RL libraries
+pettingzoo[atari]
+supersuit
+gymnasium[box2d]
+gymnasium[mujoco]
+gymnasium[classic-control]
+gymnasium[atari]
+AutoROM
+
+# Web display dependencies
+websockets
+Pillow

@@ -99,6 +99,42 @@ services:
       - 8.8.8.8
       - 1.1.1.1
 
+  arena:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.arena
+    volumes:
+      - ./arena_battle_system.py:/app/arena_battle_system.py
+      - ./requirements.arena.txt:/app/requirements.arena.txt
+      - ./ale_play_script.py:/app/ale_play_script.py
+      - ./start_arena.sh:/app/start_arena.sh
+      - ./web_server.py:/app/web_server.py
+      - ./frontend/game_interface.html:/app/frontend/game_interface.html
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    ports:
+      - "8765:8765"
+      - "5901:5901"  # VNC port (fallback)
+      - "8080:8080"  # Web display port
+      - "8081:8081"  # WebSocket port
+    env_file: .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONHASHSEED=0
+      - DISPLAY=${DISPLAY:-:0}  # Use host display if available
+      - VNC_DISPLAY=:1
+    # Enable X11 forwarding for better performance
+    privileged: true
+    depends_on:
+      - api
+    networks:
+      - rl-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import gymnasium; print('Arena healthy')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
   worker-heavy:
     build:
       context: .

@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeatRL - Human vs AI Battle</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .game-container {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .game-frame-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .game-frame {
+            width: 100%;
+            height: 600px;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .game-frame canvas {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 8px;
+        }
+
+        .game-info-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+            height: fit-content;
+        }
+
+        .info-section {
+            margin-bottom: 25px;
+        }
+
+        .info-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 8px;
+        }
+
+        .status {
+            padding: 12px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .status.connected {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+        }
+
+        .status.disconnected {
+            background: linear-gradient(135deg, #f44336, #d32f2f);
+            color: white;
+        }
+
+        .status.connecting {
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+            color: white;
+        }
+
+        .game-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-card .value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .controls-section {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+
+        .keyboard-info {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .keyboard-info p {
+            margin: 8px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .keyboard-status {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .keyboard-status p {
+            margin: 8px 0;
+        }
+
+        .keyboard-status span {
+            font-weight: bold;
+            color: #1976d2;
+        }
+
+        .environment-info {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+
+        .environment-info h4 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+
+        .environment-info p {
+            margin: 8px 0;
+            line-height: 1.5;
+        }
+
+        .loading-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            z-index: 10;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 500;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+            z-index: 100;
+        }
+
+        .back-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .winner-announcement {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            padding: 30px 50px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 1000;
+            display: none;
+        }
+
+        .winner-announcement h2 {
+            font-size: 2rem;
+            margin-bottom: 15px;
+        }
+
+        .winner-announcement p {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+        }
+
+        .winner-announcement button {
+            background: white;
+            color: #4CAF50;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        @media (max-width: 768px) {
+            .game-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .keyboard-info p {
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="back-button" onclick="goBack()">← Back to NeatRL</button>
+    
+    <div class="container">
+        <div class="header">
+            <h1>🎮 NeatRL Human vs AI Battle</h1>
+            <p>Challenge AI models in classic Atari games</p>
+        </div>
+
+        <div class="game-container">
+            <div class="game-frame-container">
+                <div class="game-frame" id="gameFrame">
+                    <div class="loading-screen" id="loadingScreen">
+                        <div class="loading-spinner"></div>
+                        <h3>Connecting to game server...</h3>
+                        <p>Please wait while we set up your battle</p>
+                    </div>
+                    <canvas id="gameCanvas" width="800" height="600"></canvas>
+                </div>
+            </div>
+
+            <div class="game-info-panel">
+                <div class="info-section">
+                    <h3>🔗 Connection Status</h3>
+                    <div id="status" class="status connecting">Connecting...</div>
+                </div>
+
+                <div class="info-section">
+                    <h3>📊 Game Statistics</h3>
+                    <div class="game-stats">
+                        <div class="stat-card">
+                            <div class="value" id="aiScore">0</div>
+                            <div class="label">AI Score</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value" id="humanScore">0</div>
+                            <div class="label">Your Score</div>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="grid-column: 1 / -1;">
+                        <div class="value" id="currentAgent">Waiting...</div>
+                        <div class="label">Current Turn</div>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h3>🎮 Keyboard Controls</h3>
+                    <div class="controls-section">
+                        <p><strong>Use your keyboard to control the game:</strong></p>
+                        <div class="keyboard-info">
+                            <p><strong>Movement:</strong> W (Up), A (Left), S (Down), D (Right)</p>
+                            <p><strong>Actions:</strong> F (Fire/Action), G (Special Action)</p>
+                            <p><strong>Quit:</strong> Q (Exit Game)</p>
+                        </div>
+                        <div class="keyboard-status">
+                            <p><strong>Status:</strong> <span id="keyboardStatus">Ready</span></p>
+                            <p><strong>Last Key:</strong> <span id="lastKey">None</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h3>🎯 Environment Info</h3>
+                    <div class="environment-info" id="environmentInfo">
+                        <h4 id="envName">Loading...</h4>
+                        <p id="envDescription">Loading environment information...</p>
+                        <p><strong>Controls:</strong> <span id="envControls">Loading...</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="winner-announcement" id="winnerAnnouncement">
+        <h2 id="winnerTitle">Game Over!</h2>
+        <p id="winnerMessage">The battle has ended.</p>
+        <button onclick="closeWinnerAnnouncement()">Continue</button>
+    </div>
+
+    <script>
+        // Game state
+        let ws = null;
+        let img = new Image();
+        let canvas = document.getElementById('gameCanvas');
+        let ctx = canvas.getContext('2d');
+        let status = document.getElementById('status');
+        let loadingScreen = document.getElementById('loadingScreen');
+        let gameInfo = {
+            environment: '',
+            ai_score: 0,
+            human_score: 0,
+            current_agent: '',
+            winner: null
+        };
+
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const battleId = urlParams.get('battle_id');
+        const environment = urlParams.get('environment');
+        const opponentId = urlParams.get('opponent_id');
+
+        // Initialize environment info
+        if (environment) {
+            document.getElementById('envName').textContent = getEnvironmentName(environment);
+            document.getElementById('envDescription').textContent = getEnvironmentDescription(environment);
+            document.getElementById('envControls').textContent = getEnvironmentControls(environment);
+        }
+
+        function getEnvironmentName(envId) {
+            const envNames = {
+                'pong_v3': 'Pong',
+                'boxing_v2': 'Boxing',
+                'tennis_v3': 'Tennis',
+                'ice_hockey_v2': 'Ice Hockey',
+                'double_dunk_v3': 'Double Dunk',
+                'wizard_of_wor_v3': 'Wizard of Wor',
+                'space_invaders_v2': 'Space Invaders',
+                'basketball_pong_v3': 'Basketball Pong',
+                'volleyball_pong_v3': 'Volleyball Pong',
+                'foozpong_v3': 'Foozpong',
+                'quadrapong_v4': 'Quadrapong',
+                'joust_v3': 'Joust',
+                'mario_bros_v3': 'Mario Bros',
+                'maze_craze_v3': 'Maze Craze',
+                'othello_v3': 'Othello',
+                'video_checkers_v4': 'Video Checkers',
+                'warlords_v3': 'Warlords',
+                'combat_plane_v2': 'Combat: Plane',
+                'combat_tank_v2': 'Combat: Tank',
+                'flag_capture_v2': 'Flag Capture',
+                'surround_v2': 'Surround',
+                'space_war_v2': 'Space War',
+                'entombed_competitive_v3': 'Entombed: Competitive',
+                'entombed_cooperative_v3': 'Entombed: Cooperative'
+            };
+            return envNames[envId] || envId;
+        }
+
+        function getEnvironmentDescription(envId) {
+            const envDescriptions = {
+                'pong_v3': 'Classic Pong - Move your paddle to hit the ball',
+                'boxing_v2': 'Punch and move to defeat your opponent',
+                'tennis_v3': 'Hit the ball over the net',
+                'ice_hockey_v2': 'Fast-paced hockey game',
+                'double_dunk_v3': 'Basketball game with two hoops',
+                'wizard_of_wor_v3': 'Maze-based action game',
+                'space_invaders_v2': 'Classic arcade shooter',
+                'basketball_pong_v3': 'Basketball version of Pong',
+                'volleyball_pong_v3': 'Volleyball version of Pong',
+                'foozpong_v3': 'Football version of Pong',
+                'quadrapong_v4': 'Four-player Pong',
+                'joust_v3': 'Medieval flying combat',
+                'mario_bros_v3': 'Classic platformer',
+                'maze_craze_v3': 'Navigate through mazes',
+                'othello_v3': 'Classic board game',
+                'video_checkers_v4': 'Classic checkers game',
+                'warlords_v3': 'Castle defense game',
+                'combat_plane_v2': 'Aerial combat simulation',
+                'combat_tank_v2': 'Tank warfare game',
+                'flag_capture_v2': 'Capture the flag game',
+                'surround_v2': 'Snake-like game',
+                'space_war_v2': 'Space combat game',
+                'entombed_competitive_v3': 'Competitive maze exploration',
+                'entombed_cooperative_v3': 'Cooperative maze exploration'
+            };
+            return envDescriptions[envId] || 'PettingZoo Atari Environment';
+        }
+
+        function getEnvironmentControls(envId) {
+            const envControls = {
+                'pong_v3': 'W=Up, S=Down, F=Fire, D=Fire Right, A=Fire Left',
+                'boxing_v2': 'W=Up, S=Down, A=Left, D=Right, F=Punch, G=Block',
+                'tennis_v3': 'W=Up, S=Down, A=Left, D=Right, F=Hit Ball',
+                'ice_hockey_v2': 'W=Up, S=Down, A=Left, D=Right, F=Shoot, G=Pass',
+                'double_dunk_v3': 'W=Up, S=Down, A=Left, D=Right, F=Shoot, G=Pass',
+                'wizard_of_wor_v3': 'W=Up, S=Down, A=Left, D=Right, F=Fire, G=Special',
+                'space_invaders_v2': 'A=Left, D=Right, F=Fire',
+                'basketball_pong_v3': 'W=Up, S=Down, F=Fire, D=Fire Right, A=Fire Left',
+                'volleyball_pong_v3': 'W=Up, S=Down, F=Fire, D=Fire Right, A=Fire Left',
+                'foozpong_v3': 'W=Up, S=Down, F=Fire, D=Fire Right, A=Fire Left',
+                'quadrapong_v4': 'W=Up, S=Down, F=Fire, D=Fire Right, A=Fire Left',
+                'joust_v3': 'W=Up, S=Down, A=Left, D=Right, F=Fire',
+                'mario_bros_v3': 'W=Up, S=Down, A=Left, D=Right, F=Fire',
+                'maze_craze_v3': 'W=Up, S=Down, A=Left, D=Right, F=Fire',
+                'othello_v3': 'W=Up, S=Down, A=Left, D=Right, F=Fire',
+                'video_checkers_v4': 'W=Up, S=Down, A=Left, D=Right, F=Fire',
+                'warlords_v3': 'W=Up, S=Down, A=Left, D=Right, F=Fire',
+                'combat_plane_v2': 'W=Up, S=Down, A=Left, D=Right, F=Fire',
+                'combat_tank_v2': 'W=Up, S=Down, A=Left, D=Right, F=Fire',
+                'flag_capture_v2': 'W=Up, S=Down, A=Left, D=Right, F=Fire',
+                'surround_v2': 'W=Up, S=Down, A=Left, D=Right, F=Fire',
+                'space_war_v2': 'W=Up, S=Down, A=Left, D=Right, F=Fire',
+                'entombed_competitive_v3': 'W=Up, S=Down, A=Left, D=Right, F=Fire',
+                'entombed_cooperative_v3': 'W=Up, S=Down, A=Left, D=Right, F=Fire'
+            };
+            return envControls[envId] || 'WASD=Movement, F=Action';
+        }
+
+        function connect() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.hostname}:8080`;
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = function() {
+                status.textContent = 'Connected to game server';
+                status.className = 'status connected';
+                loadingScreen.style.display = 'none';
+            };
+            
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === 'frame') {
+                    // Update game frame
+                    img.onload = function() {
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    };
+                    img.src = 'data:image/jpeg;base64,' + data.frame;
+                    
+                    // Update game info
+                    if (data.game_info) {
+                        gameInfo = data.game_info;
+                        updateGameStats();
+                    }
+                } else if (data.type === 'game_over') {
+                    showWinnerAnnouncement(data.winner, data.ai_score, data.human_score);
+                }
+            };
+            
+            ws.onclose = function() {
+                status.textContent = 'Disconnected from game server';
+                status.className = 'status disconnected';
+                setTimeout(connect, 3000); // Reconnect after 3 seconds
+            };
+            
+            ws.onerror = function(error) {
+                console.error('WebSocket error:', error);
+                status.textContent = 'Connection error';
+                status.className = 'status disconnected';
+            };
+        }
+
+        function updateGameStats() {
+            document.getElementById('aiScore').textContent = gameInfo.ai_score || 0;
+            document.getElementById('humanScore').textContent = gameInfo.human_score || 0;
+            document.getElementById('currentAgent').textContent = gameInfo.current_agent || 'Waiting...';
+        }
+
+        function showWinnerAnnouncement(winner, aiScore, humanScore) {
+            const announcement = document.getElementById('winnerAnnouncement');
+            const title = document.getElementById('winnerTitle');
+            const message = document.getElementById('winnerMessage');
+            
+            if (winner === 'human') {
+                title.textContent = '🎉 You Won!';
+                message.textContent = `Congratulations! You defeated the AI ${humanScore} to ${aiScore}`;
+            } else if (winner === 'ai') {
+                title.textContent = '🤖 AI Won';
+                message.textContent = `The AI was victorious ${aiScore} to ${humanScore}. Better luck next time!`;
+            } else {
+                title.textContent = '🤝 It\'s a Tie!';
+                message.textContent = `The game ended in a draw ${humanScore} to ${aiScore}`;
+            }
+            
+            announcement.style.display = 'block';
+        }
+
+        function closeWinnerAnnouncement() {
+            document.getElementById('winnerAnnouncement').style.display = 'none';
+            goBack();
+        }
+
+        function goBack() {
+            // Go back to the main NeatRL interface
+            window.location.href = '/';
+        }
+
+        // Handle keyboard input
+        document.addEventListener('keydown', function(event) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const key = event.key.toLowerCase();
+                
+                // Update keyboard status
+                document.getElementById('keyboardStatus').textContent = 'Key Pressed';
+                document.getElementById('lastKey').textContent = key.toUpperCase();
+                
+                // Send key to server
+                ws.send(JSON.stringify({
+                    type: 'keyboard',
+                    key: key
+                }));
+                
+                // Reset status after a short delay
+                setTimeout(() => {
+                    document.getElementById('keyboardStatus').textContent = 'Ready';
+                }, 200);
+            }
+        });
+
+        // Handle keyboard release
+        document.addEventListener('keyup', function(event) {
+            const key = event.key.toLowerCase();
+            document.getElementById('keyboardStatus').textContent = 'Ready';
+        });
+
+        // Start connection
+        connect();
+    </script>
+</body>
+</html>
+
