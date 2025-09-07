@@ -27,7 +27,7 @@ portfolio_home           : https://yuvrajsingh-portfolio-website.vercel.app/
 #               Additional customization can be done by editing /_includes/author-profile.html
 author:
   # Biographic information
-  avatar           : "YuvraSingh_photo.jpg"
+  avatar           : "unnamed.png"
   name             : "Yuvraj Singh"
   pronouns         : # example: "she/her"  
   bio              : "NLP | Interested in RL Reasoning in LLMs and Multimodal LLMs | Exploring the intersection of Research and Engineering"
