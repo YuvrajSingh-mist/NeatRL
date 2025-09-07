@@ -8,7 +8,6 @@ from app.api import submissions, leaderboard
 from app.api import alerts
 from app.api import visitor
 from app.api import metrics_endpoint, prometheus_metrics
-from app.api import rlhub, rlarena
 from app.db.session import init_db
 from app.core.config import settings
 from app.services.leaderboard import redis_leaderboard
@@ -24,7 +23,7 @@ setup_logging()
 
 app = FastAPI(
     title="NeatRL",
-    description="A comprehensive Reinforcement Learning platform featuring a model hub for sharing trained agents and an arena for competitive battles",
+    description="A Reinforcement Learning evaluation platform for testing and comparing trained agents",
     version="1.0.0"
 )
 
@@ -50,13 +49,13 @@ async def metrics():
         logging.getLogger(__name__).error(f"Failed to generate metrics: {str(e)}")
         return Response(content="", status_code=500)
 
-# CORS for cross-origin frontend (e.g., Render-hosted Gradio)
+# CORS for cross-origin frontend
 _cors_origins_env = os.getenv("CORS_ORIGINS", "*")
 _cors_origins = [o.strip() for o in _cors_origins_env.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if "*" in _cors_origins else _cors_origins,
-    allow_credentials=False if "*" in _cors_origins else True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -213,8 +212,6 @@ app.include_router(alerts.router, prefix="/api", tags=["alerts"])
 app.include_router(visitor.router, prefix="/api", tags=["visitor"])
 app.include_router(metrics_endpoint.router, prefix="/api", tags=["metrics"])
 app.include_router(prometheus_metrics.router, prefix="/api", tags=["prometheus"])
-app.include_router(rlhub.router, tags=["RL Hub"])
-app.include_router(rlarena.router, tags=["RL Arena"])
 
 # --- Basic SEO endpoints ---
 @app.get("/robots.txt", response_class=PlainTextResponse)
@@ -233,12 +230,11 @@ def sitemap_xml():
     import datetime
     base = settings.PUBLIC_BASE_URL.rstrip("/") if settings.PUBLIC_BASE_URL else ""
     now = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-    # Known public routes. Gradio is typically served under a separate service; list root if base set.
+    # Known public routes for sitemap
     urls = []
     if base:
         urls.append({"loc": base + "/", "changefreq": "hourly", "priority": "0.8"})
     # API documentation could be indexed if enabled (FastAPI docs routes). Add conservative entries.
-    # Note: If you expose the Gradio UI on the same domain, include it as '/'.
 
     xml_urls = []
     for u in urls:

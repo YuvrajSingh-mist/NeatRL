@@ -1,0 +1,197 @@
+---
+layout: single
+---
+
+<style>
+.model-implementation-page {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.simple-header {
+  margin-bottom: 30px;
+  text-align: left;
+}
+
+.model-title {
+  font-size: 2.5em;
+  margin-bottom: 15px;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.model-meta {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  padding: 15px 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.meta-item {
+  background-color: #f8f9fa;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.9em;
+  color: #495057;
+  border: 1px solid #dee2e6;
+}
+
+.meta-item strong {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.model-content {
+  line-height: 1.7;
+  font-size: 1.1em;
+}
+
+.model-content h1,
+.model-content h2,
+.model-content h3 {
+  color: #2c3e50;
+  margin-top: 2em;
+  margin-bottom: 1em;
+}
+
+.model-content h1 {
+  font-size: 2em;
+  border-bottom: 2px solid #e9ecef;
+  padding-bottom: 10px;
+}
+
+.model-content h2 {
+  font-size: 1.6em;
+}
+
+.model-content h3 {
+  font-size: 1.3em;
+}
+
+.model-content p {
+  margin-bottom: 1.2em;
+}
+
+.model-content img {
+  max-width: 100%;
+  height: auto;
+  margin: 20px 0;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.model-content pre {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 15px;
+  overflow-x: auto;
+  margin: 20px 0;
+}
+
+.model-content code {
+  background-color: #f8f9fa;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+.model-content blockquote {
+  border-left: 4px solid #007bff;
+  padding-left: 20px;
+  margin: 20px 0;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.model-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+}
+
+.model-content table th,
+.model-content table td {
+  border: 1px solid #dee2e6;
+  padding: 12px;
+  text-align: left;
+}
+
+.model-content table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+}
+
+.model-content ul,
+.model-content ol {
+  margin: 15px 0;
+  padding-left: 30px;
+}
+
+.model-content li {
+  margin-bottom: 8px;
+}
+
+@media (max-width: 768px) {
+  .model-implementation-page {
+    padding: 0 15px;
+  }
+  
+  .model-title {
+    font-size: 2em;
+  }
+  
+  .model-meta {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .meta-item {
+    display: block;
+  }
+}
+</style>
+
+<div class="model-implementation-page">
+  <div class="simple-header">
+    <h1 class="model-title">{{ page.title }}</h1>
+    
+    <div class="model-meta">
+      {% if page.category %}
+      <div class="meta-item">
+        <strong>Category:</strong> {{ page.category }}
+      </div>
+      {% endif %}
+      
+      {% if page.framework %}
+      <div class="meta-item">
+        <strong>Framework:</strong> {{ page.framework }}
+      </div>
+      {% endif %}
+      
+      {% if page.environment %}
+      <div class="meta-item">
+        <strong>Environment:</strong> {{ page.environment }}
+      </div>
+      {% endif %}
+      
+      {% if page.date %}
+      <div class="meta-item">
+        <strong>Created:</strong> {{ page.date | date: "%B %d, %Y" }}
+      </div>
+      {% endif %}
+      
+      {% if page.github_url %}
+      <div class="meta-item">
+        <strong>GitHub:</strong> <a href="{{ page.github_url }}" target="_blank">View Implementation</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="model-content">
+    {{ content }}
+  </div>
+</div>

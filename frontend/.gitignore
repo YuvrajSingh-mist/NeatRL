@@ -1,0 +1,42 @@
+# Ignore the contents of the _site directory
+_site/
+
+# Ignore the directory for local files during development
+local/
+
+# Ignore the Gemfile that is generated
+Gemfile.lock
+
+# Ignore files created by npm
+node_modules/
+package-lock.json
+
+# Ignore vendor directory (Ruby gems installed by Bundler)
+vendor/
+.bundle/
+
+# Ignore other Jekyll and Ruby related files
+.sass-cache/
+.jekyll-cache/
+.jekyll-metadata
+
+# Ignore OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Ignore IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Ignore temporary files
+*.tmp
+*.bak
+*.log

@@ -1,0 +1,76 @@
+<!-- Dark Mode Toggle Button and Script -->
+<button class="dark-mode-toggle" id="darkModeToggle" aria-label="Toggle dark mode">
+  <span id="darkModeIcon">🌙</span>
+</button>
+
+<script>
+// Apply theme immediately to prevent flash
+(function() {
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  document.body.setAttribute('data-theme', savedTheme);
+})();
+
+document.addEventListener('DOMContentLoaded', function() {
+  const toggleButton = document.getElementById('darkModeToggle');
+  const toggleIcon = document.getElementById('darkModeIcon');
+  const body = document.body;
+  const html = document.documentElement;
+  
+  // Check for saved theme preference or default to 'light'
+  const currentTheme = localStorage.getItem('theme') || 'light';
+  
+  // Apply the saved theme to both html and body
+  function applyTheme(theme) {
+    html.setAttribute('data-theme', theme);
+    body.setAttribute('data-theme', theme);
+    
+    // Update icon
+    if (theme === 'dark') {
+      toggleIcon.textContent = '☀️';
+    } else {
+      toggleIcon.textContent = '🌙';
+    }
+  }
+  
+  // Apply initial theme
+  applyTheme(currentTheme);
+  
+  // Toggle theme function
+  function toggleTheme() {
+    const currentTheme = html.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    
+    applyTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    
+    // Force a repaint to ensure all styles are applied
+    setTimeout(() => {
+      document.body.style.display = 'none';
+      document.body.offsetHeight; // Trigger reflow
+      document.body.style.display = '';
+    }, 10);
+  }
+  
+  // Add click event listener
+  toggleButton.addEventListener('click', toggleTheme);
+  
+  // Add keyboard support
+  toggleButton.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      toggleTheme();
+    }
+  });
+  
+  // Listen for system theme changes
+  if (window.matchMedia) {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    mediaQuery.addListener(function(e) {
+      if (!localStorage.getItem('theme')) {
+        applyTheme(e.matches ? 'dark' : 'light');
+      }
+    });
+  }
+});
+</script>

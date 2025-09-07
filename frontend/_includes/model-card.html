@@ -1,0 +1,34 @@
+{% include base_path %}
+
+{% if post.id %}
+  {% assign title = post.title | markdownify | remove: "<p>" | remove: "</p>" %}
+{% else %}
+  {% assign title = post.title %}
+{% endif %}
+
+{% assign model_id = post.title | slugify %}
+{% assign repo_url = post.github_url | default: "https://github.com/YuvrajSingh-mist/Paper-Replications" %}
+
+<div class="model-card">
+  <div class="model-card__image" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <span>{{ title }}</span>
+  </div>
+  
+  <div class="model-card__content">
+    <h3 class="model-card__title">
+      {{ title }}
+    </h3>
+    
+    {% if post.excerpt %}
+    <div class="model-card__excerpt">
+      {{ post.excerpt | markdownify | strip_html | truncatewords: 15 | replace: "Paper Replications repository", "From Scratch Implementation" }}
+    </div>
+    {% endif %}
+    
+    <div class="model-card__footer">
+      <a href="{{ base_path }}{{ post.url }}" class="model-details-btn" rel="permalink">
+        Model Details
+      </a>
+    </div>
+  </div>
+</div>

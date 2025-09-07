@@ -1,0 +1,255 @@
+---
+layout: archive
+title: "RL From Scratch"
+permalink: /rl/
+author_profile: false
+---
+
+{% include base_path %}
+
+<link rel="stylesheet" href="{{ '/assets/css/models.css' | relative_url }}?v={{ site.time | date: '%s' }}">
+
+<div class="models-page">
+  <div class="models-intro">
+    <h1>Reinforcement Learning From Scratch</h1>
+    <p>Collection of RL algorithms implemented from scratch in PyTorch. From Q-Learning to Multi-Agent RL, explore fundamental and advanced reinforcement learning concepts.</p>
+  </div>
+
+  <!-- Search Section -->
+  <div class="search-section">
+    <div class="search-container">
+      <input type="text" id="rl-search" placeholder="🔍 Search RL algorithms (e.g., DQN, PPO, A2C, MARL...)">
+    </div>
+    
+    <!-- Tag Filters -->
+    <div class="search-filters">
+      <span class="filter-label">Filter by category:</span>
+      <button class="filter-btn active" data-tag="all">All</button>
+      <button class="filter-btn" data-tag="value-based">Value-Based</button>
+      <button class="filter-btn" data-tag="policy-based">Policy-Based</button>
+      <button class="filter-btn" data-tag="actor-critic">Actor-Critic</button>
+      <button class="filter-btn" data-tag="multi-agent">Multi-Agent</button>
+      <button class="filter-btn" data-tag="exploration">Exploration</button>
+      <button class="filter-btn" data-tag="imitation-learning">Imitation Learning</button>
+      <button class="filter-btn" data-tag="game-environments">Game Environments</button>
+    </div>
+    
+    <div class="search-results-info">
+      <span id="search-results-count"></span>
+      <button id="clear-search" style="display: none;">Clear Filters</button>
+    </div>
+  </div>
+
+  <div class="models-grid" id="rl-container">
+    {% for post in site.rl %}
+      <div class="rl-wrapper" 
+           data-category="{{ post.category | downcase | replace: '/', '-' | replace: ' ', '-' }}"
+           data-categories="{{ post.categories | join: ',' | downcase | replace: '/', '-' | replace: ' ', '-' }}"
+           data-name="{{ post.title }}"
+           data-framework="{{ post.framework }}"
+           data-environment="{{ post.environment }}"
+           data-date="{{ post.date | date: '%Y-%m-%d' }}">
+        {% include rl-card.html %}
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- No results message -->
+  <div id="no-results" class="no-results-message" style="display: none;">
+    <i class="fas fa-search fa-3x"></i>
+    <h3>No RL algorithms found</h3>
+    <p>Try adjusting your search terms or filters to find what you're looking for.</p>
+  </div>
+
+  <!-- Hidden data container for GitHub dates -->
+  <script type="application/json" id="rl-github-data">
+    {{ site.data.rl | jsonify }}
+  </script>
+</div>
+
+<style>
+/* Search styles */
+.search-section {
+    margin: 30px 0;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.search-container input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+    margin-bottom: 15px;
+}
+
+.search-results-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    color: #666;
+}
+
+#clear-search {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.rl-wrapper {
+    display: block;
+}
+
+.rl-wrapper.hidden {
+    display: none !important;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔍 RL page loaded - initializing search and filters...');
+    
+    // Initialize search and filtering functionality
+    setTimeout(function() {
+        initializeRLFiltering();
+    }, 100);
+    
+    function initializeRLFiltering() {
+        const searchInput = document.getElementById('rl-search');
+        const clearButton = document.getElementById('clear-search');
+        const resultsCount = document.getElementById('search-results-count');
+        const tagButtons = document.querySelectorAll('.filter-btn[data-tag]');
+        const noResults = document.getElementById('no-results');
+        const rlContainer = document.getElementById('rl-container');
+        
+        // Store all RL algorithms for filtering
+        const allAlgorithms = Array.from(document.querySelectorAll('.rl-wrapper')).map(wrapper => {
+            const category = wrapper.getAttribute('data-category') || '';
+            const categoriesAttr = wrapper.getAttribute('data-categories') || '';
+            const categories = categoriesAttr ? categoriesAttr.split(',').filter(Boolean) : [];
+            return {
+                element: wrapper,
+                name: wrapper.querySelector('.model-card__title')?.textContent.toLowerCase() || '',
+                description: wrapper.querySelector('.model-card__excerpt')?.textContent.toLowerCase() || '',
+                category: category,
+                categories: categories,
+                framework: wrapper.getAttribute('data-framework') || '',
+                environment: wrapper.getAttribute('data-environment') || ''
+            };
+        });
+        
+        let currentQuery = '';
+        let currentTag = 'all';
+        
+        updateResultsCount(allAlgorithms.length);
+        
+        // Search input handler
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                currentQuery = this.value.toLowerCase().trim();
+                filterAlgorithms();
+                updateClearButton();
+            });
+        }
+        
+        // Tag filter handlers
+        tagButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Remove active class from all buttons
+                tagButtons.forEach(btn => btn.classList.remove('active'));
+                // Add active class to clicked button
+                this.classList.add('active');
+                
+                currentTag = this.getAttribute('data-tag');
+                filterAlgorithms();
+                updateClearButton();
+            });
+        });
+        
+        // Clear search handler
+        if (clearButton) {
+            clearButton.addEventListener('click', function() {
+                searchInput.value = '';
+                currentQuery = '';
+                currentTag = 'all';
+                
+                // Reset tag filter to "All"
+                tagButtons.forEach(btn => btn.classList.remove('active'));
+                document.querySelector('.filter-btn[data-tag="all"]')?.classList.add('active');
+                
+                filterAlgorithms();
+                updateClearButton();
+            });
+        }
+        
+        function filterAlgorithms() {
+            console.log(`🔍 Filtering RL - Query: "${currentQuery}", Category: "${currentTag}"`);
+            
+            const filteredAlgorithms = allAlgorithms.filter(algorithm => {
+                // Text search filter
+                const matchesSearch = !currentQuery || 
+                    algorithm.name.includes(currentQuery) || 
+                    algorithm.description.includes(currentQuery) ||
+                    algorithm.framework.toLowerCase().includes(currentQuery) ||
+                    algorithm.environment.toLowerCase().includes(currentQuery);
+                
+                // Category filter
+                const matchesCategory = currentTag === 'all' || algorithm.category === currentTag || (algorithm.categories && algorithm.categories.includes(currentTag));
+                
+                return matchesSearch && matchesCategory;
+            });
+            
+            // Show/hide algorithms
+            allAlgorithms.forEach(algorithm => {
+                if (filteredAlgorithms.includes(algorithm)) {
+                    algorithm.element.style.display = 'block';
+                    algorithm.element.classList.remove('hidden');
+                } else {
+                    algorithm.element.style.display = 'none';
+                    algorithm.element.classList.add('hidden');
+                }
+            });
+            
+            // Show/hide no results message
+            if (filteredAlgorithms.length === 0) {
+                noResults.style.display = 'block';
+                rlContainer.style.display = 'none';
+            } else {
+                noResults.style.display = 'none';
+                rlContainer.style.display = 'grid';
+            }
+            
+            console.log(`✅ Filtered from ${allAlgorithms.length} to ${filteredAlgorithms.length} RL algorithms`);
+            updateResultsCount(filteredAlgorithms.length);
+        }
+        
+        function updateClearButton() {
+            if (clearButton) {
+                if (currentQuery || currentTag !== 'all') {
+                    clearButton.style.display = 'inline-block';
+                } else {
+                    clearButton.style.display = 'none';
+                }
+            }
+        }
+        
+        function updateResultsCount(count) {
+            if (resultsCount) {
+                if (count === allAlgorithms.length) {
+                    resultsCount.textContent = `Showing all ${count} RL algorithms`;
+                } else {
+                    resultsCount.textContent = `Found ${count} algorithm${count !== 1 ? 's' : ''}`;
+                }
+            }
+        }
+        
+        console.log('✅ RL filtering initialized with', allAlgorithms.length, 'algorithms');
+    }
+});
+</script>

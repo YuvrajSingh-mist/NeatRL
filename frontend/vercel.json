@@ -1,0 +1,28 @@
+{
+  "redirects": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "smolhub.com"
+        }
+      ],
+      "destination": "https://www.smolhub.com/smolhub/",
+      "permanent": true
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.smolhub.com"
+        }
+      ],
+      "destination": "https://www.smolhub.com/smolhub/",
+      "permanent": true
+    }
+  ],
+  "cleanUrls": true,
+  "trailingSlash": false
+}

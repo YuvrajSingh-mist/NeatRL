@@ -1,0 +1,665 @@
+---
+layout: archive
+title: "SmolHub Playground!"
+permalink: /smolhub/
+author_profile: true
+---
+
+{% include base_path %}
+
+<link rel="stylesheet" href="{{ base_path }}/assets/css/models.css">
+
+<div class="models-page">
+  <div class="models-intro">
+    <h1>SmolHub Playground! 🚀</h1>
+    <p>Welcome to our experimental playground! Here you'll find small-scale models, proof-of-concepts, and fun AI experiments. Perfect for learning, testing ideas, and rapid prototyping.</p>
+  </div>
+
+  <!-- Search and Filter Section -->
+  <div class="search-section">
+    <div class="search-container">
+      <input type="text" id="smolhub-search" placeholder="🔍 Search projects (e.g., Mixtral, Transformer, PyTorch...)">
+    </div>
+    
+    <!-- Tag Filters -->
+    <div class="search-filters">
+      <span class="filter-label">Filter by tags:</span>
+      <button class="filter-btn active" data-tag="all">All</button>
+      <button class="filter-btn" data-tag="language-model">Language Models</button>
+      <button class="filter-btn" data-tag="transformer">Transformers</button>
+      <button class="filter-btn" data-tag="translation">Translation</button>
+      <button class="filter-btn" data-tag="storytelling">Storytelling</button>
+      <button class="filter-btn" data-tag="mixture-of-experts">MoE</button>
+      <button class="filter-btn" data-tag="compact">Compact</button>
+      <button class="filter-btn" data-tag="educational">Educational</button>
+    </div>
+    
+    <div class="search-results-info">
+      <span id="search-results-count"></span>
+      <button id="clear-search" style="display: none;">Clear Filters</button>
+    </div>
+  </div>
+
+  <div class="models-grid" id="smolhub-container">
+    {% for post in site.smolhub %}
+      <div class="smolhub-wrapper" 
+           data-tags="{{ post.tags | join: ',' | downcase }}"
+           data-name="{{ post.title }}"
+           data-date="{{ post.date | date: '%Y-%m-%d' }}">
+        {% include smolhub-card.html %}
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- No results message -->
+  <div id="no-results" class="no-results-message" style="display: none;">
+    <i class="fas fa-search fa-3x"></i>
+    <h3>No projects found</h3>
+    <p>Try adjusting your search terms or filters to find what you're looking for.</p>
+  </div>
+
+  <!-- Hidden data container for GitHub dates and project data -->
+  <script type="application/json" id="smolhub-github-data">
+    {{ site.data.smolhub_playground | jsonify }}
+  </script>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔍 SmolHub playground loaded - initializing search and filters...');
+    
+    // Initialize search and filtering functionality
+    setTimeout(function() {
+        initializeSmolHubFiltering();
+    }, 100);
+    
+    function initializeSmolHubFiltering() {
+        const searchInput = document.getElementById('smolhub-search');
+        const clearButton = document.getElementById('clear-search');
+        const resultsCount = document.getElementById('search-results-count');
+        const tagButtons = document.querySelectorAll('.filter-btn[data-tag]');
+        const noResults = document.getElementById('no-results');
+        const smolhubContainer = document.getElementById('smolhub-container');
+        
+        // Store all projects for filtering using manual tags from frontmatter
+        const allProjects = Array.from(document.querySelectorAll('.smolhub-wrapper')).map(wrapper => {
+            const tags = wrapper.getAttribute('data-tags') || '';
+            return {
+                element: wrapper,
+                name: wrapper.querySelector('.model-card__title')?.textContent.toLowerCase() || '',
+                description: wrapper.querySelector('.model-card__excerpt')?.textContent.toLowerCase() || '',
+                tags: tags
+            };
+        });
+        
+        let currentQuery = '';
+        let currentTag = 'all';
+        
+        updateResultsCount(allProjects.length);
+        
+        // Search input handler
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                currentQuery = this.value.toLowerCase().trim();
+                filterProjects();
+                updateClearButton();
+            });
+        }
+        
+        // Tag filter handlers
+        tagButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Remove active class from all buttons
+                tagButtons.forEach(btn => btn.classList.remove('active'));
+                // Add active class to clicked button
+                this.classList.add('active');
+                
+                currentTag = this.getAttribute('data-tag');
+                filterProjects();
+                updateClearButton();
+            });
+        });
+        
+        // Clear search handler
+        if (clearButton) {
+            clearButton.addEventListener('click', function() {
+                searchInput.value = '';
+                currentQuery = '';
+                currentTag = 'all';
+                
+                // Reset tag filter to "All"
+                tagButtons.forEach(btn => btn.classList.remove('active'));
+                document.querySelector('.filter-btn[data-tag="all"]')?.classList.add('active');
+                
+                filterProjects();
+                updateClearButton();
+            });
+        }
+        
+        function filterProjects() {
+            console.log(`🔍 Filtering - Query: "${currentQuery}", Tag: "${currentTag}"`);
+            
+            const filteredProjects = allProjects.filter(project => {
+                // Text search filter
+                const matchesSearch = !currentQuery || 
+                    project.name.includes(currentQuery) || 
+                    project.description.includes(currentQuery);
+                
+                // Tag filter - use manual tags from frontmatter
+                const matchesTag = currentTag === 'all' || 
+                    project.tags.toLowerCase().includes(currentTag.toLowerCase());
+                
+                console.log(`Project: ${project.name.substring(0, 20)}..., Tags: "${project.tags}", MatchesTag: ${matchesTag}, MatchesSearch: ${matchesSearch}`);
+                
+                return matchesSearch && matchesTag;
+            });
+            
+            // Show/hide projects
+            allProjects.forEach(project => {
+                if (filteredProjects.includes(project)) {
+                    project.element.style.display = 'block';
+                    project.element.classList.remove('hidden');
+                } else {
+                    project.element.style.display = 'none';
+                    project.element.classList.add('hidden');
+                }
+            });
+            
+            // Show/hide no results message
+            if (filteredProjects.length === 0) {
+                noResults.style.display = 'block';
+                smolhubContainer.style.display = 'none';
+            } else {
+                noResults.style.display = 'none';
+                smolhubContainer.style.display = 'grid';
+            }
+            
+            console.log(`✅ Filtered from ${allProjects.length} to ${filteredProjects.length} projects`);
+            updateResultsCount(filteredProjects.length);
+        }
+        
+        function updateClearButton() {
+            if (clearButton) {
+                if (currentQuery || currentTag !== 'all') {
+                    clearButton.style.display = 'inline-block';
+                } else {
+                    clearButton.style.display = 'none';
+                }
+            }
+        }
+        
+        function updateResultsCount(count) {
+            if (resultsCount) {
+                if (count === allProjects.length) {
+                    resultsCount.textContent = `Showing all ${count} projects`;
+                } else {
+                    resultsCount.textContent = `Found ${count} project${count !== 1 ? 's' : ''}`;
+                }
+            }
+        }
+        
+                console.log('✅ SmolHub filtering initialized with', allProjects.length, 'projects using manual tags');
+    }
+});
+</script>
+
+<script>
+// Function to show smolhub detail page
+    }
+});
+</script>
+
+<script>
+    }
+});
+</script>
+
+<script>
+// Function to show smolhub detail page
+        
+        function generateDynamicTagFilters() {
+            // Get GitHub data
+            const githubDataScript = document.getElementById('smolhub-github-data');
+            if (!githubDataScript) return;
+            
+            try {
+                const githubData = JSON.parse(githubDataScript.textContent);
+                if (!githubData.projects) return;
+                
+                // Collect all unique tags
+                const allTags = new Set();
+                githubData.projects.forEach(project => {
+                    if (project.tags && Array.isArray(project.tags)) {
+                        project.tags.forEach(tag => allTags.add(tag.toLowerCase()));
+                    }
+                });
+                
+                // Sort tags alphabetically
+                const sortedTags = Array.from(allTags).sort();
+                
+                // Create tag filter buttons
+                sortedTags.forEach(tag => {
+                    const tagButton = document.createElement('button');
+                    tagButton.className = 'filter-btn';
+                    tagButton.setAttribute('data-tag', tag);
+                    tagButton.textContent = capitalizeFirst(tag);
+                    
+                    // Add click event listener
+                    tagButton.addEventListener('click', handleTagClick);
+                    
+                    // Insert after the "All" button
+                    searchFilters.appendChild(tagButton);
+                });
+                
+                // Add event listener to the "All" button
+                const allButton = document.querySelector('.filter-btn[data-tag="all"]');
+                if (allButton) {
+                    allButton.addEventListener('click', handleTagClick);
+                    console.log('✅ Added event listener to "All" button');
+                } else {
+                    console.warn('⚠️ Could not find "All" button');
+                }
+                
+                console.log('📋 Generated tag filters:', sortedTags);
+                
+            } catch (error) {
+                console.error('Error generating tag filters:', error);
+            }
+        }
+        
+        function capitalizeFirst(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+        
+        function handleTagClick(event) {
+            const tagButtons = document.querySelectorAll('.filter-btn[data-tag]');
+            const clickedTag = event.target.getAttribute('data-tag');
+            
+            console.log('🏷️ Tag clicked:', `"${clickedTag}"`);
+            
+            // Remove active class from all tag buttons
+            tagButtons.forEach(btn => btn.classList.remove('active'));
+            // Add active class to clicked button
+            event.target.classList.add('active');
+            
+            activeTag = clickedTag;
+            filterProjects();
+            updateClearButtonVisibility();
+        }
+        
+        // Search input handler
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                currentSearchQuery = this.value.toLowerCase().trim();
+                filterProjects();
+                updateClearButtonVisibility();
+            });
+        }
+        
+        // Clear search handler
+        if (clearButton) {
+            clearButton.addEventListener('click', function() {
+                // Reset search
+                if (searchInput) searchInput.value = '';
+                currentSearchQuery = '';
+                
+                // Reset tag filters
+                const tagButtons = document.querySelectorAll('.filter-btn[data-tag]');
+                tagButtons.forEach(btn => btn.classList.remove('active'));
+                document.querySelector('.filter-btn[data-tag="all"]')?.classList.add('active');
+                activeTag = 'all';
+                
+                filterProjects();
+                updateClearButtonVisibility();
+            });
+        }
+        
+        function filterProjects() {
+            const allProjects = window.smolhubFilteringData?.allProjects || [];
+            
+            console.log('🔍 Filtering projects - Query:', `"${currentSearchQuery}"`, 'Tag:', `"${activeTag}"`);
+            console.log('📋 Total projects available:', allProjects.length);
+            
+            const filteredProjects = allProjects.filter(project => {
+                // Text search filter
+                const matchesSearch = !currentSearchQuery || 
+                    project.name.includes(currentSearchQuery) || 
+                    project.description.includes(currentSearchQuery) ||
+                    project.tags.toLowerCase().includes(currentSearchQuery);
+                
+                // Tag filter
+                const matchesTag = activeTag === 'all' || 
+                    project.tags.toLowerCase().includes(activeTag.toLowerCase());
+                
+                // Debug each project
+                console.log('🔍 Project:', 
+                    project.name.substring(0, 15) + '...', 
+                    ', Tags:', `"${project.tags}"`, 
+                    ', ActiveTag:', `"${activeTag}"`,
+                    ', Matches:', matchesSearch && matchesTag
+                );
+                
+                return matchesSearch && matchesTag;
+            });
+            
+            console.log('✅ Filtered from', allProjects.length, 'to', filteredProjects.length, 'projects');
+            
+            // Show/hide projects
+            allProjects.forEach(project => {
+                if (filteredProjects.includes(project)) {
+                    project.element.style.display = 'block';
+                    project.element.classList.remove('hidden');
+                } else {
+                    project.element.style.display = 'none';
+                    project.element.classList.add('hidden');
+                }
+            });
+            
+            // Show/hide no results message
+            if (filteredProjects.length === 0) {
+                noResults.style.display = 'block';
+                smolhubContainer.style.display = 'none';
+            } else {
+                noResults.style.display = 'none';
+                smolhubContainer.style.display = 'grid';
+            }
+            
+            updateResultsCount(filteredProjects.length);
+        }
+        
+        function updateResultsCount(count) {
+            const allProjects = window.smolhubFilteringData?.allProjects || [];
+            if (resultsCount) {
+                if (count === allProjects.length) {
+                    resultsCount.textContent = `Showing all ${count} projects`;
+                } else {
+                    resultsCount.textContent = `Found ${count} project${count !== 1 ? 's' : ''}`;
+                }
+            }
+        }
+        
+        function updateClearButtonVisibility() {
+            const hasFilters = currentSearchQuery || activeTag !== 'all';
+            if (clearButton) {
+                clearButton.style.display = hasFilters ? 'inline-block' : 'none';
+            }
+        }
+    }
+    
+    function initializeSmolHubEnhancement() {
+        console.log('🎮 SmolHub playground loaded - initializing project enhancements...');
+        
+        // Load GitHub dates and project data
+        loadGitHubDatesAndProjectData();
+    }
+    
+    function loadGitHubDatesAndProjectData() {
+        console.log('📅 Loading GitHub creation dates and project data for SmolHub...');
+        
+        const githubDataScript = document.getElementById('smolhub-github-data');
+        if (!githubDataScript) {
+            console.warn('⚠️ No SmolHub GitHub data found');
+            return;
+        }
+        
+        try {
+            const githubData = JSON.parse(githubDataScript.textContent);
+            console.log('📊 SmolHub GitHub data loaded:', githubData);
+            
+            if (!githubData.projects) {
+                console.warn('⚠️ No projects in SmolHub GitHub data');
+                return;
+            }
+            
+            // Create mapping of project names to GitHub dates and data
+            const nameToData = {};
+            githubData.projects.forEach(project => {
+                nameToData[project.name] = {
+                    githubDate: project.github_date || project.created_date,
+                    description: project.description,
+                    tags: project.tags || [],
+                    githubUrl: project.github_url,
+                    readmeContent: project.readme_content
+                };
+            });
+            
+            console.log('📅 SmolHub data mapping created:', nameToData);
+            
+            // Update project cards and store data for detail view
+            window.smolhubData = window.smolhubData || {};
+            let updatedCards = 0;
+            
+            document.querySelectorAll('.model-card').forEach(card => {
+                const titleElement = card.querySelector('.model-card__title');
+                if (!titleElement) return;
+                
+                const projectTitle = titleElement.textContent.trim();
+                
+                // Find matching GitHub data
+                let projectData = null;
+                let matchedKey = null;
+                for (const [name, data] of Object.entries(nameToData)) {
+                    // Match by name similarity
+                    if (name.toLowerCase().replace(/[^a-z0-9]/g, '') === 
+                        projectTitle.toLowerCase().replace(/[^a-z0-9]/g, '') ||
+                        projectTitle.toLowerCase().includes(name.toLowerCase()) ||
+                        name.toLowerCase().includes(projectTitle.toLowerCase())) {
+                        projectData = data;
+                        matchedKey = name;
+                        break;
+                    }
+                }
+                
+                if (projectData) {
+                    // Store data for detail view
+                    const smolhubId = projectTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    window.smolhubData[smolhubId] = {
+                        title: projectTitle,
+                        description: projectData.description,
+                        repoUrl: projectData.githubUrl,
+                        readmeContent: projectData.readmeContent
+                    };
+                    
+                    // Update data-tags attribute for filtering
+                    if (projectData.tags && projectData.tags.length > 0) {
+                        const tagsString = projectData.tags.join(',').toLowerCase();
+                        card.setAttribute('data-tags', tagsString);
+                        console.log(`🏷️ Updated tags for ${projectTitle}:`, tagsString);
+                    }
+                    
+                    // Add date info to the project card
+                    let dateElement = card.querySelector('.model-card__date');
+                    if (!dateElement) {
+                        dateElement = document.createElement('div');
+                        dateElement.className = 'model-card__date';
+                        
+                        // Try to insert before footer, otherwise append at end
+                        const footer = card.querySelector('.model-card__footer');
+                        try {
+                            if (footer && footer.parentNode === card) {
+                                card.insertBefore(dateElement, footer);
+                            } else {
+                                card.appendChild(dateElement);
+                            }
+                        } catch (e) {
+                            console.warn('Failed to insert date element, appending instead:', e);
+                            card.appendChild(dateElement);
+                        }
+                    }
+                    
+                    // Format date nicely
+                    const formattedDate = new Date(projectData.githubDate).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                    
+                    dateElement.innerHTML = `<small>🎮 Created: ${formattedDate}</small>`;
+                    
+                    // Add tags if available
+                    if (projectData.tags && projectData.tags.length > 0) {
+                        let tagsElement = card.querySelector('.model-card__tags');
+                        if (!tagsElement) {
+                            tagsElement = document.createElement('div');
+                            tagsElement.className = 'model-card__tags';
+                            // Insert before date element
+                            if (dateElement.parentNode === card) {
+                                card.insertBefore(tagsElement, dateElement);
+                            } else {
+                                card.appendChild(tagsElement);
+                            }
+                        }
+                        
+                        const tagLabels = projectData.tags.slice(0, 3).map(tag => 
+                            `<span class="tag" style="background: #e3f2fd; color: #1976d2; padding: 2px 6px; border-radius: 3px; font-size: 11px; margin: 0 2px;">${tag}</span>`
+                        ).join(' ');
+                        
+                        tagsElement.innerHTML = `<div style="margin: 5px 0;">${tagLabels}</div>`;
+                    }
+                    
+                    console.log(`🎮 Enhanced ${projectTitle} with data from ${matchedKey}`);
+                    updatedCards++;
+                }
+            });
+            
+            console.log(`✅ Updated ${updatedCards} SmolHub project cards with GitHub data`);
+            
+            // Refresh the allProjects array with updated tag data
+            refreshProjectsList();
+            
+        } catch (error) {
+            console.error('❌ Error parsing SmolHub GitHub data:', error);
+        }
+    }
+    
+    // Function to refresh the projects list after tags are updated
+    function refreshProjectsList() {
+        // Update the allProjects array in the filtering scope
+        if (window.smolhubFilteringData) {
+            window.smolhubFilteringData.allProjects = Array.from(document.querySelectorAll('.smolhub-card')).map(card => ({
+                element: card,
+                name: card.querySelector('.model-card__title')?.textContent.toLowerCase() || '',
+                description: card.querySelector('.model-card__excerpt')?.textContent.toLowerCase() || '',
+                tags: card.getAttribute('data-tags') || ''
+            }));
+            
+            console.log('🔄 Refreshed projects list with updated tags:', 
+                window.smolhubFilteringData.allProjects.map(p => ({
+                    name: p.name.substring(0, 20) + '...',
+                    tags: p.tags
+                }))
+            );
+        }
+    }
+});
+
+// Function to show smolhub detail page
+function showSmolhubDetail(smolhubId) {
+    const smolhubData = window.smolhubData && window.smolhubData[smolhubId];
+    if (!smolhubData) {
+        alert('SmolHub data not found');
+        return;
+    }
+    
+    // Create detail page HTML
+    const detailPageHTML = `
+        <div class="model-detail-page">
+            <div class="model-detail-header">
+                <button class="back-btn" onclick="goBackToSmolhub()">
+                    <i class="fa fa-arrow-left"></i> Back to Playground
+                </button>
+                <h1 class="model-detail-title">${smolhubData.title} 🎮</h1>
+                <div class="model-action-buttons">
+                    <a href="${smolhubData.repoUrl}" target="_blank" rel="noopener" class="action-btn github-btn">
+                        <i class="fab fa-github"></i> View on GitHub
+                    </a>
+                    ${smolhubData.title === 'Story Kimi' ? 
+                        `<a href="https://huggingface.co/spaces/YuvrajSingh9886/StoryKimi-Zero" target="_blank" rel="noopener" class="action-btn huggingface-btn">
+                            🤗 Try it
+                        </a>` : 
+                        `<a href="https://huggingface.co/YuvrajSingh9886" target="_blank" rel="noopener" class="action-btn huggingface-btn">
+                            🤗 HuggingFace Profile
+                        </a>`
+                    }
+                </div>
+            </div>
+            
+            <div class="model-detail-content">
+                <div class="readme-content">
+                    ${markdownToHTML(smolhubData.readmeContent || `# ${smolhubData.title}\n\n${smolhubData.description}\n\nThis is an experimental project from our SmolHub Playground!`)}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Hide smolhub grid and show detail page
+    document.querySelector('.models-intro').style.display = 'none';
+    document.querySelector('.models-grid').style.display = 'none';
+    
+    // Create detail container if it doesn't exist
+    let detailContainer = document.getElementById('smolhub-detail-container');
+    if (!detailContainer) {
+        detailContainer = document.createElement('div');
+        detailContainer.id = 'smolhub-detail-container';
+        document.querySelector('.models-page').appendChild(detailContainer);
+    }
+    
+    detailContainer.innerHTML = detailPageHTML;
+    detailContainer.style.display = 'block';
+    
+    // Scroll to top
+    window.scrollTo(0, 0);
+}
+
+// Function to go back to smolhub grid
+function goBackToSmolhub() {
+    document.querySelector('.models-intro').style.display = 'block';
+    document.querySelector('.models-grid').style.display = 'grid';
+    
+    const detailContainer = document.getElementById('smolhub-detail-container');
+    if (detailContainer) {
+        detailContainer.style.display = 'none';
+    }
+    
+    // Scroll to top
+    window.scrollTo(0, 0);
+}
+
+// Simple markdown to HTML converter (reuse from models)
+function markdownToHTML(markdown) {
+    let html = markdown;
+    
+    // Headers
+    html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+    html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+    html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+    
+    // Bold and italic
+    html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    
+    // Code blocks
+    html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+    html = html.replace(/`(.*?)`/g, '<code>$1</code>');
+    
+    // Links
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    
+    // Line breaks
+    html = html.replace(/\n\n/g, '</p><p>');
+    html = html.replace(/\n/g, '<br>');
+    
+    // Wrap in paragraphs
+    html = '<p>' + html + '</p>';
+    
+    // Fix empty paragraphs
+    html = html.replace(/<p><\/p>/g, '');
+    html = html.replace(/<p><h/g, '<h');
+    html = html.replace(/<\/h([1-6])><\/p>/g, '</h$1>');
+    html = html.replace(/<p><pre>/g, '<pre>');
+    html = html.replace(/<\/pre><\/p>/g, '</pre>');
+    
+    return html;
+}
+</script>

@@ -99,42 +99,6 @@ services:
       - 8.8.8.8
       - 1.1.1.1
 
-  arena:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.arena
-    volumes:
-      - ./arena_battle_system.py:/app/arena_battle_system.py
-      - ./requirements.arena.txt:/app/requirements.arena.txt
-      - ./ale_play_script.py:/app/ale_play_script.py
-      - ./start_arena.sh:/app/start_arena.sh
-      - ./web_server.py:/app/web_server.py
-      - ./frontend/game_interface.html:/app/frontend/game_interface.html
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
-    ports:
-      - "8765:8765"
-      - "5901:5901"  # VNC port (fallback)
-      - "8080:8080"  # Web display port
-      - "8081:8081"  # WebSocket port
-    env_file: .env
-    environment:
-      - PYTHONUNBUFFERED=1
-      - PYTHONHASHSEED=0
-      - DISPLAY=${DISPLAY:-:0}  # Use host display if available
-      - VNC_DISPLAY=:1
-    # Enable X11 forwarding for better performance
-    privileged: true
-    depends_on:
-      - api
-    networks:
-      - rl-net
-    healthcheck:
-      test: ["CMD", "python", "-c", "import gymnasium; print('Arena healthy')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-
   worker-heavy:
     build:
       context: .
@@ -187,6 +151,7 @@ services:
   #   # platform: linux/arm64
   #   profiles:
   #     - evaluator
+
   evaluator-gpu:
     image: rl-evaluator-gpu:latest
     build:
@@ -203,28 +168,6 @@ services:
               capabilities: [gpu]
     profiles:
       - evaluator
-  frontend:
-    build:
-      context: .
-      dockerfile: frontend/Dockerfile
-    command: python /home/appuser/frontend/gradio_app.py
-    ports:
-      - "7860:7860"
-    volumes:
-      - ./frontend:/home/appuser/frontend
-    environment:
-    # RUN pip install --no-cache-dir torch==2.1.0 --index-url https://download.pytorch.org/whl/cu121
-      - API_URL=${API_URL}
-    depends_on:
-      - api
-    networks:
-      - rl-net
-    healthcheck:
-      test: ["CMD-SHELL", "python -c 'import urllib.request,sys; sys.exit(0 if urllib.request.urlopen(\"http://localhost:7860\", timeout=5).status==200 else 1)' "]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
   redis-commander:
     image: rediscommander/redis-commander:latest
     environment:
@@ -315,7 +258,7 @@ services:
       - --storage.path=/data
     volumes:
       - ./alertmanager/config.yml:/etc/alertmanager/config.yml:ro
-      - ${ALERTMANAGER_SMTP_PASSWORD_FILE}:/run/secrets/alertmanager_smtp_password:ro
+      # Removed SMTP password secret since email notifications are disabled
       - alertmanager_data:/data
     ports:
       - "9093:9093"
@@ -366,6 +309,26 @@ services:
       - "9100:9100"
     networks:
       - rl-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./frontend:/app
+      - /app/vendor
+      - /app/.bundle
+    networks:
+      - rl-net
+    environment:
+      - JEKYLL_ENV=development
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   prometheus_data:

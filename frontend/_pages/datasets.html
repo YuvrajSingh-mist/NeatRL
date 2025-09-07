@@ -1,0 +1,536 @@
+---
+layout: archive
+title: "Datasets"
+permalink: /datasets/
+author_profile: true
+---
+
+{% include base_path %}
+
+<link rel="stylesheet" href="{{ base_path }}/assets/css/models.css">
+
+<div class="models-page">
+  <div class="models-intro">
+    <h1>Datasets Collection</h1>
+    <p>A showcase of some of my own datasets for some of my projects!efully preprocessed and documented for easy integration into your projects.</p>
+  </div>
+
+  <!-- Search and Filter Section -->
+  <div class="search-section">
+    <div class="search-container">
+      <input type="text" id="dataset-search" placeholder="🔍 Search datasets (e.g., QnA, irrigation, plant diseases...)">
+    </div>
+    
+    <!-- Tag Filters -->
+    <div class="search-filters">
+      <span class="filter-label">Filter by tags:</span>
+      <button class="filter-btn active" data-tag="all">All</button>
+      <button class="filter-btn" data-tag="qna">QnA</button>
+      <button class="filter-btn" data-tag="diseases">Diseases</button>
+      <button class="filter-btn" data-tag="irrigation">Irrigation</button>
+      <button class="filter-btn" data-tag="plant">Plant</button>
+      <button class="filter-btn" data-tag="soil">Soil</button>
+    </div>
+    
+    <div class="search-results-info">
+      <span id="search-results-count"></span>
+      <button id="clear-search" style="display: none;">Clear Filters</button>
+    </div>
+  </div>
+
+    <div class="models-grid" id="datasets-container">
+    {% for post in site.datasets %}
+      <div class="dataset-card" 
+           data-tags="{{ post.tags | join: ',' | downcase }}"
+           data-name="{{ post.title }}">
+        {% include dataset-card.html %}
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Hidden data container for GitHub dates -->
+  <script type="application/json" id="datasets-github-data">
+    {{ site.data.datasets | jsonify }}
+  </script>
+</div>
+
+  <!-- Hidden data container for GitHub dates -->
+  <script type="application/json" id="datasets-github-data">
+    {{ site.data.datasets | jsonify }}
+  </script>
+</div>
+
+<style>
+/* Search and filter styles */
+.search-section {
+    margin: 30px 0;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.search-container input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+    margin-bottom: 15px;
+}
+
+.search-filters {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+    align-items: center;
+}
+
+.filter-label {
+    font-weight: bold;
+    color: #333;
+    margin-right: 10px;
+}
+
+.filter-btn {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.filter-btn:hover {
+    background: #e9ecef;
+}
+
+.filter-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.search-results-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    color: #666;
+}
+
+#clear-search {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.dataset-card {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.dataset-card.hidden {
+    display: none;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔍 Datasets page loaded - initializing search and filters...');
+    
+    // Initialize search and filtering functionality
+    setTimeout(function() {
+        initializeDatasetFiltering();
+    }, 100);
+    
+    function initializeDatasetFiltering() {
+        const searchInput = document.getElementById('dataset-search');
+        const clearButton = document.getElementById('clear-search');
+        const resultsCount = document.getElementById('search-results-count');
+        const tagButtons = document.querySelectorAll('.filter-btn[data-tag]');
+        
+        // Store all datasets for filtering
+        const allDatasets = Array.from(document.querySelectorAll('.dataset-card')).map(card => ({
+            element: card,
+            name: card.querySelector('.model-card__title')?.textContent.toLowerCase() || '',
+            description: card.querySelector('.model-card__excerpt')?.textContent.toLowerCase() || '',
+            tags: card.getAttribute('data-tags') || ''
+        }));
+        
+        let currentSearchQuery = '';
+        let activeTag = 'all';
+        
+        updateResultsCount(allDatasets.length);
+        
+        // Search input handler
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                currentSearchQuery = this.value.toLowerCase().trim();
+                filterDatasets();
+                updateClearButtonVisibility();
+            });
+        }
+        
+        // Tag filter handlers
+        tagButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Remove active class from all tag buttons
+                tagButtons.forEach(btn => btn.classList.remove('active'));
+                // Add active class to clicked button
+                this.classList.add('active');
+                
+                activeTag = this.getAttribute('data-tag');
+                filterDatasets();
+                updateClearButtonVisibility();
+            });
+        });
+        
+        // Clear search handler
+        if (clearButton) {
+            clearButton.addEventListener('click', function() {
+                // Reset search
+                searchInput.value = '';
+                currentSearchQuery = '';
+                
+                // Reset tag filters
+                tagButtons.forEach(btn => btn.classList.remove('active'));
+                document.querySelector('.filter-btn[data-tag="all"]').classList.add('active');
+                activeTag = 'all';
+                
+                filterDatasets();
+                updateClearButtonVisibility();
+            });
+        }
+        
+        function filterDatasets() {
+            const filteredDatasets = allDatasets.filter(dataset => {
+                // Text search filter
+                const matchesSearch = !currentSearchQuery || 
+                    dataset.name.includes(currentSearchQuery) || 
+                    dataset.description.includes(currentSearchQuery) ||
+                    dataset.tags.includes(currentSearchQuery);
+                
+                // Tag filter
+                const matchesTag = activeTag === 'all' || 
+                    dataset.tags.includes(activeTag);
+                
+                return matchesSearch && matchesTag;
+            });
+            
+            // Show/hide datasets
+            allDatasets.forEach(dataset => {
+                if (filteredDatasets.includes(dataset)) {
+                    dataset.element.style.display = 'block';
+                    dataset.element.classList.remove('hidden');
+                } else {
+                    dataset.element.style.display = 'none';
+                    dataset.element.classList.add('hidden');
+                }
+            });
+            
+            updateResultsCount(filteredDatasets.length);
+        }
+        
+        function updateResultsCount(count) {
+            if (resultsCount) {
+                if (count === allDatasets.length) {
+                    resultsCount.textContent = `Showing all ${count} datasets`;
+                } else {
+                    resultsCount.textContent = `Found ${count} dataset${count !== 1 ? 's' : ''}`;
+                }
+            }
+        }
+        
+        function updateClearButtonVisibility() {
+            const hasFilters = currentSearchQuery || 
+                               activeTag !== 'all';
+            
+            if (clearButton) {
+                clearButton.style.display = hasFilters ? 'inline-block' : 'none';
+            }
+        }
+        
+        console.log('✅ Dataset filtering initialized with', allDatasets.length, 'datasets');
+        
+        // Load GitHub dates
+        loadDatasetGitHubDates();
+    }
+    
+    function loadDatasetGitHubDates() {
+        console.log('📅 Loading dataset GitHub creation dates...');
+        
+        const githubDataScript = document.getElementById('datasets-github-data');
+        if (!githubDataScript) {
+            console.warn('⚠️ No GitHub data found for datasets');
+            return;
+        }
+        
+        try {
+            const githubData = JSON.parse(githubDataScript.textContent);
+            console.log('📊 Dataset GitHub data loaded:', githubData);
+            
+            if (!githubData.datasets) {
+                console.warn('⚠️ No datasets in GitHub data');
+                return;
+            }
+            
+            // Create mapping of dataset names to GitHub dates
+            const nameToDate = {};
+            githubData.datasets.forEach(dataset => {
+                if (dataset.github_date || dataset.created_date) {
+                    nameToDate[dataset.name] = dataset.github_date || dataset.created_date;
+                }
+            });
+            
+            console.log('📅 Dataset date mapping created:', nameToDate);
+            
+            // Update dataset cards with GitHub dates
+            let updatedCards = 0;
+            document.querySelectorAll('.dataset-card').forEach(card => {
+                const datasetName = card.dataset.name;
+                if (!datasetName) return;
+                
+                // Find matching GitHub date
+                let githubDate = null;
+                for (const [name, date] of Object.entries(nameToDate)) {
+                    if (name.toLowerCase().replace(/[^a-z0-9]/g, '') === 
+                        datasetName.toLowerCase().replace(/[^a-z0-9]/g, '')) {
+                        githubDate = date;
+                        break;
+                    }
+                }
+                
+                if (githubDate) {
+                    // Add date info to the dataset card
+                    const modelCard = card.querySelector('.model-card');
+                    if (modelCard) {
+                        let dateElement = modelCard.querySelector('.model-card__date');
+                        if (!dateElement) {
+                            dateElement = document.createElement('div');
+                            dateElement.className = 'model-card__date';
+                            
+                            // Insert before footer
+                            const footer = modelCard.querySelector('.model-card__footer');
+                            if (footer) {
+                                modelCard.insertBefore(dateElement, footer);
+                            } else {
+                                modelCard.appendChild(dateElement);
+                            }
+                        }
+                        
+                        // Format date nicely
+                        const formattedDate = new Date(githubDate).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                        });
+                        
+                        dateElement.innerHTML = `<small>📅 Created: ${formattedDate}</small>`;
+                        updatedCards++;
+                    }
+                }
+            });
+            
+            console.log(`✅ Updated ${updatedCards} dataset cards with GitHub dates`);
+            
+        } catch (error) {
+            console.error('❌ Error parsing dataset GitHub data:', error);
+        }
+    }
+    
+    // Function to show dataset detail page
+    window.showDatasetDetail = function(datasetId) {
+        const datasetData = window.datasetData && window.datasetData[datasetId];
+        if (!datasetData) {
+            alert('Dataset data not found');
+            return;
+        }
+        
+        // Create detail page HTML
+        const detailPageHTML = `
+            <div class="model-detail-page">
+                <div class="model-detail-header">
+                    <button class="back-btn" onclick="goBackToDatasets()">
+                        <i class="fa fa-arrow-left"></i> Back to Datasets
+                    </button>
+                    <h1 class="model-detail-title">${datasetData.title}</h1>
+                    <div class="model-action-buttons">
+                        <a href="${datasetData.repoUrl}" target="_blank" rel="noopener" class="action-btn github-btn">
+                            <i class="fab fa-github"></i> View on GitHub
+                        </a>
+                        <a href="https://huggingface.co/YuvrajSingh9886" target="_blank" rel="noopener" class="action-btn huggingface-btn">
+                            🤗 HuggingFace Profile
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="model-detail-content">
+                    <div class="readme-content">
+                        ${markdownToHTML(datasetData.readmeContent || `# ${datasetData.title}\n\n${datasetData.description}\n\nThis dataset is part of our curated collection.`)}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Hide datasets grid and show detail page
+        document.querySelector('.models-intro').style.display = 'none';
+        document.querySelector('.models-grid').style.display = 'none';
+        
+        // Create detail container if it doesn't exist
+        let detailContainer = document.getElementById('dataset-detail-container');
+        if (!detailContainer) {
+            detailContainer = document.createElement('div');
+            detailContainer.id = 'dataset-detail-container';
+            document.querySelector('.models-page').appendChild(detailContainer);
+        }
+        
+        detailContainer.innerHTML = detailPageHTML;
+        detailContainer.style.display = 'block';
+        
+        // Scroll to top
+        window.scrollTo(0, 0);
+    }
+    
+    // Function to go back to datasets grid
+    window.goBackToDatasets = function() {
+        document.querySelector('.models-intro').style.display = 'block';
+        document.querySelector('.models-grid').style.display = 'grid';
+        
+        const detailContainer = document.getElementById('dataset-detail-container');
+        if (detailContainer) {
+            detailContainer.style.display = 'none';
+        }
+        
+        // Scroll to top
+        window.scrollTo(0, 0);
+    }
+    
+    // Simple markdown to HTML converter (reuse from models)
+    function markdownToHTML(markdown) {
+        let html = markdown;
+        
+        // Headers
+        html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+        html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+        html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+        
+        // Bold and italic
+        html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        
+        // Code blocks
+        html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+        html = html.replace(/`(.*?)`/g, '<code>$1</code>');
+        
+        // Links
+        html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+        
+        // Line breaks
+        html = html.replace(/\n\n/g, '</p><p>');
+        html = html.replace(/\n/g, '<br>');
+        
+        // Wrap in paragraphs
+        html = '<p>' + html + '</p>';
+        
+        // Fix empty paragraphs
+        html = html.replace(/<p><\/p>/g, '');
+        html = html.replace(/<p><h/g, '<h');
+        html = html.replace(/<\/h([1-6])><\/p>/g, '</h$1>');
+        html = html.replace(/<p><pre>/g, '<pre>');
+        html = html.replace(/<\/pre><\/p>/g, '</pre>');
+        
+        return html;
+    }
+    
+    // Load GitHub dates from JSON data
+    function loadDatasetGitHubDates() {
+        console.log('📅 Loading dataset GitHub creation dates...');
+        
+        const githubDataScript = document.getElementById('datasets-github-data');
+        if (!githubDataScript) {
+            console.warn('⚠️ No GitHub data found for datasets');
+            return;
+        }
+        
+        try {
+            const githubData = JSON.parse(githubDataScript.textContent);
+            console.log('📊 Dataset GitHub data loaded:', githubData);
+            
+            if (!githubData.datasets) {
+                console.warn('⚠️ No datasets in GitHub data');
+                return;
+            }
+            
+            // Create mapping of dataset names to GitHub dates
+            const nameToDate = {};
+            githubData.datasets.forEach(dataset => {
+                if (dataset.github_date || dataset.created_date) {
+                    nameToDate[dataset.name] = dataset.github_date || dataset.created_date;
+                }
+            });
+            
+            console.log('📅 Dataset date mapping created:', nameToDate);
+            
+            // Update dataset cards with GitHub dates
+            let updatedCards = 0;
+            document.querySelectorAll('.dataset-card').forEach(wrapper => {
+                const datasetName = wrapper.dataset.name;
+                if (!datasetName) return;
+                
+                // Find matching GitHub date
+                let githubDate = null;
+                for (const [name, date] of Object.entries(nameToDate)) {
+                    if (name.toLowerCase().replace(/[^a-z0-9]/g, '') === 
+                        datasetName.toLowerCase().replace(/[^a-z0-9]/g, '')) {
+                        githubDate = date;
+                        break;
+                    }
+                }
+                
+                if (githubDate) {
+                    // Add date info to the dataset card
+                    const modelCard = wrapper.querySelector('.model-card');
+                    if (modelCard) {
+                        let dateElement = modelCard.querySelector('.model-card__date');
+                        if (!dateElement) {
+                            dateElement = document.createElement('div');
+                            dateElement.className = 'model-card__date';
+                            
+                            // Insert before footer
+                            const footer = modelCard.querySelector('.model-card__footer');
+                            if (footer) {
+                                modelCard.insertBefore(dateElement, footer);
+                            } else {
+                                modelCard.appendChild(dateElement);
+                            }
+                        }
+                        
+                        // Format date nicely
+                        const formattedDate = new Date(githubDate).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                        });
+                        
+                        dateElement.innerHTML = `<small>📅 Created: ${formattedDate}</small>`;
+                        updatedCards++;
+                    }
+                }
+            });
+            
+            console.log(`✅ Updated ${updatedCards} dataset cards with GitHub dates`);
+            
+        } catch (error) {
+            console.error('❌ Error parsing dataset GitHub data:', error);
+        }
+    }
+    
+    // Initialize dataset dates on page load
+    loadDatasetGitHubDates();
+});
+</script>

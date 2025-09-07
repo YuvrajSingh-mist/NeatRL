@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test SmolHub Tags</title>
+</head>
+<body>
+    <h1>SmolHub Tags Test</h1>
+    <p>Updated tags should now be:</p>
+    <ul>
+        <li><strong>SmolMixtral:</strong> mixtral, pytorch, generation, compact</li>
+        <li><strong>SmolTransformer:</strong> transformer, pytorch, translation, compact</li>
+        <li><strong>StoryKimi:</strong> kimi, pytorch, storytelling, experimental</li>
+        <li><strong>StoryLlama:</strong> llama, pytorch, storytelling, compact</li>
+        <li><strong>StoryMixtral:</strong> mixtral, pytorch, storytelling, compact</li>
+    </ul>
+    
+    <p>❌ Removed incorrect tags: vision (no vision models!), distributed, interactive, optimized, educational</p>
+    <p>✅ Kept relevant tags: pytorch (common framework), compact (all are small models), specific model types</p>
+    
+    <script>
+        // Test the JSON data
+        fetch('_data/smolhub_playground.json')
+            .then(response => response.json())
+            .then(data => {
+                console.log('Updated SmolHub data:', data);
+                data.projects.forEach(project => {
+                    console.log(`${project.name}: ${project.tags.join(', ')}`);
+                });
+            })
+            .catch(error => console.error('Error:', error));
+    </script>
+</body>
+</html>

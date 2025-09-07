@@ -1,0 +1,155 @@
+---
+layout: single
+---
+
+<style>
+.paper-replication-page {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.simple-header {
+  margin-bottom: 30px;
+  text-align: left;
+}
+
+.paper-title {
+  font-size: 2.5em;
+  margin-bottom: 15px;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.paper-meta {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  padding: 15px 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.meta-item {
+  background: #f8f9fa;
+  padding: 6px 12px;
+  border-radius: 15px;
+  font-size: 0.9em;
+  color: #666;
+}
+
+.paper-content {
+  background: white;
+  padding: 40px 0;
+  line-height: 1.8;
+}
+
+.paper-content h1,
+.paper-content h2,
+.paper-content h3 {
+  color: #2c3e50;
+  margin-top: 30px;
+  margin-bottom: 15px;
+}
+
+.paper-content h2 {
+  border-bottom: 2px solid #667eea;
+  padding-bottom: 8px;
+}
+
+.paper-content pre {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 20px;
+  overflow-x: auto;
+}
+
+.paper-content code {
+  background: #f8f9fa;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+.paper-content blockquote {
+  border-left: 4px solid #667eea;
+  margin: 20px 0;
+  padding: 15px 20px;
+  background: #f8f9fa;
+  border-radius: 0 6px 6px 0;
+}
+
+.paper-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+}
+
+.paper-content th,
+.paper-content td {
+  border: 1px solid #ddd;
+  padding: 12px;
+  text-align: left;
+}
+
+.paper-content th {
+  background: #f8f9fa;
+  font-weight: 600;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #667eea;
+  text-decoration: none;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+.back-link:hover {
+  color: #5a67d8;
+  text-decoration: none;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .paper-title {
+    font-size: 2em;
+  }
+  
+  .paper-meta {
+    gap: 10px;
+  }
+  
+  .paper-content {
+    padding: 25px 0;
+  }
+}
+</style>
+
+<div class="paper-replication-page">
+  <a href="/models/" class="back-link">
+    ← Back to Paper Replications
+  </a>
+  
+  <div class="simple-header">
+    <h1 class="paper-title">{{ page.title }}</h1>
+    
+    <div class="paper-meta">
+      <div class="meta-item">
+        <strong>Framework:</strong> {{ page.framework | default: "PyTorch" }}
+      </div>
+      <div class="meta-item">
+        <strong>Dataset:</strong> {{ page.dataset | default: "Custom" }}
+      </div>
+      <div class="meta-item">
+        <strong>Category:</strong> {{ page.category | default: "Machine Learning" }}
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-content">
+    {{ content }}
+  </div>
+</div>

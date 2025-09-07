@@ -1,0 +1,408 @@
+/* ===== GLOBAL DARK MODE STYLES ===== */
+
+/* Dark mode toggle button - DISABLED */
+.dark-mode-toggle {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+[data-theme="dark"] .dark-mode-toggle {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+[data-theme="dark"] .dark-mode-toggle:hover {
+    display: none !important;
+}
+
+/* Global dark mode styles */
+[data-theme="dark"] {
+    color-scheme: dark;
+}
+
+[data-theme="dark"] body {
+    background-color: #1a202c;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6 {
+    color: #f7fafc;
+}
+
+[data-theme="dark"] p {
+    color: #cbd5e0;
+}
+
+[data-theme="dark"] a {
+    color: #63b3ed;
+}
+
+[data-theme="dark"] a:hover {
+    color: #90cdf4;
+}
+
+/* Dark mode for main content area */
+[data-theme="dark"] .page {
+    background-color: #1a202c;
+}
+
+[data-theme="dark"] .page__content {
+    background-color: #1a202c;
+}
+
+/* Dark mode for masthead */
+[data-theme="dark"] .masthead {
+    background-color: #2d3748;
+    border-bottom-color: #4a5568;
+}
+
+[data-theme="dark"] .site-title {
+    color: #f7fafc;
+}
+
+[data-theme="dark"] .site-title:hover {
+    color: #63b3ed;
+}
+
+/* Dark mode for navigation */
+[data-theme="dark"] .visible-links a {
+    color: #cbd5e0;
+}
+
+[data-theme="dark"] .visible-links a:hover {
+    color: #63b3ed;
+}
+
+[data-theme="dark"] .hidden-links {
+    background: #2d3748;
+    border-color: #4a5568;
+}
+
+[data-theme="dark"] .hidden-links a {
+    color: #cbd5e0;
+}
+
+[data-theme="dark"] .hidden-links a:hover {
+    color: #63b3ed;
+    background: #4a5568;
+}
+
+/* Dark mode for sidebar */
+[data-theme="dark"] .sidebar {
+    background-color: transparent !important;
+    background: transparent !important;
+    border-right: none;
+    border: none;
+}
+
+[data-theme="dark"] .sidebar .author__avatar {
+    margin-bottom: 20px;
+}
+
+[data-theme="dark"] .author__avatar img {
+    border-color: #4a5568;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .author__content {
+    background: transparent !important;
+}
+
+[data-theme="dark"] .author__content h3 {
+    color: #f7fafc;
+    font-weight: 600;
+}
+
+[data-theme="dark"] .author__bio {
+    color: #a0aec0;
+    line-height: 1.6;
+}
+
+[data-theme="dark"] .author__urls {
+    color: #a0aec0;
+    background: transparent !important;
+    border: none;
+    margin-top: 15px;
+    box-shadow: none !important;
+}
+
+[data-theme="dark"] .author__urls li {
+    background: transparent !important;
+    border: none;
+}
+
+[data-theme="dark"] .author__urls a {
+    color: #63b3ed;
+    background: transparent !important;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+[data-theme="dark"] .author__urls a:hover {
+    color: #90cdf4;
+    background: rgba(99, 179, 237, 0.1) !important;
+    border-radius: 4px;
+    transform: translateX(2px);
+}
+
+[data-theme="dark"] .author__urls i {
+    color: #cbd5e0;
+    transition: color 0.3s ease;
+}
+
+[data-theme="dark"] .author__urls a:hover i {
+    color: #90cdf4;
+}
+
+/* Dark mode for footer */
+[data-theme="dark"] .page__footer {
+    background-color: #2d3748;
+    border-top-color: #4a5568;
+}
+
+[data-theme="dark"] .page__footer-copyright {
+    color: #a0aec0;
+}
+
+[data-theme="dark"] .page__footer a {
+    color: #63b3ed;
+}
+
+[data-theme="dark"] .page__footer a:hover {
+    color: #90cdf4;
+}
+
+/* Dark mode for code blocks */
+[data-theme="dark"] code {
+    background-color: #2d3748;
+    color: #e2e8f0;
+    border-color: #4a5568;
+}
+
+[data-theme="dark"] pre {
+    background-color: #1a202c;
+    border-color: #4a5568;
+}
+
+[data-theme="dark"] pre code {
+    background-color: transparent;
+}
+
+/* Dark mode for blockquotes */
+[data-theme="dark"] blockquote {
+    background-color: #2d3748;
+    border-left-color: #63b3ed;
+    color: #cbd5e0;
+}
+
+/* Dark mode for forms */
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="email"],
+[data-theme="dark"] input[type="url"],
+[data-theme="dark"] input[type="password"],
+[data-theme="dark"] input[type="search"],
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+    background-color: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] input:focus,
+[data-theme="dark"] textarea:focus,
+[data-theme="dark"] select:focus {
+    border-color: #63b3ed;
+    box-shadow: 0 0 5px rgba(99, 179, 237, 0.3);
+}
+
+/* Dark mode for notices */
+[data-theme="dark"] .notice {
+    background-color: #2d3748;
+    border-color: #4a5568;
+    color: #cbd5e0;
+}
+
+[data-theme="dark"] .notice--primary {
+    background-color: #1e3a8a;
+    border-color: #3b82f6;
+}
+
+[data-theme="dark"] .notice--info {
+    background-color: #0c4a6e;
+    border-color: #0ea5e9;
+}
+
+[data-theme="dark"] .notice--warning {
+    background-color: #92400e;
+    border-color: #f59e0b;
+}
+
+[data-theme="dark"] .notice--danger {
+    background-color: #991b1b;
+    border-color: #ef4444;
+}
+
+[data-theme="dark"] .notice--success {
+    background-color: #166534;
+    border-color: #22c55e;
+}
+
+/* Dark mode for archive lists */
+[data-theme="dark"] .archive__item {
+    border-bottom-color: #4a5568;
+}
+
+[data-theme="dark"] .archive__item-title {
+    color: #f7fafc;
+}
+
+[data-theme="dark"] .archive__item-title a {
+    color: #63b3ed;
+}
+
+[data-theme="dark"] .archive__item-title a:hover {
+    color: #90cdf4;
+}
+
+[data-theme="dark"] .archive__item-excerpt {
+    color: #a0aec0;
+}
+
+/* Dark mode for pagination */
+[data-theme="dark"] .pagination {
+    border-color: #4a5568;
+}
+
+[data-theme="dark"] .pagination li {
+    border-right-color: #4a5568;
+}
+
+[data-theme="dark"] .pagination li a {
+    background-color: #2d3748;
+    color: #cbd5e0;
+}
+
+[data-theme="dark"] .pagination li a:hover {
+    background-color: #4a5568;
+    color: #63b3ed;
+}
+
+[data-theme="dark"] .pagination li.current {
+    background-color: #3182ce;
+}
+
+[data-theme="dark"] .pagination li.current a {
+    background-color: transparent;
+    color: #ffffff;
+}
+
+/* Dark mode for search */
+[data-theme="dark"] .search-content {
+    background-color: #2d3748;
+    border-color: #4a5568;
+}
+
+[data-theme="dark"] .search-content__form {
+    background-color: #1a202c;
+}
+
+[data-theme="dark"] .search-content__input {
+    background-color: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+/* Dark mode for toc */
+[data-theme="dark"] .toc {
+    background-color: #2d3748;
+    border-color: #4a5568;
+}
+
+[data-theme="dark"] .toc__title {
+    color: #f7fafc;
+}
+
+[data-theme="dark"] .toc a {
+    color: #cbd5e0;
+}
+
+[data-theme="dark"] .toc a:hover {
+    color: #63b3ed;
+}
+
+/* Additional sidebar improvements for dark mode */
+[data-theme="dark"] .sidebar__right {
+    background-color: transparent !important;
+    background: transparent !important;
+    border-left: none;
+    border: none;
+}
+
+[data-theme="dark"] .sidebar .nav__list {
+    background: transparent !important;
+}
+
+[data-theme="dark"] .sidebar .nav__list .nav__item {
+    background: transparent !important;
+    border: none;
+}
+
+[data-theme="dark"] .sidebar .nav__list .nav__item a {
+    color: #cbd5e0;
+    background: transparent !important;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+[data-theme="dark"] .sidebar .nav__list .nav__item a:hover {
+    color: #63b3ed;
+    background: rgba(99, 179, 237, 0.1) !important;
+    border-radius: 4px;
+}
+
+/* Ensure profile sidebar elements blend well */
+[data-theme="dark"] .sidebar .author__name {
+    color: #f7fafc;
+}
+
+[data-theme="dark"] .sidebar .author__meta {
+    color: #a0aec0;
+}
+
+[data-theme="dark"] .sidebar .author__urls-wrapper {
+    background: transparent !important;
+}
+
+[data-theme="dark"] .sidebar .nav__title {
+    color: #f7fafc;
+    background: transparent !important;
+    border-bottom: 1px solid #4a5568;
+}
+
+/* Force override any sidebar backgrounds */
+[data-theme="dark"] .sidebar,
+[data-theme="dark"] .sidebar *,
+[data-theme="dark"] .sidebar__right,
+[data-theme="dark"] .sidebar__right * {
+    background-color: transparent !important;
+}
+
+/* But preserve specific hover effects */
+[data-theme="dark"] .sidebar .author__urls a:hover,
+[data-theme="dark"] .sidebar .nav__list .nav__item a:hover {
+    background: rgba(99, 179, 237, 0.1) !important;
+}
+
+/* Dark mode transitions */
+* {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}

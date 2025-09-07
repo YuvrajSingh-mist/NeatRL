@@ -1,5 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Form
 from sqlalchemy.orm import Session
+from typing import Optional
 from app.db.session import get_db
 from app.models import Submission
 from app.core.celery import evaluate_submission_task
@@ -120,7 +121,7 @@ async def submit_rl_script(
             raise HTTPException(400, "main_file is required when uploading multiple files")
         if not chosen_main.lower().endswith('.py'):
             SUBMISSIONS_VALIDATION_FAILURES_TOTAL.labels(reason="main_not_py").inc()
-r            real_metrics.record_validation_failure("main_not_py")
+            real_metrics.record_validation_failure("main_not_py")
             raise HTTPException(400, "main_file must be a Python (.py) file")
 
         # Build tar archive in-memory; include all files at root
@@ -295,4 +296,36 @@ def get_evaluation_results(submission_id: str, db: Session = Depends(get_db)):
         "algorithm": submission.algorithm,
         "created_at": submission.created_at.isoformat() if submission.created_at else None,
         "error": submission.error
+    }
+
+@router.get("/submissions")
+def get_submissions(
+    user_id: Optional[str] = None,
+    limit: int = 10,
+    offset: int = 0,
+    db: Session = Depends(get_db)
+):
+    """Get submissions, optionally filtered by user_id"""
+    query = db.query(Submission)
+    
+    if user_id:
+        query = query.filter(Submission.user_id == user_id)
+    
+    submissions = query.order_by(Submission.created_at.desc()).offset(offset).limit(limit).all()
+    
+    return {
+        "submissions": [
+            {
+                "id": sub.id,
+                "user_id": sub.user_id,
+                "status": sub.status,
+                "score": sub.score,
+                "env_id": sub.env_id,
+                "algorithm": sub.algorithm,
+                "created_at": sub.created_at.isoformat() if sub.created_at else None,
+                "error": sub.error
+            }
+            for sub in submissions
+        ],
+        "count": len(submissions)
     }

@@ -1,0 +1,471 @@
+{% include base_path %}
+
+<!-- start custom head snippets -->
+
+<link rel="apple-touch-icon" sizes="57x57" href="{{ base_path }}/images/apple-touch-icon-57x57.png?v=M44lzPylqQ">
+<link rel="apple-touch-icon" sizes="60x60" href="{{ base_path }}/images/apple-touch-icon-60x60.png?v=M44lzPylqQ">
+<link rel="apple-touch-icon" sizes="72x72" href="{{ base_path }}/images/apple-touch-icon-72x72.png?v=M44lzPylqQ">
+<link rel="apple-touch-icon" sizes="76x76" href="{{ base_path }}/images/apple-touch-icon-76x76.png?v=M44lzPylqQ">
+<link rel="apple-touch-icon" sizes="114x114" href="{{ base_path }}/images/apple-touch-icon-114x114.png?v=M44lzPylqQ">
+<link rel="apple-touch-icon" sizes="120x120" href="{{ base_path }}/images/apple-touch-icon-120x120.png?v=M44lzPylqQ">
+<link rel="apple-touch-icon" sizes="144x144" href="{{ base_path }}/images/apple-touch-icon-144x144.png?v=M44lzPylqQ">
+<link rel="apple-touch-icon" sizes="152x152" href="{{ base_path }}/images/apple-touch-icon-152x152.png?v=M44lzPylqQ">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ base_path }}/images/apple-touch-icon-180x180.png?v=M44lzPylqQ">
+<link rel="icon" type="image/png" href="{{ base_path }}/images/favicon-32x32.png?v=M44lzPylqQ" sizes="32x32">
+<link rel="icon" type="image/png" href="{{ base_path }}/images/android-chrome-192x192.png?v=M44lzPylqQ" sizes="192x192">
+<link rel="icon" type="image/png" href="{{ base_path }}/images/favicon-96x96.png?v=M44lzPylqQ" sizes="96x96">
+<link rel="icon" type="image/png" href="{{ base_path }}/images/favicon-16x16.png?v=M44lzPylqQ" sizes="16x16">
+<link rel="manifest" href="{{ base_path }}/images/manifest.json?v=M44lzPylqQ">
+<link rel="mask-icon" href="{{ base_path }}/images/safari-pinned-tab.svg?v=M44lzPylqQ" color="#000000">
+<link rel="shortcut icon" href="/images/favicon.ico?v=M44lzPylqQ">
+<meta name="msapplication-TileColor" content="#000000">
+<meta name="msapplication-TileImage" content="{{ base_path }}/images/mstile-144x144.png?v=M44lzPylqQ">
+<meta name="msapplication-config" content="{{ base_path }}/images/browserconfig.xml?v=M44lzPylqQ">
+<meta name="theme-color" content="#ffffff">
+<link rel="stylesheet" href="{{ base_path }}/assets/css/academicons.css"/>
+
+<!-- Dark Mode CSS -->
+<style>
+  /* Dark mode toggle button */
+  .dark-mode-toggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    background: var(--toggle-bg, #f1f1f1);
+    border: none;
+    border-radius: 50px;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  }
+  
+  .dark-mode-toggle:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  }
+
+  /* Dark mode variables */
+  :root {
+    --bg-color: #ffffff;
+    --text-color: #333333;
+    --sidebar-bg: #f8f9fa;
+    --border-color: #e9ecef;
+    --link-color: #0066cc;
+    --code-bg: #f8f9fa;
+    --toggle-bg: #f1f1f1;
+    --card-bg: #ffffff;
+    --nav-bg: #ffffff;
+  }
+
+  [data-theme="dark"] {
+    --bg-color: #1a1a1a;
+    --text-color: #e0e0e0;
+    --sidebar-bg: #2d2d2d;
+    --border-color: #404040;
+    --link-color: #66b3ff;
+    --code-bg: #2d2d2d;
+    --toggle-bg: #404040;
+    --card-bg: #2d2d2d;
+    --nav-bg: #2d2d2d;
+  }
+
+  /* Comprehensive dark mode styles */
+  [data-theme="dark"] {
+    background-color: var(--bg-color) !important;
+    color: var(--text-color) !important;
+  }
+
+  [data-theme="dark"] body,
+  [data-theme="dark"] html {
+    background-color: var(--bg-color) !important;
+    color: var(--text-color) !important;
+  }
+
+  /* Navigation and header */
+  [data-theme="dark"] .masthead,
+  [data-theme="dark"] .greedy-nav,
+  [data-theme="dark"] .site-nav {
+    background-color: var(--nav-bg) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+  }
+
+  [data-theme="dark"] .greedy-nav a,
+  [data-theme="dark"] .site-title,
+  [data-theme="dark"] .nav__item a {
+    color: var(--text-color) !important;
+  }
+
+  [data-theme="dark"] .greedy-nav .visible-links a:hover,
+  [data-theme="dark"] .nav__item a:hover {
+    color: var(--link-color) !important;
+  }
+
+  /* Sidebar */
+  [data-theme="dark"] .sidebar,
+  [data-theme="dark"] .author__content,
+  [data-theme="dark"] .author__bio {
+    background-color: var(--sidebar-bg) !important;
+    color: var(--text-color) !important;
+  }
+
+  [data-theme="dark"] .author__avatar img {
+    border: 2px solid var(--border-color) !important;
+  }
+
+  [data-theme="dark"] .author__urls a {
+    color: var(--text-color) !important;
+  }
+
+  [data-theme="dark"] .author__urls a:hover {
+    color: var(--link-color) !important;
+  }
+
+  /* Main content */
+  [data-theme="dark"] .page,
+  [data-theme="dark"] .page__content,
+  [data-theme="dark"] .page__inner-wrap,
+  [data-theme="dark"] article {
+    background-color: var(--bg-color) !important;
+    color: var(--text-color) !important;
+  }
+
+  [data-theme="dark"] .page__title,
+  [data-theme="dark"] h1, [data-theme="dark"] h2, 
+  [data-theme="dark"] h3, [data-theme="dark"] h4, 
+  [data-theme="dark"] h5, [data-theme="dark"] h6 {
+    color: var(--text-color) !important;
+  }
+
+  /* Links */
+  [data-theme="dark"] a {
+    color: var(--link-color) !important;
+  }
+
+  [data-theme="dark"] a:hover {
+    color: #88ccff !important;
+  }
+
+  /* Code blocks */
+  [data-theme="dark"] code,
+  [data-theme="dark"] pre,
+  [data-theme="dark"] .highlight {
+    background-color: var(--code-bg) !important;
+    color: var(--text-color) !important;
+    border: 1px solid var(--border-color) !important;
+  }
+
+  [data-theme="dark"] .highlight pre {
+    background-color: var(--code-bg) !important;
+  }
+
+  /* Tables */
+  [data-theme="dark"] table,
+  [data-theme="dark"] th,
+  [data-theme="dark"] td {
+    background-color: var(--card-bg) !important;
+    color: var(--text-color) !important;
+    border-color: var(--border-color) !important;
+  }
+
+  [data-theme="dark"] thead th {
+    background-color: var(--sidebar-bg) !important;
+  }
+
+  /* Blockquotes */
+  [data-theme="dark"] blockquote {
+    background-color: var(--sidebar-bg) !important;
+    border-left: 4px solid var(--link-color) !important;
+    color: var(--text-color) !important;
+  }
+
+  /* Cards and notices */
+  [data-theme="dark"] .notice,
+  [data-theme="dark"] .notice--primary,
+  [data-theme="dark"] .notice--info,
+  [data-theme="dark"] .notice--warning,
+  [data-theme="dark"] .notice--success,
+  [data-theme="dark"] .notice--danger {
+    background-color: var(--card-bg) !important;
+    color: var(--text-color) !important;
+    border: 1px solid var(--border-color) !important;
+  }
+
+  /* Footer */
+  [data-theme="dark"] .page__footer,
+  [data-theme="dark"] .page__footer-copyright {
+    background-color: var(--nav-bg) !important;
+    color: var(--text-color) !important;
+    border-top: 1px solid var(--border-color) !important;
+  }
+
+  [data-theme="dark"] .page__footer a {
+    color: var(--link-color) !important;
+  }
+
+  /* Lists */
+  [data-theme="dark"] .nav__list,
+  [data-theme="dark"] .nav__list .nav__item {
+    background-color: var(--sidebar-bg) !important;
+    color: var(--text-color) !important;
+  }
+
+  [data-theme="dark"] .nav__list .nav__item {
+    border-bottom: 1px solid var(--border-color) !important;
+  }
+
+  [data-theme="dark"] .nav__list a {
+    color: var(--text-color) !important;
+  }
+
+  [data-theme="dark"] .nav__list a:hover {
+    color: var(--link-color) !important;
+  }
+
+  /* Archive and taxonomy */
+  [data-theme="dark"] .archive,
+  [data-theme="dark"] .archive__item,
+  [data-theme="dark"] .archive__subtitle {
+    background-color: var(--bg-color) !important;
+    color: var(--text-color) !important;
+  }
+
+  [data-theme="dark"] .archive__item-title a {
+    color: var(--link-color) !important;
+  }
+
+  /* Forms and inputs */
+  [data-theme="dark"] input,
+  [data-theme="dark"] textarea,
+  [data-theme="dark"] select {
+    background-color: var(--card-bg) !important;
+    color: var(--text-color) !important;
+    border: 1px solid var(--border-color) !important;
+  }
+
+  /* Breadcrumbs */
+  [data-theme="dark"] .breadcrumbs {
+    background-color: var(--sidebar-bg) !important;
+    color: var(--text-color) !important;
+  }
+
+  [data-theme="dark"] .breadcrumbs a {
+    color: var(--link-color) !important;
+  }
+
+  /* Ensure smooth transitions */
+  * {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease !important;
+  }
+
+  /* Override any remaining light backgrounds */
+  [data-theme="dark"] div,
+  [data-theme="dark"] section,
+  [data-theme="dark"] main,
+  [data-theme="dark"] header,
+  [data-theme="dark"] footer,
+  [data-theme="dark"] nav {
+    background-color: inherit !important;
+  }
+
+  /* Wide tables for better readability on front page */
+  .page__content table.table-wide {
+    width: 100% !important;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  /* Header with action button */
+  .header-with-action {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0.5rem 0 0.75rem 0;
+  }
+  .header-with-action h2,
+  .header-with-action h3 {
+    margin: 0;
+  }
+
+  /* Hugging Face themed button */
+  .btn.btn--hf {
+    background-color: #ffcc4d; /* HF yellow */
+    color: #111 !important;
+    border: 1px solid #e0b100;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn.btn--hf:hover {
+    background-color: #ffd766;
+    color: #000 !important;
+    border-color: #d1a800;
+  }
+  [data-theme="dark"] .btn.btn--hf {
+    color: #111 !important;
+  }
+
+  .btn.btn--hf .hf-logo {
+    width: 18px;
+    height: 18px;
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+  /* Align header button on SmolHub page */
+  .header-with-action {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .page__content table.table-wide th,
+  .page__content table.table-wide td {
+    padding: 14px 16px;
+    border: 1px solid var(--border-color);
+    vertical-align: top;
+  }
+  .page__content table.table-wide thead th {
+    background: var(--sidebar-bg);
+    font-weight: 600;
+  }
+  .page__content table.table-wide .summary-col {
+    word-wrap: break-word;
+    word-break: break-word;
+  }
+  .page__content table.table-wide .meta-col {
+    word-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
+  }
+  .page__content table.table-wide .summary-bullets {
+    margin: 0;
+    padding-left: 1.2rem;
+  }
+  .page__content table.table-wide .summary-bullets li {
+    margin-bottom: 0.25rem;
+  }
+
+  /* Card-like lists for Projects, Experience, Education */
+  .projects-list > ul,
+  .experience-list > ul,
+  .education-list > ul {
+    margin: 0;
+    padding-left: 0;
+  }
+  .projects-list > ul > li,
+  .experience-list > ul > li,
+  .education-list > ul > li {
+    list-style: none;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--link-color);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+  }
+  .projects-list > ul > li a,
+  .experience-list > ul > li a,
+  .education-list > ul > li a {
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .projects-list > ul > li > ul,
+  .experience-list > ul > li > ul,
+  .education-list > ul > li > ul {
+    margin-top: 6px;
+    padding-left: 1.1rem;
+  }
+
+  /* Achievements list with blue gradient accent */
+  .achievements-list > ul {
+    margin: 0;
+    padding-left: 0;
+  }
+  .achievements-list > ul > li {
+    list-style: none;
+    background: linear-gradient(135deg, rgba(0, 102, 204, 0.12), rgba(0, 102, 204, 0) 60%);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--link-color);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+  }
+  [data-theme="dark"] .achievements-list > ul > li {
+    background: linear-gradient(135deg, rgba(102, 179, 255, 0.12), rgba(102, 179, 255, 0) 60%);
+  }
+  .achievements-list .achv-title {
+    font-weight: 600;
+  }
+  .achievements-list small {
+    display: inline-block;
+    margin-top: 4px;
+    opacity: 0.9;
+  }
+
+  /* Skills list and chips */
+  .skills-list > ul {
+    margin: 0;
+    padding-left: 0;
+  }
+  .skills-list > ul > li {
+    list-style: none;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--link-color);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+  }
+  .skill-chips {
+    margin-top: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .chip {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    background: rgba(0,0,0,0.03);
+    font-size: 0.9em;
+  }
+  [data-theme="dark"] .chip {
+    background: rgba(255,255,255,0.06);
+  }
+  .page__content table.table-wide tbody tr:nth-child(odd) {
+    background-color: rgba(0,0,0,0.02);
+  }
+  [data-theme="dark"] .page__content table.table-wide tbody tr:nth-child(odd) {
+    background-color: rgba(255,255,255,0.03);
+  }
+  .page__content table.table-wide ul {
+    margin: 0;
+    padding-left: 1.1rem;
+  }
+  .page__content table.table-wide a {
+    text-decoration: none;
+  }
+  @media (max-width: 768px) {
+    .page__content table.table-wide {
+      table-layout: auto;
+    }
+    .page__content table.table-wide th,
+    .page__content table.table-wide td {
+      word-break: break-word;
+    }
+  }
+</style>
+
+
+<!-- Support for MatJax -->
+<script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+<!-- end custom head snippets -->

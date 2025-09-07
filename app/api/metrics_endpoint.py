@@ -95,3 +95,31 @@ def get_evaluation_metrics(db: Session = Depends(get_db)):
         "by_environment": env_breakdown,
         "timestamp": now.isoformat()
     }
+
+@router.get("/stats/{stat_type}")
+def get_stat(stat_type: str, db: Session = Depends(get_db)):
+    """Get specific statistics for frontend display"""
+    
+    if stat_type == "submissions":
+        total_submissions = db.query(func.count(Submission.id)).scalar()
+        return {"count": total_submissions or 0}
+    
+    elif stat_type == "completed":
+        completed_submissions = db.query(func.count(Submission.id)).filter(Submission.status == "completed").scalar()
+        return {"count": completed_submissions or 0}
+    
+    elif stat_type == "failed":
+        failed_submissions = db.query(func.count(Submission.id)).filter(Submission.status == "failed").scalar()
+        return {"count": failed_submissions or 0}
+    
+    elif stat_type == "success-rate":
+        total = db.query(func.count(Submission.id)).scalar() or 0
+        completed = db.query(func.count(Submission.id)).filter(Submission.status == "completed").scalar() or 0
+        if total > 0:
+            rate = round((completed / total) * 100, 1)
+        else:
+            rate = 0
+        return {"count": f"{rate}%"}
+    
+    else:
+        return {"count": 0}

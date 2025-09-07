@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: yuvraj-portfolio
+    env: ruby
+    plan: free
+    buildCommand: |
+      gem install bundler --no-document
+      bundle config set --local path 'vendor/bundle'
+      bundle config set --local without 'development test'
+      bundle install
+      JEKYLL_ENV=production bundle exec jekyll build
+    startCommand: |
+      export BUNDLE_PATH="vendor/bundle"
+      bundle exec jekyll serve --host 0.0.0.0 --port $PORT --skip-initial-build
+    envVars:
+      - key: JEKYLL_ENV
+        value: production
+      - key: BUNDLE_WITHOUT
+        value: development:test
+      - key: BUNDLE_PATH
+        value: vendor/bundle
+      - key: NODE_ENV
+        value: production
+      - key: GITHUB_TOKEN
+        sync: false
+    domains:
+      - yuvraj-portfolio.onrender.com

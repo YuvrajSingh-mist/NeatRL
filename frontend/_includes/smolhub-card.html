@@ -1,0 +1,78 @@
+{% include base_path %}
+
+{% if post.id %}
+  {% assign title = post.title | markdownify | remove: "<p>" | remove: "</p>" %}
+{% else %}
+  {% assign title = post.title %}
+{% endif %}
+
+{% assign smolhub_id = post.title | slugify %}
+{% assign repo_url = post.github_url | default: "https://github.com/YuvrajSingh-mist/SmolHub" %}
+
+{% comment %} Get tags from GitHub data if available {% endcomment %}
+{% assign project_tags = "" %}
+{% for project in site.data.smolhub_playground.projects %}
+  {% assign project_name_clean = project.name | downcase | replace: " ", "" | replace: "-", "" %}
+  {% assign post_title_clean = title | downcase | replace: " ", "" | replace: "-", "" %}
+  {% if project_name_clean == post_title_clean or project.display_name == title %}
+    {% assign project_tags = project.tags | join: " " %}
+    {% break %}
+  {% endif %}
+{% endfor %}
+
+<div class="model-card smolhub-card" data-tags="{{ project_tags }}">
+  <div class="model-card__image" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);">
+    <span>{{ title }} 🎮</span>
+  </div>
+  
+  <div class="model-card__content">
+    <h3 class="model-card__title">
+      {{ title }}
+    </h3>
+    
+    {% if post.excerpt %}
+    <div class="model-card__excerpt">
+      {{ post.excerpt | markdownify | strip_html | truncatewords: 25 }}
+    </div>
+    {% endif %}
+    
+    {% comment %} Display tags if available {% endcomment %}
+    {% if project_tags != "" %}
+    <div class="model-card__tags">
+      {% assign tags_array = project_tags | split: " " %}
+      {% for tag in tags_array limit: 5 %}
+        <span class="tag">{{ tag }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+    
+    <div class="model-card__footer" style="display: flex; gap: 8px; align-items: center;">
+      <a href="{{ base_path }}{{ post.url }}" class="model-details-btn" rel="permalink" style="background: linear-gradient(135deg, #ff6b6b, #ee5a52); flex: 1;">
+        Explore Project
+      </a>
+      {% if title == "Story Kimi" %}
+      <a href="https://huggingface.co/spaces/YuvrajSingh9886/StoryKimi-Zero" target="_blank" rel="noopener" class="model-details-btn huggingface-btn" style="background: linear-gradient(135deg, #ff9500, #ff8c00); flex: 1;">
+        🤗 Try it
+      </a>
+      {% endif %}
+      {% if title == "Smol Transformer" %}
+      <a href="https://huggingface.co/spaces/YuvrajSingh9886/SmolTransformer-Zero" target="_blank" rel="noopener" class="model-details-btn huggingface-btn" style="background: linear-gradient(135deg, #ff9500, #ff8c00); flex: 1;">
+        Try the Model: 🤗 Try it on HuggingFace Spaces
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+// Store static smolhub data for detail pages
+document.addEventListener('DOMContentLoaded', function() {
+    if (!window.staticSmolhubData) window.staticSmolhubData = {};
+    window.staticSmolhubData['{{ smolhub_id }}'] = {
+        title: '{{ title }}',
+        url: '{{ base_path }}{{ post.url }}',
+        repoUrl: '{{ repo_url }}',
+        content: `{{ post.content | strip_newlines | escape }}`
+    };
+});
+</script>

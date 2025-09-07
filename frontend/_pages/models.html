@@ -1,0 +1,228 @@
+---
+layout: archive
+title: "Paper Replications"
+permalink: /models/
+author_profile: true
+---
+
+{% include base_path %}
+
+<link rel="stylesheet" href="{{ '/assets/css/models.css' | relative_url }}?v={{ site.time | date: '%s' }}">
+
+<div class="models-page">
+  <div class="models-intro">
+    <h1>Paper Replication Collection</h1>
+    <p>Collection of my re-implementation of seminal AI/ML papers from scratch in PyTorch.</p>
+  </div>
+
+  <!-- Search Section -->
+  <div class="search-section">
+    <div class="search-container">
+      <input type="text" id="model-search" placeholder="🔍 Search models (e.g., GPT, BERT, GAN, Transformer...)">
+    </div>
+    
+    <!-- Tag Filters -->
+    <div class="search-filters">
+      <span class="filter-label">Filter by category:</span>
+      <button class="filter-btn active" data-tag="all">All</button>
+      <button class="filter-btn" data-tag="language-models">Language Models</button>
+      <button class="filter-btn" data-tag="computer-vision">Computer Vision</button>
+      <button class="filter-btn" data-tag="generative-models">Generative Models</button>
+      <button class="filter-btn" data-tag="audio-speech">Audio/Speech</button>
+      <button class="filter-btn" data-tag="fine-tuning">Fine-tuning</button>
+      <button class="filter-btn" data-tag="sequential-models">Sequential Models</button>
+      <button class="filter-btn" data-tag="attention-mechanisms">Attention Mechanisms</button>
+      <button class="filter-btn" data-tag="training-methods">Training Methods</button>
+    </div>
+    
+    <div class="search-results-info">
+      <span id="search-results-count"></span>
+      <button id="clear-search" style="display: none;">Clear Filters</button>
+    </div>
+  </div>
+
+    <div class="models-grid" id="models-container">
+    {% for post in site.models %}
+      <div class="model-wrapper" 
+           data-category="{{ post.category | downcase | replace: '/', '-' | replace: ' ', '-' }}"
+           data-name="{{ post.title }}"
+           data-date="{{ post.date | date: '%Y-%m-%d' }}">
+        {% include model-card.html %}
+      </div>
+    {% endfor %}
+  </div>  <!-- Hidden data container for GitHub dates -->
+  <script type="application/json" id="models-github-data">
+    {{ site.data.models | jsonify }}
+  </script>
+</div>
+
+<style>
+/* Search styles */
+.search-section {
+    margin: 30px 0;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.search-container input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+    margin-bottom: 15px;
+}
+
+.search-results-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    color: #666;
+}
+
+#clear-search {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.model-wrapper {
+    display: block;
+}
+
+.model-wrapper.hidden {
+    display: none !important;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔍 Models page loaded - initializing search and filters...');
+    
+    // Initialize search and filtering functionality
+    setTimeout(function() {
+        initializeModelFiltering();
+    }, 100);
+    
+    function initializeModelFiltering() {
+        const searchInput = document.getElementById('model-search');
+        const clearButton = document.getElementById('clear-search');
+        const resultsCount = document.getElementById('search-results-count');
+        const tagButtons = document.querySelectorAll('.filter-btn[data-tag]');
+        
+        // Store all models for filtering using manual categories
+        const allModels = Array.from(document.querySelectorAll('.model-wrapper')).map(wrapper => {
+            const category = wrapper.getAttribute('data-category') || '';
+            return {
+                element: wrapper,
+                name: wrapper.querySelector('.model-card__title')?.textContent.toLowerCase() || '',
+                description: wrapper.querySelector('.model-card__excerpt')?.textContent.toLowerCase() || '',
+                category: category
+            };
+        });
+        
+        let currentQuery = '';
+        let currentTag = 'all';
+        
+        updateResultsCount(allModels.length);
+        
+        // Search input handler
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                currentQuery = this.value.toLowerCase().trim();
+                filterModels();
+                updateClearButton();
+            });
+        }
+        
+        // Tag filter handlers
+        tagButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Remove active class from all buttons
+                tagButtons.forEach(btn => btn.classList.remove('active'));
+                // Add active class to clicked button
+                this.classList.add('active');
+                
+                currentTag = this.getAttribute('data-tag');
+                filterModels();
+                updateClearButton();
+            });
+        });
+        
+        // Clear search handler
+        if (clearButton) {
+            clearButton.addEventListener('click', function() {
+                searchInput.value = '';
+                currentQuery = '';
+                currentTag = 'all';
+                
+                // Reset tag filter to "All"
+                tagButtons.forEach(btn => btn.classList.remove('active'));
+                document.querySelector('.filter-btn[data-tag="all"]')?.classList.add('active');
+                
+                filterModels();
+                updateClearButton();
+            });
+        }
+        
+        function filterModels() {
+            console.log(`🔍 Filtering - Query: "${currentQuery}", Category: "${currentTag}"`);
+            
+            const filteredModels = allModels.filter(model => {
+                // Text search filter
+                const matchesSearch = !currentQuery || 
+                    model.name.includes(currentQuery) || 
+                    model.description.includes(currentQuery);
+                
+                // Category filter - use manual categories from frontmatter
+                const matchesCategory = currentTag === 'all' || model.category === currentTag;
+                
+                console.log(`Model: ${model.name.substring(0, 20)}..., Category: "${model.category}", MatchesCategory: ${matchesCategory}, MatchesSearch: ${matchesSearch}`);
+                
+                return matchesSearch && matchesCategory;
+            });
+            
+            // Show/hide models
+            allModels.forEach(model => {
+                if (filteredModels.includes(model)) {
+                    model.element.style.display = 'block';
+                    model.element.classList.remove('hidden');
+                } else {
+                    model.element.style.display = 'none';
+                    model.element.classList.add('hidden');
+                }
+            });
+            
+            console.log(`✅ Filtered from ${allModels.length} to ${filteredModels.length} models`);
+            updateResultsCount(filteredModels.length);
+        }
+        
+        function updateClearButton() {
+            if (clearButton) {
+                if (currentQuery || currentTag !== 'all') {
+                    clearButton.style.display = 'inline-block';
+                } else {
+                    clearButton.style.display = 'none';
+                }
+            }
+        }
+        
+        function updateResultsCount(count) {
+            if (resultsCount) {
+                if (count === allModels.length) {
+                    resultsCount.textContent = `Showing all ${count} models`;
+                } else {
+                    resultsCount.textContent = `Found ${count} model${count !== 1 ? 's' : ''}`;
+                }
+            }
+        }
+        
+        console.log('✅ Model filtering initialized with', allModels.length, 'models using manual categories');
+    }
+});
+</script>

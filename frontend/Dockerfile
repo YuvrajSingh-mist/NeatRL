@@ -1,23 +1,31 @@
+FROM ruby:3.2-alpine
 
-# Frontend service Dockerfile
-FROM python:3.10-slim
+# Install dependencies
+RUN apk add --no-cache \
+    build-base \
+    linux-headers \
+    git \
+    nodejs \
+    npm \
+    curl
 
-# Create non-root user
-RUN useradd -m appuser
-WORKDIR /home/appuser
+# Set working directory
+WORKDIR /app
 
-# Install Gradio and requests
-RUN pip install gradio requests
+# Copy Gemfile and Gemfile.lock
+COPY Gemfile* ./
 
-# Copy frontend code
-COPY frontend /home/appuser/frontend
+# Install bundler and handle lockfile compatibility
+RUN gem install bundler && \
+    bundle config set --local path 'vendor/bundle' && \
+    bundle config set --local deployment false && \
+    bundle install --jobs 4 --retry 3
 
-# Switch to non-root user
-USER appuser
+# Copy the rest of the application
+COPY . .
 
 # Expose port
-EXPOSE 7860
+EXPOSE 4000
 
-# Default command for platforms like Render/Heroku that expect a web process
-CMD ["python", "/home/appuser/frontend/gradio_app.py"]
-
+# Start Jekyll with development server
+CMD ["bundle", "exec", "jekyll", "serve", "--host", "0.0.0.0", "--port", "4000", "--force_polling", "--watch"]

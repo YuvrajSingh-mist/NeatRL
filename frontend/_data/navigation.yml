@@ -1,0 +1,41 @@
+# main links links
+main:
+
+  - title: "Home"
+    url: /
+
+  - title: "Leaderboard"
+    url: /leaderboard/
+
+  - title: "RL From Scratch"
+    url: /rl/
+
+# Leaderboard sidebar navigation
+leaderboard_nav:
+  - title: "Submit Agent"
+    url: "#submit-tab"
+    description: "Upload your trained RL model"
+    
+  - title: "Check Status"
+    url: "#status-tab" 
+    description: "Track evaluation progress"
+    
+  - title: "View Rankings"
+    url: "#leaderboard-tab"
+    description: "Browse leaderboard results"
+    
+  - title: "Documentation"
+    children:
+      - title: "Submission Format"
+        url: "#format-guide"
+      - title: "Example Agents"
+        url: "https://github.com/YuvrajSingh-mist/RL-Eval-Leaderboard/tree/main/example_agents"
+      - title: "API Reference"
+        url: "/api/docs"
+        
+  - title: "Monitoring"
+    children:
+      - title: "System Status"
+        url: "http://localhost:3000"
+      - title: "Metrics Dashboard"
+        url: "http://localhost:3001"

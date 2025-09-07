@@ -1,9 +1,10 @@
 global:
-  smtp_smarthost: 'smtp.gmail.com:587'
-  smtp_from: 'yuvraj.mist@gmail.com'
-  smtp_auth_username: 'yuvraj.mist@gmail.com'
-  smtp_auth_password_file: /run/secrets/alertmanager_smtp_password
-  smtp_require_tls: true
+  # SMTP disabled to avoid configuration errors
+  # smtp_smarthost: 'smtp.gmail.com:587'
+  # smtp_from: 'yuvraj.mist@gmail.com'
+  # smtp_auth_username: 'yuvraj.mist@gmail.com'
+  # smtp_auth_password_file: /run/secrets/alertmanager_smtp_password
+  # smtp_require_tls: true
 
 route:
   receiver: default
@@ -23,6 +24,7 @@ receivers:
   - name: default
     webhook_configs:
       - url: 'http://api:8000/api/alertmanager/webhook'
-    email_configs:
-      - to: 'yuvraj.mist@gmail.com'
+    # Email notifications disabled
+    # email_configs:
+    #   - to: 'yuvraj.mist@gmail.com'
 

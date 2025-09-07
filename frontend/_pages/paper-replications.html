@@ -1,0 +1,424 @@
+---
+layout: archive
+title: "Paper Replications"
+permalink: /paper-replications/
+author_profile: true
+---
+
+<link rel="stylesheet" href="{{ '/assets/css/models.css' | relative_url }}">
+
+<div class="models-page">
+  <div class="models-intro">
+    <h1>🧠 Paper Replications</h1>
+    <p>Explore my collection of AI paper implementations built from scratch. Each implementation demonstrates deep understanding of algorithms and provides educational insights into modern ML techniques.</p>
+    
+    <div class="models-stats">
+      <div class="stat-item">
+        <span class="stat-number">{{ site.paper_replications.size }}</span>
+        <span class="stat-label">Total Models</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-number">{{ site.paper_replications | map: 'framework' | uniq | size }}</span>
+        <span class="stat-label">Frameworks</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-number">{{ site.paper_replications | map: 'category' | uniq | size }}</span>
+        <span class="stat-label">Categories</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search and Filter Section -->
+  <div class="search-section">
+    <div class="search-container">
+      <input type="text" id="model-search" placeholder="🔍 Search models (e.g., GPT, BERT, GAN, Transformer...)">
+      <div class="search-filters">
+        <button class="filter-btn active" data-category="all">All Models ({{ site.paper_replications.size }})</button>
+        {% assign categories = site.paper_replications | map: 'category' | uniq | sort %}
+        {% for category in categories %}
+          {% assign count = site.paper_replications | where: 'category', category | size %}
+          <button class="filter-btn" data-category="{{ category | slugify }}">{{ category }} ({{ count }})</button>
+        {% endfor %}
+      </div>
+      <div class="search-filters">
+        <strong>Framework:</strong>
+        {% assign frameworks = site.paper_replications | map: 'framework' | uniq | sort %}
+        {% for framework in frameworks %}
+          {% assign count = site.paper_replications | where: 'framework', framework | size %}
+          <button class="filter-btn framework-filter" data-framework="{{ framework | slugify }}">{{ framework }} ({{ count }})</button>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Models Grid -->
+  <div class="models-grid" id="models-container">
+    {% for model in site.paper_replications %}
+      <div class="model-card" 
+           data-category="{{ model.category | slugify }}" 
+           data-framework="{{ model.framework | slugify }}"
+           data-name="{{ model.title | downcase }}"
+           data-content="{{ model.content | strip_html | downcase }}">
+        
+        <div class="model-header">
+          <h3 class="model-title">{{ model.title }}</h3>
+          <div class="model-badges">
+            <span class="badge category-badge">{{ model.category }}</span>
+            <span class="badge framework-badge">{{ model.framework }}</span>
+          </div>
+        </div>
+        
+        <div class="model-description">
+          {{ model.excerpt | strip_html | truncatewords: 25 }}
+        </div>
+        
+        <div class="model-details">
+          <div class="detail-item">
+            <strong>Dataset:</strong> {{ model.dataset | default: "Custom" }}
+          </div>
+          <div class="detail-item">
+            <strong>Category:</strong> {{ model.category }}
+          </div>
+        </div>
+        
+        <div class="model-actions">
+          <a href="{{ model.url | relative_url }}" class="btn btn-primary">
+            📖 View Details
+          </a>
+          {% if model.github_url %}
+            <a href="{{ model.github_url }}" target="_blank" rel="noopener" class="btn btn-secondary">
+              <i class="fab fa-github"></i> Code
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<style>
+/* Enhanced styles for the paper replications page */
+.models-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.models-intro {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.models-intro h1 {
+  font-size: 2.5em;
+  margin-bottom: 20px;
+  color: #2c3e50;
+}
+
+.models-stats {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin: 30px 0;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+  color: white;
+  min-width: 120px;
+}
+
+.stat-number {
+  font-size: 2em;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.stat-label {
+  font-size: 0.9em;
+  opacity: 0.9;
+}
+
+.search-section {
+  margin: 30px 0;
+  padding: 25px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
+}
+
+.search-container input {
+  width: 100%;
+  padding: 15px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+  margin-bottom: 20px;
+  transition: border-color 0.3s ease;
+}
+
+.search-container input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.search-filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 15px;
+  align-items: center;
+}
+
+.filter-btn {
+  padding: 8px 16px;
+  border: 2px solid #ddd;
+  background: white;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+}
+
+.filter-btn:hover {
+  background: #f8f9fa;
+  border-color: #667eea;
+}
+
+.filter-btn.active {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.framework-filter.active {
+  background: #28a745;
+  border-color: #28a745;
+}
+
+.models-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 25px;
+  margin-top: 30px;
+}
+
+.model-card {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  border: 1px solid #e9ecef;
+}
+
+.model-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.model-header {
+  margin-bottom: 15px;
+}
+
+.model-title {
+  font-size: 1.4em;
+  margin-bottom: 10px;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.model-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  padding: 4px 12px;
+  border-radius: 15px;
+  font-size: 0.8em;
+  font-weight: 500;
+}
+
+.category-badge {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.framework-badge {
+  background: #e8f5e8;
+  color: #388e3c;
+}
+
+.model-description {
+  margin: 15px 0;
+  color: #666;
+  line-height: 1.6;
+}
+
+.model-details {
+  margin: 20px 0;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.detail-item {
+  margin-bottom: 8px;
+  font-size: 0.9em;
+}
+
+.detail-item strong {
+  color: #2c3e50;
+}
+
+.model-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.btn {
+  padding: 10px 20px;
+  text-decoration: none;
+  border-radius: 6px;
+  font-weight: 500;
+  text-align: center;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-primary {
+  background: #667eea;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #5a67d8;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .models-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .models-stats {
+    gap: 20px;
+  }
+  
+  .stat-item {
+    min-width: 100px;
+    padding: 15px;
+  }
+  
+  .search-filters {
+    justify-content: center;
+  }
+  
+  .model-actions {
+    flex-direction: column;
+  }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('model-search');
+  const filterBtns = document.querySelectorAll('.filter-btn');
+  const modelCards = document.querySelectorAll('.model-card');
+  
+  let currentCategory = 'all';
+  let currentFramework = 'all';
+  let currentSearch = '';
+  
+  // Search functionality
+  searchInput.addEventListener('input', function() {
+    currentSearch = this.value.toLowerCase();
+    filterModels();
+  });
+  
+  // Category and framework filter functionality
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', function() {
+      if (this.hasAttribute('data-category')) {
+        // Category filter
+        document.querySelectorAll('.filter-btn[data-category]').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        currentCategory = this.getAttribute('data-category');
+      } else if (this.hasAttribute('data-framework')) {
+        // Framework filter
+        document.querySelectorAll('.framework-filter').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        currentFramework = this.getAttribute('data-framework');
+      }
+      filterModels();
+    });
+  });
+  
+  function filterModels() {
+    modelCards.forEach(card => {
+      const category = card.getAttribute('data-category');
+      const framework = card.getAttribute('data-framework');
+      const name = card.getAttribute('data-name');
+      const content = card.getAttribute('data-content');
+      
+      const matchesCategory = currentCategory === 'all' || category === currentCategory;
+      const matchesFramework = currentFramework === 'all' || framework === currentFramework;
+      const matchesSearch = currentSearch === '' || 
+                           name.includes(currentSearch) || 
+                           content.includes(currentSearch);
+      
+      if (matchesCategory && matchesFramework && matchesSearch) {
+        card.classList.remove('hidden');
+      } else {
+        card.classList.add('hidden');
+      }
+    });
+    
+    // Update count
+    const visibleCards = document.querySelectorAll('.model-card:not(.hidden)').length;
+    const searchInfo = document.querySelector('.search-info');
+    if (searchInfo) {
+      searchInfo.textContent = `Showing ${visibleCards} models`;
+    }
+  }
+  
+  // Add search info
+  const searchContainer = document.querySelector('.search-container');
+  const searchInfo = document.createElement('div');
+  searchInfo.className = 'search-info';
+  searchInfo.style.textAlign = 'center';
+  searchInfo.style.marginTop = '10px';
+  searchInfo.style.color = '#666';
+  searchInfo.textContent = `Showing ${modelCards.length} models`;
+  searchContainer.appendChild(searchInfo);
+});
+</script>

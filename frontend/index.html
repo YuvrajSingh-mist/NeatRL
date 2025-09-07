@@ -1,0 +1,379 @@
+---
+layout: splash
+title: "NeatRL - Reinforcement Learning Evaluation Platform"
+excerpt: "A comprehensive platform for testing, evaluating, and comparing reinforcement learning agents"
+header:
+  overlay_color: "#000"
+  overlay_filter: "0.5"
+  overlay_image: /assets/images/rl-header-bg.jpg
+  actions:
+    - label: "Submit Your Model"
+      url: "/leaderboard/#submit"
+      class: "btn--primary btn--large"
+    - label: "View Leaderboards"
+      url: "/leaderboard/"
+      class: "btn--inverse btn--large"
+intro: 
+  - excerpt: "NeatRL provides a production-ready environment for RL enthusiasts to upload, evaluate, and compare their trained models across various Gymnasium environments."
+feature_row:
+  - image_path: /assets/images/evaluation-icon.png
+    alt: "Model Evaluation"
+    title: "Model Evaluation"
+    excerpt: "Submit your trained RL agents and get comprehensive performance metrics across multiple environments. Our system supports various algorithms including DQN, PPO, A2C, and more."
+    url: "/leaderboard/#submit"
+    btn_label: "Submit Model"
+    btn_class: "btn--primary"
+  - image_path: /assets/images/leaderboard-icon.png
+    alt: "Live Leaderboards"
+    title: "Live Leaderboards"
+    excerpt: "Track performance with real-time leaderboards. Compare your models against others and see how different algorithms perform on various environments."
+    url: "/leaderboard/"
+    btn_label: "View Rankings"
+    btn_class: "btn--primary"
+  - image_path: /assets/images/analytics-icon.png
+    alt: "Performance Analytics"
+    title: "Performance Analytics"
+    excerpt: "Get detailed analytics and metrics for your submissions. Monitor evaluation progress, view score distributions, and analyze performance trends."
+    url: "/leaderboard/#analytics"
+    btn_label: "View Analytics"
+    btn_class: "btn--primary"
+feature_row2:
+  - image_path: /assets/images/rl-architecture.png
+    alt: "Platform Architecture"
+    title: "Production-Ready Infrastructure"
+    excerpt: "Built with FastAPI, Celery, Redis, and PostgreSQL. Our platform provides scalable evaluation infrastructure with Docker containerization, real-time monitoring, and comprehensive observability."
+    url: "https://github.com/YuvrajSingh-mist/RL-Eval-Leaderboard"
+    btn_label: "View on GitHub"
+    btn_class: "btn--inverse"
+feature_row3:
+  - image_path: /assets/images/environments.png
+    alt: "Supported Environments"
+    title: "Wide Environment Support"
+    excerpt: "**Classic Control:** CartPole, MountainCar, Acrobot, Pendulum • **Box2D:** LunarLander, BipedalWalker, CarRacing • **MuJoCo:** Ant, HalfCheetah, Hopper, Humanoid, Walker2d • **Atari:** Breakout, Pong, SpaceInvaders, and more"
+feature_row4:
+  - image_path: /assets/images/algorithms.png
+    alt: "Algorithm Support"
+    title: "Algorithm Support"
+    excerpt: "**Value-Based:** DQN, Double DQN, Dueling DQN, Rainbow • **Policy-Based:** REINFORCE, PPO, TRPO, A2C, A3C • **Actor-Critic:** SAC, TD3, DDPG • **Multi-Agent:** MADDPG, QMIX • **Others:** Custom implementations welcome"
+---
+
+{% include feature_row id="intro" type="center" %}
+
+<div class="home-stats">
+  <div class="stats-container">
+    <div class="stat-item">
+      <div class="stat-number" id="total-submissions">0</div>
+      <div class="stat-label">Total Submissions</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number" id="active-environments">25+</div>
+      <div class="stat-label">Supported Environments</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number" id="evaluation-time">~2min</div>
+      <div class="stat-label">Avg Evaluation Time</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number" id="success-rate">95%</div>
+      <div class="stat-label">Success Rate</div>
+    </div>
+  </div>
+</div>
+
+{% include feature_row %}
+
+{% include feature_row id="feature_row2" type="left" %}
+
+{% include feature_row id="feature_row3" type="right" %}
+
+{% include feature_row id="feature_row4" type="left" %}
+
+<div class="home-getting-started">
+  <div class="container">
+    <h2>Getting Started</h2>
+    <div class="steps-grid">
+      <div class="step">
+        <div class="step-number">1</div>
+        <h3>Prepare Your Model</h3>
+        <p>Train your RL agent using any framework (PyTorch, TensorFlow, Stable-Baselines3, etc.). Ensure it follows our submission format.</p>
+      </div>
+      <div class="step">
+        <div class="step-number">2</div>
+        <h3>Submit for Evaluation</h3>
+        <p>Upload your model file and specify the environment. Our system will automatically evaluate your agent's performance.</p>
+      </div>
+      <div class="step">
+        <div class="step-number">3</div>
+        <h3>View Results</h3>
+        <p>Check the leaderboards to see how your model performs compared to others. Get detailed metrics and insights.</p>
+      </div>
+    </div>
+    <div class="cta-section">
+      <a href="/leaderboard/#submit" class="btn btn--primary btn--large">Start Evaluating Your Models</a>
+      <a href="/rl/" class="btn btn--inverse btn--large">Learn RL From Scratch</a>
+    </div>
+  </div>
+</div>
+
+<div class="home-tech-stack">
+  <div class="container">
+    <h2>Technology Stack</h2>
+    <div class="tech-grid">
+      <div class="tech-item">
+        <img src="/assets/images/fastapi-logo.png" alt="FastAPI">
+        <span>FastAPI</span>
+      </div>
+      <div class="tech-item">
+        <img src="/assets/images/celery-logo.png" alt="Celery">
+        <span>Celery</span>
+      </div>
+      <div class="tech-item">
+        <img src="/assets/images/redis-logo.png" alt="Redis">
+        <span>Redis</span>
+      </div>
+      <div class="tech-item">
+        <img src="/assets/images/postgresql-logo.png" alt="PostgreSQL">
+        <span>PostgreSQL</span>
+      </div>
+      <div class="tech-item">
+        <img src="/assets/images/docker-logo.png" alt="Docker">
+        <span>Docker</span>
+      </div>
+      <div class="tech-item">
+        <img src="/assets/images/prometheus-logo.png" alt="Prometheus">
+        <span>Prometheus</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.home-stats {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 60px 0;
+  margin: 60px 0;
+  color: white;
+}
+
+.stats-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 3em;
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: #ffffff;
+}
+
+.stat-label {
+  font-size: 1.1em;
+  opacity: 0.9;
+}
+
+.home-getting-started {
+  padding: 80px 0;
+  background: #f8f9fa;
+}
+
+.home-getting-started .container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.home-getting-started h2 {
+  text-align: center;
+  margin-bottom: 50px;
+  font-size: 2.5em;
+  color: #333;
+}
+
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 40px;
+  margin-bottom: 60px;
+}
+
+.step {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  text-align: center;
+  transition: transform 0.3s ease;
+}
+
+.step:hover {
+  transform: translateY(-5px);
+}
+
+.step-number {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5em;
+  font-weight: bold;
+  margin: 0 auto 20px;
+}
+
+.step h3 {
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.step p {
+  color: #666;
+  line-height: 1.6;
+}
+
+.cta-section {
+  text-align: center;
+}
+
+.cta-section .btn {
+  margin: 0 10px;
+}
+
+.home-tech-stack {
+  padding: 80px 0;
+  background: white;
+}
+
+.home-tech-stack .container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.home-tech-stack h2 {
+  text-align: center;
+  margin-bottom: 50px;
+  font-size: 2.5em;
+  color: #333;
+}
+
+.tech-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 30px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.tech-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  transition: transform 0.3s ease;
+}
+
+.tech-item:hover {
+  transform: translateY(-5px);
+}
+
+.tech-item img {
+  width: 60px;
+  height: 60px;
+  margin-bottom: 15px;
+  object-fit: contain;
+}
+
+.tech-item span {
+  font-weight: bold;
+  color: #333;
+}
+
+@media (max-width: 768px) {
+  .stats-container {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+  
+  .stat-number {
+    font-size: 2em;
+  }
+  
+  .steps-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .tech-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .cta-section .btn {
+    display: block;
+    margin: 10px auto;
+    width: 80%;
+  }
+}
+</style>
+
+<script>
+// Animate stats on scroll
+function animateStats() {
+  const statNumbers = document.querySelectorAll('.stat-number');
+  
+  statNumbers.forEach(stat => {
+    const target = stat.id;
+    
+    // Simulate fetching real data from API
+    switch(target) {
+      case 'total-submissions':
+        fetchStatistic('submissions', stat);
+        break;
+      case 'active-environments':
+        stat.textContent = '25+';
+        break;
+      case 'evaluation-time':
+        stat.textContent = '~2min';
+        break;
+      case 'success-rate':
+        stat.textContent = '95%';
+        break;
+    }
+  });
+}
+
+async function fetchStatistic(type, element) {
+  try {
+    // Auto-detect API base URL
+    const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:8000/api' 
+      : `${window.location.protocol}//${window.location.hostname}:8000/api`;
+    
+    const response = await fetch(`${API_BASE_URL}/stats/${type}`);
+    if (response.ok) {
+      const data = await response.json();
+      element.textContent = data.count || '0';
+    } else {
+      element.textContent = '0';
+    }
+  } catch (error) {
+    console.log('Stats API not available, using placeholder');
+    element.textContent = '0';
+  }
+}
+
+// Initialize stats animation when page loads
+document.addEventListener('DOMContentLoaded', animateStats);
+</script>

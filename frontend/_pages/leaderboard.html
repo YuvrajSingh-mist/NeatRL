@@ -1,0 +1,573 @@
+---
+layout: archive
+title: "RL Leaderboard"
+permalink: /leaderboard/
+author_profile: true
+---
+
+{% include base_path %}
+
+<link rel="stylesheet" href="{{ '/assets/css/leaderboard.css' | relative_url }}?v={{ site.time | date: '%s' }}">
+
+<div class="leaderboard-page">
+  <div class="models-intro">
+    <h1>Reinforcement Learning Leaderboard</h1>
+    <p>Submit your trained RL agents and compare performance across various Gymnasium environments. Compete with researchers worldwide and track your progress in real-time.</p>
+  </div>
+
+  <div class="leaderboard-content">
+    <!-- Navigation Tabs -->
+    <div class="leaderboard-tabs">
+      <button class="tab-btn active" data-tab="submit">Submit Model</button>
+      <button class="tab-btn" data-tab="status">Check Status</button>
+      <button class="tab-btn" data-tab="leaderboard">Leaderboard</button>
+    </div>  <!-- Submit Model Tab -->
+  <div id="submit-tab" class="tab-content active">
+    <div class="submit-section">
+      <h2>Submit Your RL Model</h2>
+      <form id="submission-form" class="submission-form">
+        <div class="form-group">
+          <label for="user-id">User ID:</label>
+          <input type="text" id="user-id" name="user_id" required placeholder="Enter your unique user ID">
+          <small>Use a consistent ID to track your submissions</small>
+        </div>
+
+        <div class="form-group">
+          <label for="algorithm">Algorithm:</label>
+          <select id="algorithm" name="algorithm" required>
+            <option value="">Select Algorithm</option>
+            <option value="DQN">DQN (Deep Q-Network)</option>
+            <option value="PPO">PPO (Proximal Policy Optimization)</option>
+            <option value="A2C">A2C (Advantage Actor-Critic)</option>
+            <option value="SAC">SAC (Soft Actor-Critic)</option>
+            <option value="TD3">TD3 (Twin Delayed DDPG)</option>
+            <option value="DDPG">DDPG (Deep Deterministic Policy Gradient)</option>
+            <option value="TRPO">TRPO (Trust Region Policy Optimization)</option>
+            <option value="Rainbow">Rainbow DQN</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="environment">Environment:</label>
+          <select id="environment" name="env_id" required>
+            <option value="">Loading environments...</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="model-file">Model File:</label>
+          <input type="file" id="model-file" name="file" accept=".py,.tar.gz,.zip" required>
+          <small>Upload a Python script (.py) or archive (.tar.gz, .zip) containing your trained model</small>
+        </div>
+
+        <div class="form-group">
+          <button type="submit" class="submit-btn">
+            <span class="btn-text">Submit for Evaluation</span>
+            <span class="btn-loader" style="display: none;">⟳</span>
+          </button>
+        </div>
+      </form>
+
+      <!-- Submission Format Guide -->
+      <div class="format-guide">
+        <h3>Submission Format</h3>
+        <p>Your submission should include a Python script with the following structure:</p>
+        <pre><code>
+import gymnasium as gym
+
+def make_agent():
+    """Return your trained agent"""
+    # Load your trained model here
+    # Return an object with a predict() method
+    pass
+
+# Example for Stable-Baselines3:
+from stable_baselines3 import PPO
+
+def make_agent():
+    model = PPO.load("path/to/your/model.zip")
+    return model
+
+# Example for custom PyTorch model:
+class CustomAgent:
+    def predict(self, observation, deterministic=True):
+        # Your prediction logic here
+        return action, _states
+        
+def make_agent():
+    agent = CustomAgent()
+    # Load your weights
+    return agent
+        </code></pre>
+      </div>
+    </div>
+
+    <!-- Recent Submissions -->
+    <div class="recent-submissions">
+      <h3>Your Recent Submissions</h3>
+      <div id="recent-submissions-list">
+        <p>No recent submissions. Submit your first model above!</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Check Tab -->
+  <div id="status-tab" class="tab-content">
+    <div class="submit-section">
+      <h2>Check Submission Status</h2>
+      <form id="status-form" class="submission-form">
+        <div class="form-group">
+          <label for="submission-id">Submission ID:</label>
+          <input type="text" id="submission-id" name="submission_id" required placeholder="Enter your submission UUID">
+          <small>Enter the UUID you received when submitting your model</small>
+        </div>
+
+        <div class="form-group">
+          <button type="submit" class="submit-btn">
+            <span class="btn-text">Check Status</span>
+            <span class="btn-loader" style="display: none;">⟳</span>
+          </button>
+        </div>
+      </form>
+
+      <!-- Status Result -->
+      <div id="status-result" class="status-result" style="display: none;">
+        <h3>Submission Status</h3>
+        <div class="status-details">
+          <div class="status-item">
+            <strong>Status:</strong> 
+            <span id="status-badge" class="submission-status"></span>
+          </div>
+          <div class="status-item">
+            <strong>Environment:</strong> 
+            <span id="status-env"></span>
+          </div>
+          <div class="status-item">
+            <strong>Algorithm:</strong> 
+            <span id="status-algorithm"></span>
+          </div>
+          <div class="status-item">
+            <strong>Submitted:</strong> 
+            <span id="status-date"></span>
+          </div>
+          <div class="status-item" id="score-item" style="display: none;">
+            <strong>Score:</strong> 
+            <span id="status-score" class="submission-score"></span>
+          </div>
+          <div class="status-item" id="error-item" style="display: none;">
+            <strong>Error:</strong> 
+            <span id="status-error" class="error-text"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaderboard Tab -->
+  <div id="leaderboard-tab" class="tab-content">
+    <div class="leaderboard-controls">
+      <div class="control-group">
+        <label for="env-filter">Environment:</label>
+        <select id="env-filter">
+          <option value="CartPole-v1">CartPole-v1</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="algorithm-filter">Algorithm:</label>
+        <select id="algorithm-filter">
+          <option value="">All Algorithms</option>
+          <option value="DQN">DQN</option>
+          <option value="PPO">PPO</option>
+          <option value="A2C">A2C</option>
+          <option value="SAC">SAC</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <button id="refresh-leaderboard" class="refresh-leaderboard-btn" title="Refresh leaderboard">
+          <span class="refresh-icon">⟳</span>
+          <span class="refresh-text">Refresh</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="leaderboard-table-container">
+      <table id="leaderboard-table" class="leaderboard-table">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>User</th>
+            <th>Algorithm</th>
+            <th>Score</th>
+            <th>Submitted</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboard-body">
+          <tr>
+            <td colspan="6" class="loading">Loading leaderboard...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Environments Tab -->
+  <div id="environments-tab" class="tab-content">
+    <div class="environments-section">
+      <h2>Supported Environments</h2>
+      <p>Our platform supports a wide range of Gymnasium environments. Click on any environment to view its leaderboard.</p>
+      
+      <div class="env-search">
+        <input type="text" id="env-search" placeholder="Search environments...">
+      </div>
+      
+      <div class="environments-grid" id="environments-grid">
+        <div class="loading">Loading environments...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Global configuration
+// API Configuration - Auto-detect based on environment
+const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:8000/api' 
+  : `${window.location.protocol}//${window.location.hostname}:8000/api`;
+
+// Tab functionality
+document.addEventListener('DOMContentLoaded', function() {
+    initializeTabs();
+    loadEnvironments();
+    loadLeaderboard();
+    setupFormSubmission();
+    setupStatusCheck();
+    loadRecentSubmissions();
+});
+
+function initializeTabs() {
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabName = btn.dataset.tab;
+            
+            // Remove active class from all tabs and contents
+            tabBtns.forEach(b => b.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+            
+            // Add active class to clicked tab and corresponding content
+            btn.classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            
+            // Load data for specific tabs
+            if (tabName === 'leaderboard') {
+                loadLeaderboard();
+            } else if (tabName === 'environments') {
+                loadEnvironmentsGrid();
+            }
+        });
+    });
+}
+
+async function loadEnvironments() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/leaderboard/environments`);
+        const data = await response.json();
+        
+        const envSelect = document.getElementById('environment');
+        const envFilter = document.getElementById('env-filter');
+        
+        envSelect.innerHTML = '';
+        envFilter.innerHTML = '';
+        
+        data.envs.forEach(env => {
+            const option = new Option(env, env);
+            envSelect.appendChild(option.cloneNode(true));
+            envFilter.appendChild(option);
+        });
+        
+        // Set default
+        envFilter.value = 'CartPole-v1';
+        
+    } catch (error) {
+        console.error('Failed to load environments:', error);
+        document.getElementById('environment').innerHTML = '<option value="">Failed to load environments</option>';
+    }
+}
+
+async function loadLeaderboard() {
+    const envId = document.getElementById('env-filter').value || 'CartPole-v1';
+    const algorithmFilter = document.getElementById('algorithm-filter').value;
+    
+    try {
+        let url = `${API_BASE_URL}/leaderboard/?env_id=${envId}`;
+        if (algorithmFilter) {
+            url += `&algorithm=${algorithmFilter}`;
+        }
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        const tbody = document.getElementById('leaderboard-body');
+        tbody.innerHTML = '';
+        
+        if (data.entries && data.entries.length > 0) {
+            data.entries.forEach((entry, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${entry.user_id}</td>
+                    <td><span class="algorithm-badge">${entry.algorithm}</span></td>
+                    <td class="score">${entry.score.toFixed(2)}</td>
+                    <td>${new Date(entry.created_at).toLocaleDateString()}</td>
+                    <td><span class="status-badge status-completed">Completed</span></td>
+                `;
+                tbody.appendChild(row);
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="6" class="no-data">No submissions found for this environment</td></tr>';
+        }
+        
+    } catch (error) {
+        console.error('Failed to load leaderboard:', error);
+        document.getElementById('leaderboard-body').innerHTML = '<tr><td colspan="6" class="error">Failed to load leaderboard data</td></tr>';
+    }
+}
+
+function setupFormSubmission() {
+    const form = document.getElementById('submission-form');
+    
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const submitBtn = form.querySelector('.submit-btn');
+        const btnText = submitBtn.querySelector('.btn-text');
+        const btnLoader = submitBtn.querySelector('.btn-loader');
+        
+        // Show loading state
+        submitBtn.disabled = true;
+        btnText.style.display = 'none';
+        btnLoader.style.display = 'inline';
+        
+        try {
+            const formData = new FormData(form);
+            
+            const response = await fetch(`${API_BASE_URL}/submit/`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                alert('Model submitted successfully! Check the leaderboard for results.');
+                form.reset();
+                loadRecentSubmissions();
+            } else {
+                alert(`Submission failed: ${result.detail || 'Unknown error'}`);
+            }
+            
+        } catch (error) {
+            console.error('Submission error:', error);
+            alert('Submission failed. Please check your connection and try again.');
+        } finally {
+            // Reset button state
+            submitBtn.disabled = false;
+            btnText.style.display = 'inline';
+            btnLoader.style.display = 'none';
+        }
+    });
+}
+
+async function loadRecentSubmissions() {
+    const userId = document.getElementById('user-id').value;
+    if (!userId) return;
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/submissions?user_id=${userId}&limit=5`);
+        const data = await response.json();
+        
+        const container = document.getElementById('recent-submissions-list');
+        
+        if (data.submissions && data.submissions.length > 0) {
+            container.innerHTML = data.submissions.map(sub => `
+                <div class="submission-item">
+                    <div class="submission-info">
+                        <strong>${sub.algorithm}</strong> on ${sub.env_id}
+                        <span class="submission-date">${new Date(sub.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div class="submission-status status-${sub.status}">${sub.status}</div>
+                    ${sub.score ? `<div class="submission-score">Score: ${sub.score.toFixed(2)}</div>` : ''}
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = '<p>No recent submissions found.</p>';
+        }
+        
+    } catch (error) {
+        console.error('Failed to load recent submissions:', error);
+    }
+}
+
+async function loadEnvironmentsGrid() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/leaderboard/environments`);
+        const data = await response.json();
+        
+        const grid = document.getElementById('environments-grid');
+        grid.innerHTML = '';
+        
+        data.envs.forEach(env => {
+            const envCard = document.createElement('div');
+            envCard.className = 'env-card';
+            envCard.innerHTML = `
+                <h4>${env}</h4>
+                <p>Click to view leaderboard</p>
+                <button onclick="viewEnvironmentLeaderboard('${env}')">View Rankings</button>
+            `;
+            grid.appendChild(envCard);
+        });
+        
+    } catch (error) {
+        console.error('Failed to load environments grid:', error);
+        document.getElementById('environments-grid').innerHTML = '<div class="error">Failed to load environments</div>';
+    }
+}
+
+function viewEnvironmentLeaderboard(envId) {
+    document.getElementById('env-filter').value = envId;
+    document.querySelector('[data-tab="leaderboard"]').click();
+    loadLeaderboard();
+}
+
+// Event listeners
+document.getElementById('env-filter').addEventListener('change', loadLeaderboard);
+document.getElementById('algorithm-filter').addEventListener('change', loadLeaderboard);
+document.getElementById('refresh-leaderboard').addEventListener('click', refreshLeaderboard);
+
+async function refreshLeaderboard() {
+    const refreshBtn = document.getElementById('refresh-leaderboard');
+    const refreshIcon = refreshBtn.querySelector('.refresh-icon');
+    
+    // Add loading state
+    refreshBtn.classList.add('loading');
+    refreshBtn.disabled = true;
+    
+    try {
+        // Force refresh by clearing any cached data and reloading
+        await loadLeaderboard();
+        console.log('Leaderboard refreshed successfully');
+        
+        // Show brief success feedback
+        const originalText = refreshBtn.querySelector('.refresh-text').textContent;
+        refreshBtn.querySelector('.refresh-text').textContent = 'Refreshed!';
+        setTimeout(() => {
+            refreshBtn.querySelector('.refresh-text').textContent = originalText;
+        }, 1000);
+        
+    } catch (error) {
+        console.error('Failed to refresh leaderboard:', error);
+        
+        // Show brief error feedback
+        const originalText = refreshBtn.querySelector('.refresh-text').textContent;
+        refreshBtn.querySelector('.refresh-text').textContent = 'Error';
+        setTimeout(() => {
+            refreshBtn.querySelector('.refresh-text').textContent = originalText;
+        }, 2000);
+    } finally {
+        // Remove loading state
+        refreshBtn.classList.remove('loading');
+        refreshBtn.disabled = false;
+    }
+}
+
+// User ID change listener for recent submissions
+document.getElementById('user-id').addEventListener('blur', loadRecentSubmissions);
+
+// Environment search
+document.getElementById('env-search').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const envCards = document.querySelectorAll('.env-card');
+    
+    envCards.forEach(card => {
+        const envName = card.querySelector('h4').textContent.toLowerCase();
+        card.style.display = envName.includes(searchTerm) ? 'block' : 'none';
+    });
+});
+
+function setupStatusCheck() {
+    const form = document.getElementById('status-form');
+    
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const submitBtn = form.querySelector('.submit-btn');
+        const btnText = submitBtn.querySelector('.btn-text');
+        const btnLoader = submitBtn.querySelector('.btn-loader');
+        const resultDiv = document.getElementById('status-result');
+        
+        // Show loading state
+        submitBtn.disabled = true;
+        btnText.style.display = 'none';
+        btnLoader.style.display = 'inline';
+        resultDiv.style.display = 'none';
+        
+        try {
+            const formData = new FormData(form);
+            const submissionId = formData.get('submission_id');
+            
+            const response = await fetch(`${API_BASE_URL}/results/${submissionId}`);
+            const result = await response.json();
+            
+            if (response.ok) {
+                // Show the result
+                resultDiv.style.display = 'block';
+                
+                // Update status badge
+                const statusBadge = document.getElementById('status-badge');
+                statusBadge.textContent = result.status;
+                statusBadge.className = `submission-status status-${result.status}`;
+                
+                // Update details
+                document.getElementById('status-env').textContent = result.env_id || 'N/A';
+                document.getElementById('status-algorithm').textContent = result.algorithm || 'N/A';
+                document.getElementById('status-date').textContent = result.created_at ? new Date(result.created_at).toLocaleString() : 'N/A';
+                
+                // Show/hide score based on completion
+                const scoreItem = document.getElementById('score-item');
+                if (result.status === 'completed' && result.score !== null) {
+                    document.getElementById('status-score').textContent = result.score.toFixed(2);
+                    scoreItem.style.display = 'flex';
+                } else {
+                    scoreItem.style.display = 'none';
+                }
+                
+                // Show/hide error based on failure
+                const errorItem = document.getElementById('error-item');
+                if (result.status === 'failed' && result.error) {
+                    document.getElementById('status-error').textContent = result.error;
+                    errorItem.style.display = 'flex';
+                } else {
+                    errorItem.style.display = 'none';
+                }
+            } else {
+                alert(`Failed to get status: ${result.detail || 'Unknown error'}`);
+            }
+            
+        } catch (error) {
+            console.error('Status check error:', error);
+            alert('Failed to check status. Please verify the submission ID and try again.');
+        } finally {
+            // Reset button state
+            submitBtn.disabled = false;
+            btnText.style.display = 'inline';
+            btnLoader.style.display = 'none';
+        }
+    });
+}
+</script>
+  </div> <!-- Close leaderboard-content -->
+</div> <!-- Close leaderboard-page -->

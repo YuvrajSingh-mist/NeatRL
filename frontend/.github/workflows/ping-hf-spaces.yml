@@ -1,0 +1,99 @@
+name: Keep Hugging Face Spaces Awake
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # every 5 minutes
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y jq ripgrep
+
+      - name: Collect Space URLs
+        id: collect
+        run: |
+          set -e
+          # From playground data
+          jq -r '..|strings|select(test("^https://huggingface.co/spaces/"))' _data/smolhub_playground.json || true > /tmp/urls1.txt
+
+          # Also scan project markdown and includes for any HF Spaces links
+          rg -No --glob '!node_modules' 'https://huggingface\.co/spaces/\S+' || true > /tmp/urls2.txt
+
+          # Merge, dedupe, and basic sanitize (strip trailing punctuation)
+          cat /tmp/urls1.txt /tmp/urls2.txt | sed 's/[),.\"]$//' | sort -u > /tmp/urls.txt
+
+          echo "Found URLs:" && cat /tmp/urls.txt || true
+
+          count=$(wc -l < /tmp/urls.txt | tr -d ' ')
+          echo "count=$count" >> $GITHUB_OUTPUT
+
+      - name: Ping and Restart Spaces
+        if: steps.collect.outputs.count != '0'
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          set -e
+          while IFS= read -r url; do
+            echo "Checking $url"
+            
+            # Extract owner and space name from URL
+            OWNER=$(echo "$url" | sed 's|https://huggingface.co/spaces/||' | cut -d'/' -f1)
+            SPACE=$(echo "$url" | sed 's|https://huggingface.co/spaces/||' | cut -d'/' -f2)
+            
+            echo "Owner: $OWNER, Space: $SPACE"
+            
+            # Try to ping the space with timeout
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$url?cachebust=$(date +%s)" || echo "000")
+            echo "HTTP Code: $HTTP_CODE"
+            
+            # Check if space is down (5xx errors, connection timeouts, or specific error codes)
+            if [[ "$HTTP_CODE" == "000" || "$HTTP_CODE" == "502" || "$HTTP_CODE" == "503" || "$HTTP_CODE" == "504" || "$HTTP_CODE" == "520" || "$HTTP_CODE" == "521" || "$HTTP_CODE" == "522" || "$HTTP_CODE" == "523" || "$HTTP_CODE" == "524" ]]; then
+              echo "Space $SPACE appears to be down (HTTP $HTTP_CODE). Attempting restart..."
+              
+              # Restart the space using HF API
+              RESTART_RESPONSE=$(curl -s -w "%{http_code}" -X POST \
+                "https://huggingface.co/api/spaces/$OWNER/$SPACE/restart" \
+                -H "Authorization: Bearer $HF_TOKEN" \
+                -H "Content-Type: application/json" \
+                -d '{}' || echo "000")
+              
+              RESTART_CODE=$(echo "$RESTART_RESPONSE" | tail -c 4)
+              RESTART_BODY=$(echo "$RESTART_RESPONSE" | head -c -4)
+              
+              echo "Restart response code: $RESTART_CODE"
+              echo "Restart response body: $RESTART_BODY"
+              
+              if [[ "$RESTART_CODE" == "200" || "$RESTART_CODE" == "201" ]]; then
+                echo "Successfully initiated restart for $SPACE"
+                # Wait a bit for restart to begin
+                sleep 10
+                
+                # Try pinging again after restart
+                echo "Pinging $SPACE after restart..."
+                curl -s -o /dev/null -w "%{http_code}\n" --max-time 30 "$url?cachebust=$(date +%s)" || echo "Still down"
+              else
+                echo "Failed to restart $SPACE (HTTP $RESTART_CODE): $RESTART_BODY"
+              fi
+            else
+              echo "Space $SPACE is responding (HTTP $HTTP_CODE). Pinging to keep warm..."
+              # Ping both root and queue endpoints to keep it warm
+              curl -s -o /dev/null -w "%{http_code}\n" --max-time 15 "$url?cachebust=$(date +%s)" || true
+              curl -s -o /dev/null -w "%{http_code}\n" --max-time 15 "$url/queue/join?cachebust=$(date +%s)" || true
+            fi
+            
+            sleep 2 # Small delay between spaces
+          done < /tmp/urls.txt
+
+      - name: Summary
+        run: |
+          echo "Processed $(wc -l < /tmp/urls.txt | tr -d ' ') Hugging Face Spaces URLs."
+
+

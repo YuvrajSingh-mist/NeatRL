@@ -1,0 +1,167 @@
+Yuvraj Singh
+
+§ Github — Website (cid:239) Linkedin # yuvraj.mist@gmail.com — HuggingFace (cid:138) X
+(cid:131) +919354672378
+
+Experience
+
+University of Maryland | Research intern
+
+Dec 2024 – Feb 2025
+
+• Worked on UI/UX2Code generation with primary focus on creation of a robust dataset for the VLM models to be
+
+fine-tuned upon.
+
+• Scraped 100+ websites of static web pages and collected their commit history and corresponding webpage layouts
+
+to create a dataset of 200+ records.
+
+IISER, Kolkata | Summer Research intern
+
+May 2024 – May 2025
+
+• With Prof. Kripabandhu Ghosh, we created a dataset of 40k, humanely-verified, stance-analysed famous sports
+
+controversies with applied stance detection
+
+• Scraped YouTube comments for famous sports controversies ranging from cricket to football.
+• Utilized LLMs like Llama-3.1/3.2, Mistral-7b, Qwen-2.5 under zero/few-shot prompt to create the dataset
+
+post-human verification of the generated labels..
+
+• Fine-tuned LLMs Reasoning (distilled models) and Non-Reasoning LLMs on the humanely verified dataset. Boost
+
+of 30% compared to base LLM.
+
+AIISC | Research intern
+
+March. 2024 – July 2024
+
+• Worked with Prof. Amitava Das on Prevention of Hallucination in LLMs
+• Part of the data collection team- Performed web scraping of news articles and posts. Generated synthetic data
+
+using various open-source LLMs.
+
+• Tagged LLM-generated synthetic data with entities using GLiNER and other open-source models.
+
+Clinical AI Assistance | Research intern
+
+Dec. 2023 – March 2024
+
+• Worked closely with the Research Team for the main project, building dataset and testing the model’s generated
+
+output with other Text Generative tools like GPT etc.
+
+• Used HuggingFace API to use various LLMs to test our generated response to the original ones
+• Data Gathering and cleaning and performing Data Analysis on the generated output to view model’s efficiency
+
+Skills
+
+Languages: Python
+Frameworks: Pytorch, Keras, Flutter, Flask
+GenAI Tools Langchain, LlamaIndex, Chromadb, Pinecone, FAISS, HuggingFace
+NLP: GRU, RNN, LSTM, Attention, Transformers, LLMs
+Computer Vision: CNN, OpenCV, YOLOv8, GANs, Vision-Language Models, ViTs
+Tools: Streamlit, Git, Github, Firebase, Docker, GCP
+
+Projects
+
+Paper/Architecture Replication from Scratch using PyTorch | GitHub Repository
+
+2024
+
+∗ Tools: Pytorch, HuggingFace Spaces (for deployment of smaller versions of replicated models), Git, Github
+
+StoryLlama | A Smaller Language Model for Bedtime Stories! | 2025
+
+∗ Description: Pretrained a Llama based decoder only (90M) model implemented from scratch in PyTorch and
+trained it on 4.2B tokens of TinyStories using DDP (torchrun) for 5k steps with gradient accumulation of 0.5M
+tokens
+
+∗ Result: Train Loss: 1.43 Val loss: 1.45
+
+SmolLlama | A 123 M model | 2025
+
+∗ Description: Pretrained a Llama based decoder only model implemented from scratch in PyTorch and trained it
+
+on 10B tokens of FineWeb dataset using DDP (torchrun) with gradient accumulation of 0.5M tokens. It was
+followed by SFT (Instruction following) and DPO.
+
+∗ Result - Pretraining: : Train Loss: 3.77 (stagnated) Val loss: 3.80 (stagnated)
+∗ Result - SFT: : Train Loss: 1.01 Val loss: 1.39
+
+FarmGenie (GeoHack 2024) | Empowering farmers with real-time insights and expert guidance via AI-driven space
+
+2024
+
+∗ Role: Backend (AI/ML Integration)
+∗ Vision/Goal: In the ever-evolving agricultural landscape, farmers often face challenges in accessing up-to-date
+
+knowledge and resources to improve their farming practices. To address this, we have developed a comprehensive
+product that leverages the power of LLMs as Experts and Agents to create an interactive platform for farmers.
+∗ Solution: Our platform utilizes LLMs and a Mixture of Expert (MoE) approaches to provide precise guidance on
+soil management, plant disease identification, and irrigation techniques. Built as a scalable web application with a
+Next.js frontend and backend, and supported by a Redis queue and multiple worker nodes, FarmGenie ensures
+robust performance. The system’s multilingual support, interactive community forum, and up-to-date knowledge
+base facilitate seamless, expert-driven assistance for both new and experienced farmers.
+
+∗ Tools: Tailwind CSS, TypeScript, Next.js, Flask, Python, Langchain, GeminiPro API, peft , bitsandbytes,
+
+transformers, PostgreSQL, FAISS, Pinecone, MySQL, Unsloth, GCP, Docker, Vercel, DigitalOcean
+
+PlogPayouts (Google Solution Challenge ’24) | AI-driven Plogging System
+
+2024
+
+∗ Role: Backend (AI/ML+Server)
+∗ Vision/Goal: To bring about an effective change in the garbage collection process and also tackle the social
+stigma regarding the position and work of garbage collectors to harbour a cleaner and greener environment,
+working together without any social differences.
+
+∗ Solution: Detection, classification and counting of garbage collected by the users for which redeemable coins are
+rewarded in exchange for their hard work, lowering the need for post-garbage processing while being the garbage
+collectors themselves doing a part of their daily activity-jogging.
+
+∗ Tools: Flutter, HTML, CSS JavaScript, Bootstrap, Flask, Python , Django , Keras, OpenCV, YOLOv8, Firebase
+
+Firestore, Realtime Database, Storage, GCP APIs,Mapbox, Render, Docker
+
+Achievements
+
+2nd place @GeoHack ’24 Finale
+Secured 2nd position at finals of GeoHack 2024 with our project- FarmGenie organised by IEEE GRSS Kolkata and
+SAADRI.
+
+2024
+
+Finalist @YESIST12 ’24- Special Track
+Led the winning project PlogPayouts at YESIST12 ’24 under Special Track category
+
+Geek-o-thon (D3 @IIIT-BH)
+Led the winning project MovieMania at D3 2023, inter-college hackathon in AI/ML domain
+
+Education
+
+International Institute of Information Technology Bhubaneswar
+BTech Computer Science Engineering
+
+Delhi Public School
+CBSE Grade 12
+
+Amity International School
+CBSE Grade 10
+
+2024
+
+2023
+
+2023- 2027
+
+2022-23
+Percentage: 91
+
+2021-22
+Percentage: 96
+
+
