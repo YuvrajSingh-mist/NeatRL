@@ -1,6 +1,5 @@
 ---
 layout: archive
-title: "RL From Scratch"
 permalink: /rl/
 author_profile: false
 ---
@@ -8,6 +7,43 @@ author_profile: false
 {% include base_path %}
 
 <link rel="stylesheet" href="{{ '/assets/css/models.css' | relative_url }}?v={{ site.time | date: '%s' }}">
+
+<style>
+/* Emergency CSS override - FORCE WIDE LAYOUT */
+html, body, .page, .archive, .page__content, .layout--archive, * {
+    max-width: none !important;
+}
+
+.page__content, .archive, .models-page, .models-intro {
+    max-width: 1400px !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 20px !important;
+    box-sizing: border-box !important;
+}
+
+.layout--archive .archive {
+    width: 100% !important;
+    max-width: 1400px !important;
+    margin: 0 auto !important;
+    padding: 0 20px !important;
+}
+
+.layout--archive .sidebar {
+    display: none !important;
+}
+
+/* Add spacing around main intro section */
+.models-intro {
+    margin-bottom: 30px;
+    padding: 50px 40px !important;
+}
+
+/* Add overall page padding */
+.models-page {
+    padding: 30px 20px;
+}
+</style>
 
 <div class="models-page">
   <div class="models-intro">

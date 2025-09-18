@@ -1,0 +1,212 @@
+/* Ultra-Strong Wide Layout Override - Force full width layout */
+
+/* Kill ALL max-width constraints with nuclear force */
+*,
+*::before,
+*::after,
+html,
+body,
+.page,
+.page__content,
+.page__inner-wrap,
+.archive,
+.initial-content,
+.layout--archive,
+.layout--single,
+.layout--splash,
+.masthead,
+.masthead__inner-wrap,
+.page__footer,
+.page__footer-wrapper,
+.sidebar,
+.main,
+section,
+article,
+div {
+  max-width: none !important;
+}
+
+/* Force body and html to be full width */
+html,
+body {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Main page structure - FORCE FULL WIDTH */
+.page {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Content area with reasonable max-width */
+.page__content {
+  max-width: 1400px !important;
+  width: 100% !important;
+  margin: 0 auto !important;
+  padding: 0 20px !important;
+  box-sizing: border-box !important;
+}
+
+/* Archive layout (leaderboard/RL pages) */
+.archive {
+  max-width: 1400px !important;
+  width: 100% !important;
+  margin: 0 auto !important;
+  padding: 0 20px !important;
+  box-sizing: border-box !important;
+}
+
+/* Kill sidebar constraints on archive pages */
+.layout--archive {
+  display: block !important;
+}
+
+.layout--archive .archive {
+  width: 100% !important;
+  max-width: 1400px !important;
+  margin: 0 auto !important;
+  padding: 0 20px !important;
+  float: none !important;
+  margin-right: 0 !important;
+}
+
+/* Leaderboard specific */
+.leaderboard-page,
+.leaderboard-content,
+.models-page {
+  max-width: 1400px !important;
+  width: 100% !important;
+  margin: 0 auto !important;
+  padding: 0 20px !important;
+  box-sizing: border-box !important;
+}
+
+/* Models intro section */
+.models-intro {
+  max-width: 1400px !important;
+  width: 100% !important;
+  margin: 0 auto 30px auto !important;
+  padding: 40px 20px !important;
+  box-sizing: border-box !important;
+}
+
+/* Override minimal-mistakes specific classes */
+.page__inner-wrap {
+  max-width: none !important;
+  width: 100% !important;
+}
+
+.archive .page__content {
+  max-width: none !important;
+  padding: 0 !important;
+  width: 100% !important;
+}
+
+/* Header and footer */
+.masthead,
+.masthead__inner-wrap {
+  max-width: 1400px !important;
+  width: 100% !important;
+  margin: 0 auto !important;
+}
+
+.page__footer,
+.page__footer-wrapper {
+  max-width: 1400px !important;
+  width: 100% !important;
+  margin: 0 auto !important;
+}
+
+/* Kill any remaining layout constraints */
+.initial-content {
+  max-width: 1400px !important;
+  width: 100% !important;
+  margin: 0 auto !important;
+}
+
+/* Main content wrapper */
+.main {
+  max-width: none !important;
+  width: 100% !important;
+}
+
+/* Sidebar removal for archive pages */
+.layout--archive .sidebar {
+  display: none !important;
+}
+
+/* Make sure content fills available space */
+.layout--archive .main {
+  width: 100% !important;
+  max-width: none !important;
+  margin-right: 0 !important;
+}
+
+/* Force layout recalculation */
+.page,
+.archive,
+.main {
+  display: block !important;
+  overflow: visible !important;
+  position: relative !important;
+}
+
+/* Responsive behavior */
+@media (max-width: 1440px) {
+  .page__content,
+  .archive,
+  .leaderboard-content,
+  .models-page,
+  .masthead__inner-wrap,
+  .page__footer-wrapper,
+  .models-intro {
+    max-width: 1200px !important;
+  }
+}
+
+@media (max-width: 1200px) {
+  .page__content,
+  .archive,
+  .leaderboard-content,
+  .models-page,
+  .masthead__inner-wrap,
+  .page__footer-wrapper,
+  .models-intro {
+    max-width: 1000px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .page__content,
+  .archive,
+  .leaderboard-content,
+  .models-page,
+  .models-intro {
+    padding: 0 15px !important;
+  }
+}
+
+/* Additional nuclear overrides */
+.container,
+.wrapper,
+.content,
+.inner {
+  max-width: none !important;
+  width: 100% !important;
+}
+
+/* Ensure the layout is recalculated */
+html {
+  box-sizing: border-box !important;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit !important;
+}

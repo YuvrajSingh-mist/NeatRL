@@ -23,6 +23,7 @@
 <meta name="msapplication-config" content="{{ base_path }}/images/browserconfig.xml?v=M44lzPylqQ">
 <meta name="theme-color" content="#ffffff">
 <link rel="stylesheet" href="{{ base_path }}/assets/css/academicons.css"/>
+<link rel="stylesheet" href="{{ base_path }}/assets/css/wide-layout.css?v={{ site.time | date: '%s' }}"/>
 
 <!-- Dark Mode CSS -->
 <style>
@@ -461,11 +462,145 @@
       word-break: break-word;
     }
   }
+
+  /* Layout improvements for better spacing and wider content */
+  .page {
+    width: 100% !important;
+    max-width: none !important;
+  }
+  
+  .page__content {
+    max-width: 1400px !important;
+    margin: 0 auto !important;
+    padding: 0 20px !important;
+  }
+  
+  /* Override minimal-mistakes theme constraints */
+  .page__inner-wrap {
+    max-width: none !important;
+    width: 100% !important;
+  }
+  
+  /* Improve archive layout for leaderboard and RL pages */
+  .archive {
+    max-width: 1400px !important;
+    margin: 0 auto !important;
+    padding: 0 20px !important;
+  }
+  
+  .archive .page__content {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  
+  /* Better spacing for models and leaderboard content */
+  .models-page, .leaderboard-page {
+    max-width: 1400px !important;
+    margin: 0 auto !important;
+    padding: 0 20px !important;
+  }
+  
+  /* Override theme's content wrapper */
+  .layout--archive .archive {
+    max-width: 1400px !important;
+    width: 100% !important;
+  }
+  
+  /* Improve main content area */
+  .initial-content {
+    max-width: 1400px !important;
+    margin: 0 auto !important;
+  }
+  
+  /* Fix leaderboard specific content */
+  .leaderboard-content {
+    max-width: 1400px !important;
+    margin: 0 auto !important;
+    padding: 40px 20px !important;
+  }
+  
+  /* Override any theme max-width constraints */
+  .masthead__inner-wrap,
+  .page__footer-wrapper {
+    max-width: 1400px !important;
+    margin: 0 auto !important;
+  }
+  
+  /* Better responsive behavior */
+  @media (max-width: 1440px) {
+    .page__content, .archive, .models-page, .leaderboard-page, .initial-content,
+    .masthead__inner-wrap, .page__footer-wrapper, .leaderboard-content {
+      max-width: 1200px !important;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .page__content, .archive, .models-page, .leaderboard-page, .leaderboard-content {
+      padding: 0 15px !important;
+    }
+  }
 </style>
 
 
 <!-- Support for MatJax -->
 <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
 <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+<!-- Fix navigation links to use localhost -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Fixing navigation links...');
+    
+    // Fix all navigation links to use localhost instead of 0.0.0.0
+    function fixNavigationLinks() {
+        const navLinks = document.querySelectorAll('a[href]');
+        let fixedCount = 0;
+        
+        navLinks.forEach(link => {
+            const href = link.getAttribute('href');
+            
+            // Fix absolute URLs with 0.0.0.0
+            if (href && href.includes('0.0.0.0:4000')) {
+                const newHref = href.replace('0.0.0.0:4000', 'localhost:4000');
+                link.setAttribute('href', newHref);
+                console.log('Fixed absolute link:', href, '->', newHref);
+                fixedCount++;
+            }
+            
+            // Fix relative links that might resolve to 0.0.0.0
+            if (href && (href === '/' || href === '/leaderboard/' || href === '/rl/' || href.startsWith('/'))) {
+                link.addEventListener('click', function(e) {
+                    // Only override if current host is 0.0.0.0
+                    if (window.location.hostname === '0.0.0.0') {
+                        e.preventDefault();
+                        const newUrl = 'http://localhost:4000' + href;
+                        console.log('Redirecting to localhost:', newUrl);
+                        window.location.href = newUrl;
+                    }
+                });
+            }
+        });
+        
+        console.log('Fixed', fixedCount, 'navigation links');
+    }
+    
+    // Fix links immediately and after any dynamic content loads
+    fixNavigationLinks();
+    
+    // Also fix links that might be added later
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                fixNavigationLinks();
+            }
+        });
+    });
+    
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+});
+</script>
 
 <!-- end custom head snippets -->

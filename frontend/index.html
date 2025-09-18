@@ -30,12 +30,12 @@ feature_row:
     url: "/leaderboard/"
     btn_label: "View Rankings"
     btn_class: "btn--primary"
-  - image_path: /assets/images/analytics-icon.png
-    alt: "Performance Analytics"
-    title: "Performance Analytics"
-    excerpt: "Get detailed analytics and metrics for your submissions. Monitor evaluation progress, view score distributions, and analyze performance trends."
-    url: "/leaderboard/#analytics"
-    btn_label: "View Analytics"
+  - image_path: /assets/images/rl-learning-icon.png
+    alt: "Learn RL From Scratch"
+    title: "Learn RL From Scratch"
+    excerpt: "New to Reinforcement Learning? Start with our comprehensive tutorials covering Q-Learning, Policy Gradients, Actor-Critic methods, and more. Learn by implementing algorithms step by step."
+    url: "/rl/"
+    btn_label: "Start Learning"
     btn_class: "btn--primary"
 feature_row2:
   - image_path: /assets/images/rl-architecture.png
@@ -115,34 +115,77 @@ feature_row4:
   </div>
 </div>
 
-<div class="home-tech-stack">
+<div class="home-rl-learning">
   <div class="container">
-    <h2>Technology Stack</h2>
-    <div class="tech-grid">
-      <div class="tech-item">
-        <img src="/assets/images/fastapi-logo.png" alt="FastAPI">
-        <span>FastAPI</span>
+    <h2>RL From Scratch</h2>
+    <p class="section-intro">Learn Reinforcement Learning from the ground up with our comprehensive collection of algorithms implemented from scratch in PyTorch.</p>
+    
+    <div class="rl-categories">
+      <div class="rl-category">
+        <div class="category-icon">🎯</div>
+        <h3>Value-Based Methods</h3>
+        <p>Explore Q-Learning, DQN, Double DQN, and Dueling DQN. Learn how agents make decisions by estimating value functions.</p>
+        <ul>
+          <li>Q-Learning (Tabular)</li>
+          <li>Deep Q-Network (DQN)</li>
+          <li>Double DQN & Dueling DQN</li>
+          <li>Rainbow DQN</li>
+        </ul>
       </div>
-      <div class="tech-item">
-        <img src="/assets/images/celery-logo.png" alt="Celery">
-        <span>Celery</span>
+      
+      <div class="rl-category">
+        <div class="category-icon">🎭</div>
+        <h3>Policy-Based Methods</h3>
+        <p>Master direct policy optimization with REINFORCE, PPO, and TRPO. Learn to optimize policies without value functions.</p>
+        <ul>
+          <li>REINFORCE Algorithm</li>
+          <li>Proximal Policy Optimization (PPO)</li>
+          <li>Trust Region Policy Optimization (TRPO)</li>
+          <li>Natural Policy Gradients</li>
+        </ul>
       </div>
-      <div class="tech-item">
-        <img src="/assets/images/redis-logo.png" alt="Redis">
-        <span>Redis</span>
+      
+      <div class="rl-category">
+        <div class="category-icon">🎪</div>
+        <h3>Actor-Critic Methods</h3>
+        <p>Combine the best of both worlds with A2C, A3C, SAC, and TD3. Learn hybrid approaches that use both policy and value functions.</p>
+        <ul>
+          <li>Advantage Actor-Critic (A2C)</li>
+          <li>Asynchronous Advantage Actor-Critic (A3C)</li>
+          <li>Soft Actor-Critic (SAC)</li>
+          <li>Twin Delayed DDPG (TD3)</li>
+        </ul>
       </div>
-      <div class="tech-item">
-        <img src="/assets/images/postgresql-logo.png" alt="PostgreSQL">
-        <span>PostgreSQL</span>
+    </div>
+    
+    <div class="rl-features">
+      <div class="feature-grid">
+        <div class="feature-item">
+          <div class="feature-icon">�</div>
+          <h4>Complete Implementations</h4>
+          <p>Every algorithm includes full PyTorch implementation with detailed comments and explanations.</p>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">🧪</div>
+          <h4>Experimental Setup</h4>
+          <p>Pre-configured environments and hyperparameters to get you started immediately.</p>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">�</div>
+          <h4>Visualization Tools</h4>
+          <p>Built-in plotting and analysis tools to understand agent behavior and training progress.</p>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">�</div>
+          <h4>From Theory to Practice</h4>
+          <p>Bridge the gap between mathematical formulations and working code implementations.</p>
+        </div>
       </div>
-      <div class="tech-item">
-        <img src="/assets/images/docker-logo.png" alt="Docker">
-        <span>Docker</span>
-      </div>
-      <div class="tech-item">
-        <img src="/assets/images/prometheus-logo.png" alt="Prometheus">
-        <span>Prometheus</span>
-      </div>
+    </div>
+    
+    <div class="cta-section">
+      <a href="/rl/" class="btn btn--primary btn--large">Explore RL Algorithms</a>
+      <a href="/leaderboard/" class="btn btn--inverse btn--large">Test Your Models</a>
     </div>
   </div>
 </div>
@@ -250,56 +293,115 @@ feature_row4:
   margin: 0 10px;
 }
 
-.home-tech-stack {
+.home-rl-learning {
   padding: 80px 0;
   background: white;
 }
 
-.home-tech-stack .container {
+.home-rl-learning .container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
 }
 
-.home-tech-stack h2 {
+.home-rl-learning h2 {
   text-align: center;
-  margin-bottom: 50px;
+  margin-bottom: 20px;
   font-size: 2.5em;
   color: #333;
 }
 
-.tech-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 30px;
+.section-intro {
+  text-align: center;
+  font-size: 1.2em;
+  color: #666;
+  margin-bottom: 50px;
   max-width: 800px;
-  margin: 0 auto;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-.tech-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px;
+.rl-categories {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 30px;
+  margin-bottom: 60px;
+}
+
+.rl-category {
   background: #f8f9fa;
+  padding: 30px;
   border-radius: 12px;
+  text-align: center;
   transition: transform 0.3s ease;
 }
 
-.tech-item:hover {
+.rl-category:hover {
   transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
-.tech-item img {
-  width: 60px;
-  height: 60px;
-  margin-bottom: 15px;
-  object-fit: contain;
+.category-icon {
+  font-size: 3em;
+  margin-bottom: 20px;
 }
 
-.tech-item span {
-  font-weight: bold;
+.rl-category h3 {
   color: #333;
+  margin-bottom: 15px;
+  font-size: 1.5em;
+}
+
+.rl-category p {
+  color: #666;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.rl-category ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.rl-category li {
+  color: #495057;
+  padding: 5px 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.rl-category li:last-child {
+  border-bottom: none;
+}
+
+.rl-features {
+  margin-bottom: 50px;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 30px;
+}
+
+.feature-item {
+  text-align: center;
+  padding: 20px;
+}
+
+.feature-icon {
+  font-size: 2.5em;
+  margin-bottom: 15px;
+}
+
+.feature-item h4 {
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.feature-item p {
+  color: #666;
+  line-height: 1.6;
 }
 
 @media (max-width: 768px) {
@@ -316,14 +418,24 @@ feature_row4:
     grid-template-columns: 1fr;
   }
   
-  .tech-grid {
-    grid-template-columns: repeat(3, 1fr);
+  .rl-categories {
+    grid-template-columns: 1fr;
+  }
+  
+  .feature-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
   
   .cta-section .btn {
     display: block;
     margin: 10px auto;
     width: 80%;
+  }
+}
+
+@media (max-width: 480px) {
+  .feature-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
@@ -357,7 +469,7 @@ function animateStats() {
 async function fetchStatistic(type, element) {
   try {
     // Auto-detect API base URL
-    const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '0.0.0.0'
       ? 'http://localhost:8000/api' 
       : `${window.location.protocol}//${window.location.hostname}:8000/api`;
     

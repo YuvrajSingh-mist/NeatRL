@@ -1,0 +1,13 @@
+// Custom overrides to prevent vendor import errors
+// This file prevents the minimal-mistakes theme from loading problematic vendor dependencies
+
+// Disable vendor imports that cause errors
+$breakpoint-to-ems: false !default;
+$susy: () !default;
+
+// Define minimal breakpoint mixin as fallback
+@mixin breakpoint($point) {
+  @media (min-width: $point) {
+    @content;
+  }
+}
