@@ -15,9 +15,13 @@
   document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
 </script>
 
+<!-- Disable greedy navigation that hides tabs -->
+<script src="{{ '/assets/js/disable-greedy-nav.js' | relative_url }}"></script>
+
 <!-- For all browsers -->
 <link rel="stylesheet" href="{{ '/assets/css/main.css' | relative_url }}">
 <link rel="stylesheet" href="{{ '/assets/css/dark-mode.css' | relative_url }}">
 <link rel="stylesheet" href="{{ '/assets/css/models.css' | relative_url }}">
+<link rel="stylesheet" href="{{ '/assets/css/rlhub.css' | relative_url }}">
 
 <meta http-equiv="cleartype" content="on">

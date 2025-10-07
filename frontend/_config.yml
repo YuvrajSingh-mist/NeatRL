@@ -12,15 +12,14 @@ minimal_mistakes_skin: "default" # "air", "aqua", "contrast", "dark", "dirt", "n
 
 # Basic Site Settings
 locale                   : "en-US"
-title                    : "NeatRL — Reinforcement Learning Evaluation Platform"
+title                    : "NeatRL"
 title_separator          : "-"
 name                     : &name "Yuvraj Singh"
 description              : &description "NeatRL: A comprehensive Reinforcement Learning evaluation platform for testing and comparing trained agents. Submit your models, view leaderboards, and explore RL algorithms."
 url                      : https://smolhub.com # Primary domain
 # Alternate domains: https://yuvrajsingh-portfoilo-website.vercel.app, https://smolhub.vercel.app
 baseurl                  : "" # the subpath of your site, e.g. "/blog"
-repository               : "YuvrajSingh-mist/SmolHub-Website"
-portfolio_home           : https://yuvrajsingh-portfolio-website.vercel.app/
+repository               : "YuvrajSingh-mist/NeatRL"
 
 # Site Author - The following control what appear as part of the author content on the side bar.
 #               If a field is blank the icon and link will not appear, otherwise it will be shown.

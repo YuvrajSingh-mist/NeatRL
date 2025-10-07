@@ -24,9 +24,17 @@ RUN gem install bundler && \
 # Copy the rest of the application
 COPY . .
 
+# Install gems again after copying all files to ensure they're available
+RUN bundle install --jobs 4 --retry 3
+
+# Create a proper entrypoint script to ensure gems are available
+RUN printf '#!/bin/sh\nset -e\nbundle install --quiet\nexec "$@"\n' > /entrypoint.sh && \
+    chmod +x /entrypoint.sh
+
 # Expose port
 EXPOSE 4000
 
 # Start Jekyll with development server
 ENV JEKYLL_ENV=development
-CMD ["bundle", "exec", "jekyll", "serve", "--host", "0.0.0.0", "--port", "4000", "--force_polling", "--watch", "--config", "_config.yml,_config_dev.yml"]
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["bundle", "exec", "jekyll", "serve", "--host", "0.0.0.0", "--port", "4000", "--force_polling", "--watch"]

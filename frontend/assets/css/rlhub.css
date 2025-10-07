@@ -1,0 +1,253 @@
+/* RLHub - Agent Performance Gallery Styles */
+
+.rlhub-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.rlhub-intro {
+  text-align: center;
+  margin-bottom: 4rem;
+  padding: 3rem 2rem;
+  background: linear-gradient(135deg, rgba(52, 152, 219, 0.05), rgba(46, 204, 113, 0.05));
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  
+  h1 {
+    font-size: 3rem !important;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(135deg, #3498db, #2c3e50);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    
+    @media (max-width: 768px) {
+      font-size: 2.2rem !important;
+    }
+  }
+  
+  .rlhub-description {
+    font-size: 1.3rem;
+    color: #2c3e50;
+    line-height: 1.6;
+    max-width: 800px;
+    margin: 0 auto;
+    
+    @media (max-width: 768px) {
+      font-size: 1.1rem;
+    }
+  }
+}
+
+.algorithm-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4rem;
+}
+
+.algorithm-section {
+  background: white;
+  border-radius: 20px;
+  padding: 2.5rem;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(52, 152, 219, 0.1);
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+  }
+}
+
+.algorithm-title {
+  font-size: 2.2rem !important;
+  margin-bottom: 2rem !important;
+  color: #2c3e50;
+  border-left: 5px solid #3498db;
+  padding-left: 1rem;
+  
+  @media (max-width: 768px) {
+    font-size: 1.8rem !important;
+  }
+}
+
+.agent-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  gap: 2rem;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
+.agent-card {
+  background: #f8f9fa;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  }
+}
+
+.agent-gif {
+  position: relative;
+  width: 100%;
+  height: 250px;
+  overflow: hidden;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: all 0.3s ease;
+  }
+  
+  &::after {
+    content: "🎮";
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 1.2rem;
+  }
+}
+
+.agent-info {
+  padding: 1.5rem;
+  
+  h3 {
+    font-size: 1.4rem !important;
+    margin-bottom: 1rem !important;
+    color: #2c3e50;
+    font-weight: 600;
+  }
+  
+  .agent-description {
+    color: #555;
+    line-height: 1.6;
+    margin-top: 1rem;
+    font-size: 0.95rem;
+  }
+}
+
+.performance-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+  
+  .stat {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+  }
+  
+  @media (max-width: 480px) {
+    justify-content: center;
+  }
+}
+
+.rlhub-footer {
+  margin-top: 4rem;
+  text-align: center;
+}
+
+.implementation-note {
+  background: linear-gradient(135deg, rgba(46, 204, 113, 0.05), rgba(52, 152, 219, 0.05));
+  padding: 2.5rem;
+  border-radius: 20px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  
+  h3 {
+    font-size: 1.8rem !important;
+    margin-bottom: 1.5rem !important;
+    color: #2c3e50;
+  }
+  
+  p {
+    font-size: 1.1rem;
+    color: #555;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+.cta-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  
+  @media (max-width: 480px) {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+/* Placeholder for missing GIFs */
+.agent-gif img[src*="placeholder"] {
+  background: linear-gradient(135deg, #ecf0f1, #bdc3c7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #7f8c8d;
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+/* Loading state */
+.agent-gif img {
+  background: linear-gradient(135deg, #ecf0f1, #bdc3c7);
+  min-height: 250px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .rlhub-container {
+    padding: 1rem 0.5rem;
+  }
+  
+  .algorithm-section {
+    padding: 1.5rem;
+  }
+  
+  .agent-gallery {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .agent-gif {
+    height: 200px;
+  }
+  
+  .performance-stats {
+    justify-content: center;
+  }
+  
+  .performance-stats .stat {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.6rem;
+  }
+}
