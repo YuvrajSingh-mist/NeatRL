@@ -1105,188 +1105,274 @@ body {
 }
 
 /* ================================
-   MODEL DETAIL PAGE - CLEAN LAYOUT
+   MODEL DETAIL PAGE - CLEAN LAYOUT LIKE SMOLHUB.COM
    ================================ */
 
-/* Hide sidebar on model detail pages to create clean, centered layout like smolhub.com */
-.layout--single {
+/* FORCE CLEAN LAYOUT FOR MODEL DETAIL PAGES */
+body.layout--single {
+  
+  /* Hide sidebar completely */
   .sidebar {
     display: none !important;
   }
   
+  /* Force full-width main container */
   #main {
     max-width: 1000px !important;
     margin: 0 auto !important;
     padding: 2rem !important;
+    width: 100% !important;
   }
   
+  /* Reset page layout to single column */
   .page {
     max-width: none !important;
     margin: 0 !important;
     padding: 0 !important;
     display: block !important;
     grid-template-columns: none !important;
+    width: 100% !important;
+    float: none !important;
+    padding-right: 0 !important;
   }
   
+  /* Reset inner wrap to normal flow */
   .page__inner-wrap {
     max-width: none !important;
     margin: 0 !important;
     padding: 0 !important;
     display: block !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+    width: 100% !important;
+    float: none !important;
+  }
+  
+  /* Force content to full width */
+  .page__content {
+    grid-column: unset !important;
+    width: 100% !important;
+    max-width: none !important;
+    float: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* Hide all unwanted elements */
+  .page__meta,
+  .page__share,
+  .pagination {
+    display: none !important;
+  }
+  
+  /* Force initial content to be centered */
+  .initial-content {
+    margin-left: 0 !important;
+    width: 100% !important;
   }
 }
 
-/* Clean Model Page Layout */
-.model-implementation-page {
+/* SMOLHUB.COM STYLE MODEL PAGE LAYOUT */
+body.layout--single .model-implementation-page {
   max-width: 900px !important;
   margin: 0 auto !important;
   padding: 0 !important;
+  width: 100% !important;
 }
 
-.model-implementation-page .simple-header {
+/* Clean header like smolhub.com */
+body.layout--single .model-implementation-page .simple-header {
   margin-bottom: 3rem !important;
-  padding-bottom: 2rem !important;
-  border-bottom: 2px solid var(--border-color) !important;
+  padding-bottom: 0 !important;
+  border-bottom: none !important;
+  text-align: left !important;
 }
 
-.model-implementation-page .model-title {
+/* Large title like smolhub.com */
+body.layout--single .model-implementation-page .model-title {
   font-size: 3rem !important;
   font-weight: 700 !important;
-  color: var(--text-color) !important;
+  color: #333 !important;
   margin-bottom: 1.5rem !important;
   line-height: 1.2 !important;
+  text-align: left !important;
 }
 
-.model-implementation-page .model-meta {
+/* Metadata badges like smolhub.com */
+body.layout--single .model-implementation-page .model-meta {
   display: flex !important;
   flex-wrap: wrap !important;
-  gap: 1rem !important;
-  margin: 0 !important;
+  gap: 0.8rem !important;
+  margin: 0 0 2rem 0 !important;
   padding: 0 !important;
   border: none !important;
 }
 
-.model-implementation-page .meta-item {
+body.layout--single .model-implementation-page .meta-item {
   background: #f8f9fa !important;
   border: 1px solid #e9ecef !important;
-  border-radius: 20px !important;
-  padding: 8px 16px !important;
-  font-size: 0.9rem !important;
-  color: #495057 !important;
+  border-radius: 4px !important;
+  padding: 6px 12px !important;
+  font-size: 0.85rem !important;
+  color: #666 !important;
   display: inline-block !important;
   white-space: nowrap !important;
+  font-weight: normal !important;
 }
 
-.model-implementation-page .meta-item strong {
-  color: var(--text-color) !important;
+body.layout--single .model-implementation-page .meta-item strong {
+  color: #333 !important;
   font-weight: 600 !important;
 }
 
-.model-implementation-page .meta-item a {
+body.layout--single .model-implementation-page .meta-item a {
   color: #0066cc !important;
   text-decoration: none !important;
 }
 
-.model-implementation-page .meta-item a:hover {
+body.layout--single .model-implementation-page .meta-item a:hover {
   text-decoration: underline !important;
 }
 
-/* Clean Content Styling */
-.model-implementation-page .model-content {
+/* CLEAN CONTENT STYLING LIKE SMOLHUB.COM */
+body.layout--single .model-implementation-page .model-content {
   font-size: 1.1rem !important;
   line-height: 1.7 !important;
-  color: var(--text-color) !important;
+  color: #333 !important;
+  margin-top: 0 !important;
 }
 
-.model-implementation-page .model-content h1,
-.model-implementation-page .model-content h2,
-.model-implementation-page .model-content h3 {
-  color: var(--text-color) !important;
+body.layout--single .model-implementation-page .model-content h1,
+body.layout--single .model-implementation-page .model-content h2,
+body.layout--single .model-implementation-page .model-content h3 {
+  color: #333 !important;
   font-weight: 600 !important;
-  margin-top: 3rem !important;
-  margin-bottom: 1.5rem !important;
+  margin-top: 2.5rem !important;
+  margin-bottom: 1rem !important;
 }
 
-.model-implementation-page .model-content h1 {
-  font-size: 2.5rem !important;
-  border-bottom: 2px solid var(--border-color) !important;
-  padding-bottom: 1rem !important;
+body.layout--single .model-implementation-page .model-content h1 {
+  font-size: 2rem !important;
+  border-bottom: none !important;
+  padding-bottom: 0 !important;
 }
 
-.model-implementation-page .model-content h2 {
-  font-size: 1.8rem !important;
+body.layout--single .model-implementation-page .model-content h2 {
+  font-size: 1.5rem !important;
 }
 
-.model-implementation-page .model-content h3 {
-  font-size: 1.4rem !important;
+body.layout--single .model-implementation-page .model-content h3 {
+  font-size: 1.25rem !important;
 }
 
-.model-implementation-page .model-content p {
-  margin-bottom: 1.5rem !important;
-  color: var(--text-color) !important;
-}
-
-.model-implementation-page .model-content ul,
-.model-implementation-page .model-content ol {
-  margin: 1.5rem 0 !important;
-  padding-left: 2rem !important;
-}
-
-.model-implementation-page .model-content li {
-  margin-bottom: 0.5rem !important;
+body.layout--single .model-implementation-page .model-content p {
+  margin-bottom: 1.2rem !important;
+  color: #333 !important;
   line-height: 1.6 !important;
 }
 
-.model-implementation-page .model-content strong {
-  font-weight: 600 !important;
-  color: var(--text-color) !important;
-}
-
-.model-implementation-page .model-content code {
-  background: #f8f9fa !important;
-  padding: 2px 6px !important;
-  border-radius: 4px !important;
-  font-size: 0.9em !important;
-  color: #e83e8c !important;
-  border: 1px solid #e9ecef !important;
-}
-
-.model-implementation-page .model-content pre {
-  background: #f8f9fa !important;
-  border: 1px solid #e9ecef !important;
-  border-radius: 8px !important;
-  padding: 1.5rem !important;
-  overflow-x: auto !important;
-  margin: 2rem 0 !important;
-}
-
-.model-implementation-page .model-content blockquote {
-  border-left: 4px solid #0066cc !important;
+body.layout--single .model-implementation-page .model-content ul,
+body.layout--single .model-implementation-page .model-content ol {
+  margin: 1.2rem 0 !important;
   padding-left: 1.5rem !important;
-  margin: 2rem 0 !important;
+}
+
+body.layout--single .model-implementation-page .model-content li {
+  margin-bottom: 0.4rem !important;
+  line-height: 1.6 !important;
+  color: #333 !important;
+}
+
+body.layout--single .model-implementation-page .model-content strong {
+  font-weight: 600 !important;
+  color: #333 !important;
+}
+
+body.layout--single .model-implementation-page .model-content code {
+  background: #f5f5f5 !important;
+  padding: 2px 4px !important;
+  border-radius: 3px !important;
+  font-size: 0.9em !important;
+  color: #d63384 !important;
+  border: none !important;
+}
+
+body.layout--single .model-implementation-page .model-content pre {
+  background: #f8f9fa !important;
+  border: 1px solid #e9ecef !important;
+  border-radius: 6px !important;
+  padding: 1rem !important;
+  overflow-x: auto !important;
+  margin: 1.5rem 0 !important;
+}
+
+body.layout--single .model-implementation-page .model-content blockquote {
+  border-left: 3px solid #0066cc !important;
+  padding-left: 1rem !important;
+  margin: 1.5rem 0 !important;
   color: #666 !important;
   font-style: italic !important;
 }
 
-.model-implementation-page .model-content a {
+body.layout--single .model-implementation-page .model-content a {
   color: #0066cc !important;
   text-decoration: none !important;
 }
 
-.model-implementation-page .model-content a:hover {
+body.layout--single .model-implementation-page .model-content a:hover {
   text-decoration: underline !important;
 }
 
-/* Hide unwanted page elements */
-.layout--single .page__meta,
-.layout--single .page__share,
-.layout--single .pagination {
+/* Ensure images are responsive */
+body.layout--single .model-implementation-page .model-content img {
+  max-width: 100% !important;
+  height: auto !important;
+  margin: 1.5rem 0 !important;
+  border-radius: 6px !important;
+}
+
+/* Tables styling */
+body.layout--single .model-implementation-page .model-content table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin: 1.5rem 0 !important;
+}
+
+body.layout--single .model-implementation-page .model-content table th,
+body.layout--single .model-implementation-page .model-content table td {
+  border: 1px solid #dee2e6 !important;
+  padding: 0.75rem !important;
+  text-align: left !important;
+}
+
+body.layout--single .model-implementation-page .model-content table th {
+  background-color: #f8f9fa !important;
+  font-weight: 600 !important;
+}
+
+/* HIDE DEFAULT JEKYLL ELEMENTS */
+body.layout--single .page__title {
+  display: none !important;
+}
+
+body.layout--single .page__date {
+  display: none !important;
+}
+
+body.layout--single header {
+  display: none !important;
+}
+
+body.layout--single .page__meta,
+body.layout--single .page__share,
+body.layout--single .pagination {
   display: none !important;
 }
 
 /* Ensure clean full-width layout */
-.layout--single .initial-content {
+body.layout--single .initial-content {
   margin-left: 0 !important;
+  width: 100% !important;
 }
 
 /* Mobile Responsive */

@@ -3,119 +3,216 @@ layout: single
 ---
 
 <style>
+/* CLEAN SMOLHUB.COM STYLE LAYOUT */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Hide sidebar completely */
+.sidebar {
+  display: none !important;
+}
+
+/* Clean main container */
+#main {
+  max-width: 1000px !important;
+  margin: 0 auto !important;
+  padding: 2rem !important;
+  width: 100% !important;
+}
+
+/* Reset page layout */
+.page {
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  float: none !important;
+  padding-right: 0 !important;
+}
+
+.page__inner-wrap {
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  float: none !important;
+}
+
+.page__content {
+  width: 100% !important;
+  max-width: none !important;
+  float: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Hide Jekyll default elements */
+.page__title,
+.page__date,
+header,
+.page__meta,
+.page__share,
+.pagination {
+  display: none !important;
+}
+
+/* Model page container */
 .model-implementation-page {
   max-width: 900px;
   margin: 0 auto;
+  padding: 0;
 }
 
+/* Clean header */
 .simple-header {
-  margin-bottom: 30px;
+  margin-bottom: 3rem;
   text-align: left;
 }
 
+/* Large title like smolhub.com */
 .model-title {
-  font-size: 2.5em;
-  margin-bottom: 15px;
+  font-size: 3rem;
   font-weight: 700;
-  color: #2c3e50;
+  color: #333;
+  margin-bottom: 1.5rem;
+  line-height: 1.2;
 }
 
+/* Metadata badges */
 .model-meta {
   display: flex;
-  gap: 20px;
   flex-wrap: wrap;
-  margin-bottom: 20px;
-  padding: 15px 0;
-  border-bottom: 1px solid #e9ecef;
+  gap: 0.8rem;
+  margin: 0 0 2rem 0;
+  padding: 0;
+  border: none;
 }
 
 .meta-item {
-  background-color: #f8f9fa;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 0.9em;
-  color: #495057;
-  border: 1px solid #dee2e6;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  color: #666;
+  display: inline-block;
+  white-space: nowrap;
 }
 
 .meta-item strong {
-  color: #2c3e50;
+  color: #333;
   font-weight: 600;
 }
 
+.meta-item a {
+  color: #0066cc;
+  text-decoration: none;
+}
+
+.meta-item a:hover {
+  text-decoration: underline;
+}
+
+/* Clean content styling */
 .model-content {
+  font-size: 1.1rem;
   line-height: 1.7;
-  font-size: 1.1em;
+  color: #333;
 }
 
 .model-content h1,
 .model-content h2,
 .model-content h3 {
-  color: #2c3e50;
-  margin-top: 2em;
-  margin-bottom: 1em;
+  color: #333;
+  font-weight: 600;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
 }
 
 .model-content h1 {
-  font-size: 2em;
-  border-bottom: 2px solid #e9ecef;
-  padding-bottom: 10px;
+  font-size: 2rem;
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
 .model-content h2 {
-  font-size: 1.6em;
+  font-size: 1.5rem;
 }
 
 .model-content h3 {
-  font-size: 1.3em;
+  font-size: 1.25rem;
 }
 
 .model-content p {
-  margin-bottom: 1.2em;
+  margin-bottom: 1.2rem;
+  color: #333;
+  line-height: 1.6;
+}
+
+.model-content ul,
+.model-content ol {
+  margin: 1.2rem 0;
+  padding-left: 1.5rem;
+}
+
+.model-content li {
+  margin-bottom: 0.4rem;
+  line-height: 1.6;
+  color: #333;
+}
+
+.model-content strong {
+  font-weight: 600;
+  color: #333;
+}
+
+.model-content code {
+  background: #f5f5f5;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 0.9em;
+  color: #d63384;
+  border: none;
+}
+
+.model-content pre {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;  
+  border-radius: 6px;
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+}
+
+.model-content a {
+  color: #0066cc;
+  text-decoration: none;
+}
+
+.model-content a:hover {
+  text-decoration: underline;
 }
 
 .model-content img {
   max-width: 100%;
   height: auto;
-  margin: 20px 0;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-.model-content pre {
-  background-color: #f8f9fa;
-  border: 1px solid #e9ecef;
+  margin: 1.5rem 0;
   border-radius: 6px;
-  padding: 15px;
-  overflow-x: auto;
-  margin: 20px 0;
-}
-
-.model-content code {
-  background-color: #f8f9fa;
-  padding: 2px 4px;
-  border-radius: 3px;
-  font-size: 0.9em;
-}
-
-.model-content blockquote {
-  border-left: 4px solid #007bff;
-  padding-left: 20px;
-  margin: 20px 0;
-  color: #6c757d;
-  font-style: italic;
 }
 
 .model-content table {
   width: 100%;
   border-collapse: collapse;
-  margin: 20px 0;
+  margin: 1.5rem 0;
 }
 
 .model-content table th,
 .model-content table td {
   border: 1px solid #dee2e6;
-  padding: 12px;
+  padding: 0.75rem;
   text-align: left;
 }
 
@@ -124,32 +221,31 @@ layout: single
   font-weight: 600;
 }
 
-.model-content ul,
-.model-content ol {
-  margin: 15px 0;
-  padding-left: 30px;
-}
-
-.model-content li {
-  margin-bottom: 8px;
-}
-
+/* Mobile responsive */
 @media (max-width: 768px) {
-  .model-implementation-page {
-    padding: 0 15px;
+  #main {
+    padding: 1rem !important;
   }
   
   .model-title {
-    font-size: 2em;
+    font-size: 2.5rem;
   }
   
   .model-meta {
     flex-direction: column;
-    gap: 10px;
+    gap: 0.5rem;
   }
   
-  .meta-item {
-    display: block;
+  .model-content h1 {
+    font-size: 1.8rem;
+  }
+  
+  .model-content h2 {
+    font-size: 1.3rem;
+  }
+  
+  .model-content h3 {
+    font-size: 1.1rem;
   }
 }
 </style>
