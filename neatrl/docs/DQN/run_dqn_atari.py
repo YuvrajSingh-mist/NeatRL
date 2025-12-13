@@ -33,7 +33,7 @@ def test_dqn_breakout():
         wandb_project="NeatRL",
         wandb_entity="",
         exp_name="DQN-Atari-Test",
-        atari_wrapper=True
+        atari_wrapper=True,
     )
 
     print(f"Training completed! Model type: {type(model)}")

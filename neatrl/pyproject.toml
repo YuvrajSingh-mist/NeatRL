@@ -17,6 +17,7 @@ dependencies = [
     "torch",
     "numpy",
     "gymnasium",
+    "torchinfo",
     "stable-baselines3",
     "tqdm",
     "wandb",
@@ -24,7 +25,9 @@ dependencies = [
     "imageio",
     "opencv-python",
     "imageio[ffmpeg]",
-    "gymnasium[other]"
+    "gymnasium[other]",
+    "gymnasium[classic-control]",
+    "ale_py"
 
 ]
 

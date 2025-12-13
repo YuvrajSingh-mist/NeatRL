@@ -44,6 +44,37 @@ model = train_dqn(
 )
 ```
 
+### Using Custom Neural Networks
+
+You can also provide your own neural network architecture:
+
+```python
+import torch.nn as nn
+from neatrl import train_dqn
+
+class MyCustomQNet(nn.Module):
+    def __init__(self, state_dim, action_dim):
+        super().__init__()
+        self.layers = nn.Sequential(
+            nn.Linear(state_dim, 256),
+            nn.ReLU(),
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Linear(128, action_dim)
+        )
+    
+    def forward(self, x):
+        return self.layers(x)
+
+model = train_dqn(
+    env_id="CartPole-v1",
+    total_timesteps=50000,
+    agent=MyCustomQNet(state_dim=4, action_dim=2),  # Pass instantiated nn.Module
+    use_wandb=True,
+    exp_name="custom-dqn-cartpole"
+)
+```
+
 **📖 [Complete NeatRL Documentation](../neatrl/docs/DQN/README.md)** - Includes detailed usage examples, hyperparameter tuning guides, and troubleshooting tips.
 
 ---

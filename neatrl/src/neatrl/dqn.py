@@ -2,25 +2,27 @@ import os
 import random
 import time
 
+import ale_py
 import gymnasium as gym
 import imageio
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import wandb
 from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
-import ale_py
+
+import wandb
 
 gym.register_envs(ale_py)
+
 
 # ===== CONFIGURATION =====
 class Config:
     # Experiment settings
     exp_name = "DQN"
     seed = 42
-    env_id = "CartPole-v1"
+    env_id = "BreakoutNoFrameskip-v4"
 
     # Training parameters
     total_timesteps = 20000
@@ -35,7 +37,7 @@ class Config:
     exploration_fraction = 0.5
     learning_starts = 1000
     train_frequency = 10
-
+    num_eval_eps = 10
     # Logging & saving
     capture_video = False
     use_wandb = False
@@ -45,6 +47,9 @@ class Config:
     save_every = 1000
     upload_every = 100
     atari_wrapper = False
+
+    # Custom agent
+    custom_agent = None  # Custom neural network class or instance
 
 
 class QNet(nn.Module):
@@ -76,26 +81,25 @@ class LinearEpsilonDecay(nn.Module):
 def make_env(env_id, seed, atari_wrapper=False):
     """Create environment with video recording"""
     env = gym.make(env_id, render_mode="rgb_array")
-    
+
     if atari_wrapper:
-        
-        from gym.wrappers import AtariPreprocessing, FrameStack
-        
+        from gym.wrappers import AtariPreprocessing, FrameStackObservation
+
         env = AtariPreprocessing(env, grayscale_obs=True, scale_obs=True)
-        env = FrameStack(env, num_stack=4)
-    
+        env = FrameStackObservation(env, num_stack=4)
+
     env = gym.wrappers.RecordEpisodeStatistics(env)
     env.action_space.seed(seed)
 
     return env
 
 
-def evaluate(model, device, run_name, num_eval_eps=10, record=False):
+def evaluate(env_id, model, device, seed, num_eval_eps=10, record=False):
     eval_env = make_env(
-        env_id=Config.env_id,
-        seed=Config.seed,
+        env_id=env_id,
+        seed=seed,
     )
-    eval_env.action_space.seed(Config.seed)
+    eval_env.action_space.seed(seed)
 
     model = model.to(device)
     model = model.eval()
@@ -168,6 +172,8 @@ def train_dqn(
     save_every=Config.save_every,
     upload_every=Config.upload_every,
     atari_wrapper=Config.atari_wrapper,
+    custom_agent=Config.custom_agent,
+    num_eval_eps=Config.num_eval_eps,
 ):
     """
     Train a DQN agent on a Gymnasium environment.
@@ -196,6 +202,8 @@ def train_dqn(
         save_every: Frequency of saving the model
         upload_every: Frequency of uploading the agent videos to wandb
         atari_wrapper: Whether to apply Atari preprocessing wrappers
+        agent: Custom neural network class or instance (nn.Module subclass or instance, optional, defaults to QNet)
+        num_eval_eps: Number of evaluation episodes
     Returns:
         Trained Q-network model
     """
@@ -206,7 +214,7 @@ def train_dqn(
         wandb.init(
             project=wandb_project,
             entity=wandb_entity,
-            sync_tensorboard=True,
+            sync_tensorboard=False,
             config=locals(),
             name=run_name,
             monitor_gym=True,
@@ -233,11 +241,34 @@ def train_dqn(
         torch.backends.cudnn.benchmark = False
 
     env = make_env(env_id, seed, atari_wrapper=atari_wrapper)
-    q_network = QNet(env.observation_space.shape[0], env.action_space.n).to(device)
-    target_net = QNet(env.observation_space.shape[0], env.action_space.n).to(device)
+
+    # Use custom agent if provided, otherwise use default QNet
+    if custom_agent is not None:
+        if isinstance(custom_agent, nn.Module):
+            q_network = custom_agent.to(device)
+            target_net = custom_agent.to(device)
+        else:
+            raise ValueError("agent must be an instance of nn.Module")
+    else:
+        q_network = QNet(env.observation_space.shape[0], env.action_space.n).to(device)
+        target_net = QNet(env.observation_space.shape[0], env.action_space.n).to(device)
+
     target_net.load_state_dict(q_network.state_dict())
     optimizer = optim.Adam(q_network.parameters(), lr=learning_rate)
     eps_decay = LinearEpsilonDecay(start_e, end_e, total_timesteps)
+
+    # Print network architecture
+    try:
+        from torchinfo import summary
+
+        print("Q-Network Architecture:")
+        print(
+            summary(
+                q_network, input_size=(1, env.observation_space.shape[0]), device=device
+            )
+        )
+    except ImportError:
+        print("torchinfo not installed, skipping architecture summary")
 
     q_network.train()
     target_net.train()
@@ -342,7 +373,9 @@ def train_dqn(
 
         # Model evaluation & saving
         if step % eval_every == 0:
-            episodic_returns, _ = evaluate(q_network, device, run_name)
+            episodic_returns, _ = evaluate(
+                env_id, q_network, device, seed, num_eval_eps
+            )
             avg_return = np.mean(episodic_returns)
 
             if use_wandb:
