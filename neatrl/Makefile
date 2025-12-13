@@ -1,7 +1,9 @@
 .PHONY: venv install install-dev lint format build upload clean
 
 venv:
-	uv venv
+	@if [ ! -d ".venv" ]; then \
+		uv venv; \
+	fi
 
 install: venv
 	. .venv/bin/activate && uv pip install -e .
@@ -9,16 +11,16 @@ install: venv
 install-dev: venv
 	. .venv/bin/activate && uv pip install -e .[dev]
 
-lint:
-	. .venv/bin/activate && ruff check .
+lint: venv
+	. .venv/bin/activate && ruff check --fix .
 
 format:
 	. .venv/bin/activate && ruff format .
 
-build: install-dev
+build: install-dev lint format
 	. .venv/bin/activate && python -m build
 
-upload: build
+upload: build lint format
 	. .venv/bin/activate && twine upload dist/*
 
 clean:

@@ -4,6 +4,7 @@ script for DQN training on CartPole using neatrl library.
 """
 
 import torch
+
 from neatrl import train_dqn
 
 
@@ -14,10 +15,10 @@ def test_dqn_cartpole():
     # Train DQN on CartPole
     model = train_dqn(
         env_id="CartPole-v1",
-        total_timesteps=5000,
+        total_timesteps=100000,
         seed=42,
         learning_rate=2.5e-4,
-        buffer_size=10000,
+        buffer_size=50000,
         gamma=0.99,
         tau=1.0,
         target_network_frequency=50,

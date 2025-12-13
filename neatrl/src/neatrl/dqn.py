@@ -2,7 +2,6 @@ import os
 import random
 import time
 
-import cv2
 import gymnasium as gym
 import imageio
 import numpy as np
@@ -79,21 +78,6 @@ def make_env(env_id, seed, capture_video, run_name, eval_mode=False):
     env = gym.make(env_id, render_mode="rgb_array")
     env = gym.wrappers.RecordEpisodeStatistics(env)
 
-    # Video recording setup
-    if capture_video:
-        if eval_mode:
-            # Evaluation videos
-            video_prefix = f"videos/{run_name}/eval"
-        else:
-            # Training videos
-            video_prefix = f"videos/{run_name}/train"
-            
-        env = gym.wrappers.RecordVideo(
-            env,
-            video_prefix,
-            step_trigger=lambda x: x % 100 == 0,  # Record every 100 episodes
-        )
-
     env.action_space.seed(seed)
 
     return env
@@ -140,11 +124,20 @@ def evaluate(model, device, run_name, num_eval_eps=10, record=False):
         # if eps == 0:  # Save frames only for the first episode (optional)
         #     frames = episode_frames.copy()  # Avoid memory issues
 
-
     # Save video
     if frames:
-        os.makedirs(f"videos/{run_name}/eval", exist_ok=True)
-        imageio.mimsave(f"videos/{run_name}/eval/eval_video.mp4", frames, fps=30)
+        video = np.stack(frames)
+        video = np.transpose(video, (0, 3, 1, 2))
+
+        wandb.log(
+            {
+                "videos/final_policy": wandb.Video(
+                    video,
+                    fps=30,
+                    format="mp4",
+                )
+            }
+        )
 
     return returns, frames
 
@@ -169,6 +162,9 @@ def train_dqn(
     wandb_project="cleanRL",
     wandb_entity="",
     exp_name="DQN",
+    eval_every=1000,
+    save_every=1000,
+    upload_every=100,
 ):
     """
     Train a DQN agent on a Gymnasium environment.
@@ -193,7 +189,9 @@ def train_dqn(
         wandb_project: W&B project name
         wandb_entity: W&B entity/username
         exp_name: Experiment name
-
+        eval_every: Frequency of evaluation during training
+        save_every: Frequency of saving the model
+        upload_every: Frequency of uploading the agent videos to wandb
     Returns:
         Trained Q-network model
     """
@@ -216,22 +214,20 @@ def train_dqn(
         os.makedirs(f"videos/{run_name}/eval", exist_ok=True)
     os.makedirs(f"runs/{run_name}", exist_ok=True)
 
-
     # Set seeds
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.cuda.manual_seed(seed)
-    
-    #setting up the device
+
+    # setting up the device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
+
     if device.type == "cuda":
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.benchmark = False
-    
-    
+
     env = make_env(env_id, seed, capture_video, run_name)
     q_network = QNet(env.observation_space.shape[0], env.action_space.n).to(device)
     target_net = QNet(env.observation_space.shape[0], env.action_space.n).to(device)
@@ -251,7 +247,8 @@ def train_dqn(
     )
 
     obs, _ = env.reset()
-
+    start_time = time.time()
+    frames = []
     for step in tqdm(range(total_timesteps)):
         eps = eps_decay(step, exploration_fraction)
         rnd = random.random()
@@ -269,6 +266,25 @@ def train_dqn(
             obs, new_obs, np.array(action), np.array(reward), np.array(done), [info]
         )
 
+        frames.append(env.render())
+
+        # Logging videos to WandB
+        if capture_video and step % upload_every == 0 and step > 0:
+            if frames:
+                video = np.stack(frames)
+                video = np.transpose(video, (0, 3, 1, 2))
+
+                wandb.log(
+                    {
+                        "videos/policy": wandb.Video(
+                            video,
+                            fps=30,
+                            format="mp4",
+                        )
+                    }
+                )
+            frames = []  # Clear frames after uploading
+
         # Log episode returns
         if "episode" in info:
             print(
@@ -279,10 +295,10 @@ def train_dqn(
             if use_wandb:
                 wandb.log(
                     {
-                        "episodic_return": info["episode"]["r"],
-                        "episodic_length": info["episode"]["l"],
-                        "epsilon": eps,
-                        "global_step": step,
+                        "charts/episodic_return": info["episode"]["r"],
+                        "charts/episodic_length": info["episode"]["l"],
+                        "charts/epsilon": eps,
+                        "charts/global_step": step,
                     }
                 )
 
@@ -309,6 +325,8 @@ def train_dqn(
                         }
                     )
 
+                    # Upload video to wandb if video recording is enabled
+
         # Update target network
         if step % target_network_frequency == 0:
             for q_params, target_params in zip(
@@ -319,18 +337,34 @@ def train_dqn(
                 )
 
         # Model evaluation & saving
-        if step % 1000 == 0:
+        if step % eval_every == 0:
             episodic_returns, _ = evaluate(q_network, device, run_name)
             avg_return = np.mean(episodic_returns)
 
             if use_wandb:
-                wandb.log({"val_avg_return": avg_return, "val_step": step})
+                wandb.log({"charts/val_avg_return": avg_return, "val_step": step})
             print(f"Evaluation returns: {episodic_returns}, Average: {avg_return:.2f}")
 
         if done:
             obs, _ = env.reset()
         else:
             obs = new_obs
+
+        print("SPS: ", int(step / (time.time() - start_time)), end="\r")
+        
+        if use_wandb:
+            wandb.log(
+                {
+                    "charts/SPS": int(step / (time.time() - start_time)),
+                    "charts/step": step,
+                }
+            )
+
+        if step % save_every == 0 and step > 0:
+            model_path = f"runs/{run_name}/models/dqn_model_step_{step}.pth"
+            os.makedirs(os.path.dirname(model_path), exist_ok=True)
+            torch.save(q_network.state_dict(), model_path)
+            print(f"Model saved at step {step} to {model_path}")
 
     # Save final video to WandB
     if use_wandb:
@@ -341,6 +375,7 @@ def train_dqn(
         wandb.finish()
 
     return q_network
+
 
 if __name__ == "__main__":
     train_dqn()
