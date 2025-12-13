@@ -84,6 +84,40 @@ model = train_dqn(
 
 ```
 
+## 🔧 Function Arguments
+
+The `train_dqn` function accepts the following arguments for customizing your DQN training:
+
+| Argument | Type | Default | Description |
+|----------|------|---------|-------------|
+| `env_id` | str | `"BreakoutNoFrameskip-v4"` | Gymnasium environment ID to train on |
+| `total_timesteps` | int | `20000` | Total number of environment steps to train for |
+| `seed` | int | `42` | Random seed for reproducibility |
+| `learning_rate` | float | `2.5e-4` | Learning rate for the Adam optimizer |
+| `buffer_size` | int | `10000` | Size of the replay buffer |
+| `gamma` | float | `0.99` | Discount factor for future rewards |
+| `tau` | float | `1.0` | Target network update rate (1.0 = hard update, <1.0 = soft update) |
+| `target_network_frequency` | int | `50` | How often to update the target network (in steps) |
+| `batch_size` | int | `128` | Batch size for training |
+| `start_e` | float | `1.0` | Initial epsilon for ε-greedy exploration |
+| `end_e` | float | `0.05` | Final epsilon for ε-greedy exploration |
+| `exploration_fraction` | float | `0.5` | Fraction of training steps for epsilon decay |
+| `learning_starts` | int | `1000` | Number of steps to collect before starting training |
+| `train_frequency` | int | `10` | How often to train the network (in steps) |
+| `capture_video` | bool | `False` | Whether to record training videos |
+| `use_wandb` | bool | `False` | Whether to log to Weights & Biases |
+| `wandb_project` | str | `"cleanRL"` | W&B project name |
+| `wandb_entity` | str | `""` | W&B username/entity |
+| `exp_name` | str | `"DQN"` | Experiment name for logging |
+| `eval_every` | int | `1000` | Frequency of evaluation during training (in steps) |
+| `save_every` | int | `1000` | Frequency of saving model checkpoints (in steps) |
+| `atari_wrapper` | bool | `False` | Whether to apply Atari preprocessing wrappers |
+| `custom_agent` | nn.Module | `None` | Custom Q-network class/instance (overrides default) |
+| `num_eval_eps` | int | `10` | Number of episodes for evaluation |
+| `n_envs` | int | `4` | Number of parallel environments for vectorized training |
+| `record` | bool | `False` | Whether to record evaluation videos |
+| `device` | str | `"cpu"` | Device for training ("cpu", "cuda", "mps") |
+
 ## 🎮 Supported Environments
 
 DQN works with any Gymnasium environment. Here are some popular choices:
@@ -167,7 +201,6 @@ Check out these example scripts:
 - [`run_dqn_lunarlander.py`](./run_dqn_lunarlander.py) - DQN training on LunarLander
 - [`run_dqn_carracing.py`](./run_dqn_carracing.py) - DQN training on CarRacing (discrete)
 - [`run_dqn_atari.py`](./run_dqn_atari.py) - DQN training on Atari-Breakout
-- *More examples coming soon...*
 
 ---
 
