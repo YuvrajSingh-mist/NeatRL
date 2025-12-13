@@ -38,11 +38,8 @@ class Config:
     learning_starts = 1000
     train_frequency = 10
     num_eval_eps = 10
-    # Logging & saving
-    capture_video = False
-    use_wandb = False
-    wandb_project = "cleanRL"
-    wandb_entity = ""
+    grid_env = False
+
     eval_every = 1000
     save_every = 1000
     upload_every = 100
@@ -52,6 +49,12 @@ class Config:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # Custom agent
     custom_agent = None  # Custom neural network class or instance
+
+    # Logging & saving
+    capture_video = False
+    use_wandb = False
+    wandb_project = "cleanRL"
+    wandb_entity = ""
 
 
 class QNet(nn.Module):
@@ -99,8 +102,22 @@ def make_env(env_id, seed, idx, atari_wrapper=False):
     return thunk
 
 
+def one_hot_encode(obs, state_dim=16):
+    """Convert integer observation to one-hot encoded vector"""
+    encoded = np.zeros(state_dim, dtype=np.float32)
+    encoded[obs] = 1.0
+    return encoded
+
+
 def evaluate(
-    env_id, model, device, seed, atari_wrapper=False, num_eval_eps=10, record=False
+    env_id,
+    model,
+    device,
+    seed,
+    atari_wrapper=False,
+    num_eval_eps=10,
+    record=False,
+    grid_env=False,
 ):
     eval_env = make_env(idx=0, env_id=env_id, seed=seed, atari_wrapper=atari_wrapper)()
     eval_env.action_space.seed(seed)
@@ -121,7 +138,8 @@ def evaluate(
                 frame = eval_env.render()
                 frames.append(frame)
 
-            # with torch.no_grad():
+            if grid_env:
+                obs = one_hot_encode(obs, state_dim=eval_env.observation_space.n if hasattr(eval_env.observation_space, 'n') else eval_env.observation_space.shape[0])
             action = (
                 model(torch.tensor(obs, device=device).unsqueeze(0)).argmax().item()
             )
@@ -178,6 +196,7 @@ def train_dqn(
     n_envs=Config.n_envs,
     record=Config.record,
     device=Config.device,
+    grid_env=Config.grid_env,
 ):
     """
     Train a DQN agent on a Gymnasium environment.
@@ -210,6 +229,7 @@ def train_dqn(
         n_envs : Number of parallel environments for the replay buffer
         record: Whether to record evaluation videos
         device: Device to use for training (e.g., "cpu", "cuda")
+        grid_env: Whether the environment uses discrete grid observations
     Returns:
         Trained Q-network model
     """
@@ -310,6 +330,9 @@ def train_dqn(
         step = step * n_envs
         eps = eps_decay(step, exploration_fraction)
         rnd = random.random()
+
+        if grid_env:
+            obs = one_hot_encode(obs, state_dim=env.single_observation_space.shape[0] if n_envs > 1 else env.observation_space.n)
 
         if rnd < eps:
             if n_envs > 1:
@@ -412,6 +435,7 @@ def train_dqn(
                 num_eval_eps=num_eval_eps,
                 atari_wrapper=atari_wrapper,
                 record=record,
+                grid_env=grid_env,
             )
             avg_return = np.mean(episodic_returns)
 
@@ -451,6 +475,7 @@ def train_dqn(
             atari_wrapper=atari_wrapper,
             num_eval_eps=num_eval_eps,
             record=True,
+            grid_env=grid_env,
         )
         imageio.mimsave(train_video_path, frames, fps=30)
         print(f"Final training video saved to {train_video_path}")

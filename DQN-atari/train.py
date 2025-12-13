@@ -38,11 +38,8 @@ class Config:
     learning_starts = 1000
     train_frequency = 10
     num_eval_eps = 10
-    # Logging & saving
-    capture_video = False
-    use_wandb = False
-    wandb_project = "cleanRL"
-    wandb_entity = ""
+    grid_env = False
+    
     eval_every = 1000
     save_every = 1000
     upload_every = 100
@@ -52,7 +49,14 @@ class Config:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # Custom agent
     custom_agent = None  # Custom neural network class or instance
+    
+    # Logging & saving
+    capture_video = False
+    use_wandb = False
+    wandb_project = "cleanRL"
+    wandb_entity = ""
 
+    
 
 class QNet(nn.Module):
     def __init__(self, state_space, action_space):
@@ -239,10 +243,8 @@ def train_dqn(
 
     # setting up the device
     device = torch.device(device)
-    if device.type == "mps" and not torch.backends.mps.is_available():
-        device = torch.device("cpu")
-        print("MPS not available, falling back to CPU")
-    elif device.type == "cuda" and not torch.cuda.is_available():
+
+    if device.type == "cuda" and not torch.cuda.is_available():
         device = torch.device("cpu")
         print("CUDA not available, falling back to CPU")
 
@@ -251,6 +253,7 @@ def train_dqn(
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.benchmark = False
+
     elif device.type == "mps":
         torch.mps.manual_seed(seed)
 
@@ -406,7 +409,13 @@ def train_dqn(
         # Model evaluation & saving
         if step % eval_every == 0:
             episodic_returns, _ = evaluate(
-                env_id, q_network, device, seed, num_eval_eps=num_eval_eps, atari_wrapper=atari_wrapper, record=record
+                env_id,
+                q_network,
+                device,
+                seed,
+                num_eval_eps=num_eval_eps,
+                atari_wrapper=atari_wrapper,
+                record=record,
             )
             avg_return = np.mean(episodic_returns)
 

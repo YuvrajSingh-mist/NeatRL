@@ -10,7 +10,6 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 from stable_baselines3.common.buffers import ReplayBuffer
 # import wandb  # Commented out as we're using only TensorBoard
-from huggingface_hub import HfApi, upload_folder
 import cv2
 import imageio
 

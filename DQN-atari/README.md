@@ -6,6 +6,97 @@ This repository contains an implementation of Deep Q-Network (DQN) for solving t
 
 ![Breakout Demo](images/output.gif)
 
+## 🚀 Quick Training with NeatRL Library
+
+**For the easiest way to train a DQN agent on Atari games, use the NeatRL library** - it handles preprocessing, custom networks, and device management automatically.
+
+### Install NeatRL
+
+```bash
+pip install neatrl
+```
+
+### Train DQN on Breakout (Simple)
+
+```python
+from neatrl import train_dqn
+
+# Define convolutional Q-network for Atari
+import torch.nn as nn
+
+class AtariQNet(nn.Module):
+    def __init__(self, state_space, action_space):
+        super().__init__()
+        self.conv1 = nn.Conv2d(state_space, 32, kernel_size=8, stride=4)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
+        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
+        self.flatten = nn.Flatten()
+        self.fc1 = nn.Linear(64 * 7 * 7, 512)
+        self.fc2 = nn.Linear(512, action_space)
+
+    def forward(self, x):
+        x = torch.relu(self.conv1(x))
+        x = torch.relu(self.conv2(x))
+        x = torch.relu(self.conv3(x))
+        x = self.flatten(x)
+        x = torch.relu(self.fc1(x))
+        return self.fc2(x)
+
+model = train_dqn(
+    env_id="BreakoutNoFrameskip-v4",
+    total_timesteps=1000000,
+    seed=42,
+    atari_wrapper=True,  # Apply Atari preprocessing
+    custom_agent=AtariQNet(4, 4),  # 4 stacked frames, 4 actions
+    use_wandb=True,
+    wandb_project="atari-experiments",
+    exp_name="dqn-breakout"
+)
+
+print("Training completed! 🎉")
+```
+
+### Advanced Training with Multiple Environments
+
+```python
+from neatrl import train_dqn
+
+model = train_dqn(
+    env_id="BreakoutNoFrameskip-v4",
+    total_timesteps=2000000,
+    seed=42,
+    learning_rate=2.5e-4,
+    buffer_size=100000,
+    gamma=0.99,
+    batch_size=32,
+    atari_wrapper=True,
+    custom_agent=AtariQNet(4, 4),
+    n_envs=4,  # Parallel environments for faster training
+    use_wandb=True,
+    wandb_project="atari-experiments",
+    exp_name="dqn-breakout-parallel"
+)
+```
+### Training on Other Atari Games
+
+You can easily adapt the code for other Atari games by changing the `env_id` and adjusting the `action_space` in your custom network:
+
+```python
+# For Pong (6 actions)
+model = train_dqn(
+    env_id="ALE/Pong-v5",
+    custom_agent=AtariQNet(4, 6),  # 6 actions for Pong
+    # ... other parameters
+)
+
+# For Space Invaders (6 actions)
+model = train_dqn(
+    env_id="ALE/SpaceInvaders-v5",
+    custom_agent=AtariQNet(4, 6),  # 6 actions
+    # ... other parameters
+)
+```
+
 ## Overview
 
 The main training script (`train.py`) implements a DQN agent to solve the BreakoutNoFrameskip-v4 environment, where the goal is to control a paddle to bounce a ball and break bricks. The agent learns to take actions (move left, right, or stay still) to maximize the score by breaking as many bricks as possible while keeping the ball in play.

@@ -126,6 +126,7 @@ DQN works with any Gymnasium environment. Here are some popular choices:
 - `CartPole-v1` - Balance a pole on a cart
 - `MountainCar-v0` - Drive up a hill
 - `Acrobot-v1` - Swing up a two-link robot
+- `FrozenLake-v1` - Navigate ice lake to goal (discrete states, requires one-hot encoding)
 
 ### Box2D
 - `LunarLander-v2` - Land a spacecraft safely
@@ -196,6 +197,7 @@ Videos are:
 Check out these example scripts:
 
 - [`run_dqn_cartpole.py`](./run_dqn_cartpole.py) - Basic DQN training on CartPole
+- [`run_dqn_frozenlake.py`](./run_dqn_frozenlake.py) - DQN training on FrozenLake (with one-hot encoding)
 - [`run_dqn_mountaincar.py`](./run_dqn_mountaincar.py) - DQN training on MountainCar
 - [`run_dqn_acrobot.py`](./run_dqn_acrobot.py) - DQN training on Acrobot
 - [`run_dqn_lunarlander.py`](./run_dqn_lunarlander.py) - DQN training on LunarLander

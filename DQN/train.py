@@ -2,15 +2,19 @@ import os
 import random
 import time
 
+import ale_py
 import gymnasium as gym
 import imageio
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import wandb
 from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
+
+import wandb
+
+gym.register_envs(ale_py)
 
 
 # ===== CONFIGURATION =====
@@ -18,7 +22,7 @@ class Config:
     # Experiment settings
     exp_name = "DQN"
     seed = 42
-    env_id = "CartPole-v1"
+    env_id = "BreakoutNoFrameskip-v4"
 
     # Training parameters
     total_timesteps = 20000
@@ -33,16 +37,26 @@ class Config:
     exploration_fraction = 0.5
     learning_starts = 1000
     train_frequency = 10
-
+    num_eval_eps = 10
+    grid_env = False
+    
+    eval_every = 1000
+    save_every = 1000
+    upload_every = 100
+    atari_wrapper = False
+    n_envs = 4
+    record = False
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # Custom agent
+    custom_agent = None  # Custom neural network class or instance
+    
     # Logging & saving
     capture_video = False
     use_wandb = False
     wandb_project = "cleanRL"
     wandb_entity = ""
-    eval_every = 1000
-    save_every = 1000
-    upload_every = 100
 
+    
 
 class QNet(nn.Module):
     def __init__(self, state_space, action_space):
@@ -70,22 +84,30 @@ class LinearEpsilonDecay(nn.Module):
         return max(slope * current_timestep + self.initial_eps, self.end_eps)
 
 
-def make_env(env_id, seed):
-    """Create environment with video recording"""
-    env = gym.make(env_id, render_mode="rgb_array")
-    env = gym.wrappers.RecordEpisodeStatistics(env)
+def make_env(env_id, seed, idx, atari_wrapper=False):
+    def thunk():
+        """Create environment with video recording"""
+        env = gym.make(env_id, render_mode="rgb_array")
 
-    env.action_space.seed(seed)
+        if atari_wrapper:
+            from gymnasium.wrappers import AtariPreprocessing, FrameStackObservation
 
-    return env
+            env = AtariPreprocessing(env, grayscale_obs=True, scale_obs=True)
+            env = FrameStackObservation(env, stack_size=4)
+
+        env = gym.wrappers.RecordEpisodeStatistics(env)
+        env.action_space.seed(seed + idx)
+
+        return env
+
+    return thunk
 
 
-def evaluate(model, device, run_name, num_eval_eps=10, record=False):
-    eval_env = make_env(
-        env_id=Config.env_id,
-        seed=Config.seed,
-    )
-    eval_env.action_space.seed(Config.seed)
+def evaluate(
+    env_id, model, device, seed, atari_wrapper=False, num_eval_eps=10, record=False
+):
+    eval_env = make_env(idx=0, env_id=env_id, seed=seed, atari_wrapper=atari_wrapper)()
+    eval_env.action_space.seed(seed)
 
     model = model.to(device)
     model = model.eval()
@@ -100,11 +122,8 @@ def evaluate(model, device, run_name, num_eval_eps=10, record=False):
 
         while not done:
             if record:
-                if episode_reward > 500:
-                    print("Hooray! Episode reward exceeded 500, stopping early.")
-                    break
                 frame = eval_env.render()
-                frames.append(frame)  # Capture all frames
+                frames.append(frame)
 
             # with torch.no_grad():
             action = (
@@ -123,14 +142,15 @@ def evaluate(model, device, run_name, num_eval_eps=10, record=False):
 
         wandb.log(
             {
-                "videos/final_policy": wandb.Video(
+                "videos/eval_policy": wandb.Video(
                     video,
                     fps=30,
                     format="mp4",
                 )
             }
         )
-
+    model.train()
+    eval_env.close()
     return returns, frames
 
 
@@ -156,7 +176,12 @@ def train_dqn(
     exp_name=Config.exp_name,
     eval_every=Config.eval_every,
     save_every=Config.save_every,
-    upload_every=Config.upload_every,
+    atari_wrapper=Config.atari_wrapper,
+    custom_agent=Config.custom_agent,
+    num_eval_eps=Config.num_eval_eps,
+    n_envs=Config.n_envs,
+    record=Config.record,
+    device=Config.device,
 ):
     """
     Train a DQN agent on a Gymnasium environment.
@@ -183,7 +208,12 @@ def train_dqn(
         exp_name: Experiment name
         eval_every: Frequency of evaluation during training
         save_every: Frequency of saving the model
-        upload_every: Frequency of uploading the agent videos to wandb
+        atari_wrapper: Whether to apply Atari preprocessing wrappers
+        agent: Custom neural network class or instance (nn.Module subclass or instance, optional, defaults to QNet)
+        num_eval_eps: Number of evaluation episodes
+        n_envs : Number of parallel environments for the replay buffer
+        record: Whether to record evaluation videos
+        device: Device to use for training (e.g., "cpu", "cuda")
     Returns:
         Trained Q-network model
     """
@@ -194,7 +224,7 @@ def train_dqn(
         wandb.init(
             project=wandb_project,
             entity=wandb_entity,
-            sync_tensorboard=True,
+            sync_tensorboard=False,
             config=locals(),
             name=run_name,
             monitor_gym=True,
@@ -210,89 +240,136 @@ def train_dqn(
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.cuda.manual_seed(seed)
 
     # setting up the device
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(device)
+
+    if device.type == "cuda" and not torch.cuda.is_available():
+        device = torch.device("cpu")
+        print("CUDA not available, falling back to CPU")
 
     if device.type == "cuda":
+        torch.backends.cudnn.deterministic = True
+        torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.benchmark = False
 
-    env = make_env(env_id, seed)
-    q_network = QNet(env.observation_space.shape[0], env.action_space.n).to(device)
-    target_net = QNet(env.observation_space.shape[0], env.action_space.n).to(device)
+    elif device.type == "mps":
+        torch.mps.manual_seed(seed)
+
+    if n_envs > 1:
+        print(f"Using {n_envs} parallel environments for experience collection.")
+        env = gym.vector.SyncVectorEnv(
+            [
+                make_env(env_id, seed, idx=i, atari_wrapper=atari_wrapper)
+                for i in range(n_envs)
+            ]
+        )
+    else:
+        env = make_env(env_id, seed, idx=0, atari_wrapper=atari_wrapper)()
+
+    # Use custom agent if provided, otherwise use default QNet
+    if custom_agent is not None:
+        if isinstance(custom_agent, nn.Module):
+            q_network = custom_agent.to(device)
+            target_net = custom_agent.to(device)
+        else:
+            raise ValueError("agent must be an instance of nn.Module")
+    else:
+        obs_shape = (
+            env.single_observation_space.shape[0]
+            if n_envs > 1
+            else env.observation_space.shape[0]
+        )
+        action_shape = env.single_action_space.n if n_envs > 1 else env.action_space.n
+
+        q_network = QNet(obs_shape, action_shape).to(device)
+        target_net = QNet(obs_shape, action_shape).to(device)
+
     target_net.load_state_dict(q_network.state_dict())
     optimizer = optim.Adam(q_network.parameters(), lr=learning_rate)
     eps_decay = LinearEpsilonDecay(start_e, end_e, total_timesteps)
+
+    # Print network architecture
+    print("Q-Network Architecture:")
+    print(q_network)
 
     q_network.train()
     target_net.train()
 
     replay_buffer = ReplayBuffer(
         buffer_size,
-        env.observation_space,
-        env.action_space,
+        env.single_observation_space if n_envs > 1 else env.observation_space,
+        env.single_action_space if n_envs > 1 else env.action_space,
         device=device,
         handle_timeout_termination=False,
+        n_envs=n_envs,
     )
 
     obs, _ = env.reset()
     start_time = time.time()
     frames = []
+
     for step in tqdm(range(total_timesteps)):
+        step = step * n_envs
         eps = eps_decay(step, exploration_fraction)
         rnd = random.random()
 
         if rnd < eps:
-            action = env.action_space.sample()
+            if n_envs > 1:
+                # Sample one action per environment
+                action = np.array(
+                    [env.single_action_space.sample() for _ in range(n_envs)]
+                )
+            else:
+                action = env.action_space.sample()
         else:
-            action = (
-                q_network(torch.tensor(obs, device=device).unsqueeze(0)).argmax().item()
-            )
+            with torch.no_grad():
+                q_values = q_network(torch.tensor(obs, device=device))
+                action = q_values.argmax(dim=-1).cpu().numpy()
 
         new_obs, reward, terminated, truncated, info = env.step(action)
-        done = terminated or truncated
+        done = np.logical_or(terminated, truncated)
+
         replay_buffer.add(
             obs, new_obs, np.array(action), np.array(reward), np.array(done), [info]
         )
 
-        frames.append(env.render())
-
-        # Logging videos to WandB
-        if capture_video and step % upload_every == 0 and step > 0:
-            if frames:
-                video = np.stack(frames)
-                video = np.transpose(video, (0, 3, 1, 2))
-
-                wandb.log(
-                    {
-                        "videos/policy": wandb.Video(
-                            video,
-                            fps=30,
-                            format="mp4",
-                        )
-                    }
-                )
-            frames = []  # Clear frames after uploading
-
         # Log episode returns
         if "episode" in info:
-            print(
-                f"Step={step}, Return={info['episode']['r']:.2f}, Length={info['episode']['l']}"
-            )
+            if n_envs > 1:
+                for i in range(n_envs):
+                    if done[i]:
+                        ep_ret = info["episode"]["r"][i]
+                        ep_len = info["episode"]["l"][i]
 
-            # WandB logging
-            if use_wandb:
-                wandb.log(
-                    {
-                        "charts/episodic_return": info["episode"]["r"],
-                        "charts/episodic_length": info["episode"]["l"],
-                        "charts/epsilon": eps,
-                        "charts/global_step": step,
-                    }
-                )
+                        print(
+                            f"Step={step}, Env={i}, Return={ep_ret:.2f}, Length={ep_len}"
+                        )
+
+                        if use_wandb:
+                            wandb.log(
+                                {
+                                    "charts/episodic_return": ep_ret,
+                                    "charts/episodic_length": ep_len,
+                                    "charts/global_step": step,
+                                }
+                            )
+            else:
+                if done:
+                    ep_ret = info["episode"]["r"]
+                    ep_len = info["episode"]["l"]
+
+                    print(f"Step={step}, Return={ep_ret:.2f}, Length={ep_len}")
+
+                    if use_wandb:
+                        wandb.log(
+                            {
+                                "charts/episodic_return": ep_ret,
+                                "charts/episodic_length": ep_len,
+                                "charts/global_step": step,
+                            }
+                        )
 
         if step > learning_starts and step % train_frequency == 0:
             data = replay_buffer.sample(batch_size)
@@ -301,6 +378,7 @@ def train_dqn(
             td_target = data.rewards.flatten() + gamma * target_max * (
                 1 - data.dones.flatten()
             )
+
             old_val = q_network(data.observations).gather(1, data.actions).squeeze()
 
             optimizer.zero_grad()
@@ -330,14 +408,22 @@ def train_dqn(
 
         # Model evaluation & saving
         if step % eval_every == 0:
-            episodic_returns, _ = evaluate(q_network, device, run_name)
+            episodic_returns, _ = evaluate(
+                env_id,
+                q_network,
+                device,
+                seed,
+                num_eval_eps=num_eval_eps,
+                atari_wrapper=atari_wrapper,
+                record=record,
+            )
             avg_return = np.mean(episodic_returns)
 
             if use_wandb:
                 wandb.log({"charts/val_avg_return": avg_return, "val_step": step})
             print(f"Evaluation returns: {episodic_returns}, Average: {avg_return:.2f}")
 
-        if done:
+        if done.all():
             obs, _ = env.reset()
         else:
             obs = new_obs
@@ -361,10 +447,20 @@ def train_dqn(
     # Save final video to WandB
     if use_wandb:
         train_video_path = "videos/final.mp4"
-        _, frames = evaluate(q_network, device, run_name, record=True)
+        _, frames = evaluate(
+            env_id,
+            q_network,
+            device,
+            seed,
+            atari_wrapper=atari_wrapper,
+            num_eval_eps=num_eval_eps,
+            record=True,
+        )
         imageio.mimsave(train_video_path, frames, fps=30)
         print(f"Final training video saved to {train_video_path}")
         wandb.finish()
+
+    env.close()
 
     return q_network
 
