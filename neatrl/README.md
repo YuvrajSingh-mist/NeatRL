@@ -64,6 +64,20 @@ cd NeatRL
 pip install -e .[dev]
 ```
 
+## 📋 Changelog
+
+### [0.1.4] - 2025-12-13
+- **Added**: Custom agent support for DQN training
+- **Added**: Network architecture display using torchinfo
+- **Improved**: Error handling for custom agent constructors
+- **Changed**: Agent parameter now accepts nn.Module subclasses
+
+### [0.1.3] - 2025-12-01
+- Initial release with DQN implementation
+- Weights & Biases integration
+- Video recording capabilities
+- Comprehensive documentation
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
