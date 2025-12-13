@@ -54,7 +54,7 @@ def test_dqn_acrobot():
         n_envs=4,
         record=True,
         eval_every=50000,
-        device='cpu',
+        device="cpu",
     )
 
     print(f"Training completed! Model type: {type(model)}")

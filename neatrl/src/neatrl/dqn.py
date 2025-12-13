@@ -249,7 +249,7 @@ def train_dqn(
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.benchmark = False
-        
+
     elif device.type == "mps":
         torch.mps.manual_seed(seed)
 
@@ -405,7 +405,13 @@ def train_dqn(
         # Model evaluation & saving
         if step % eval_every == 0:
             episodic_returns, _ = evaluate(
-                env_id, q_network, device, seed, num_eval_eps=num_eval_eps, atari_wrapper=atari_wrapper, record=record
+                env_id,
+                q_network,
+                device,
+                seed,
+                num_eval_eps=num_eval_eps,
+                atari_wrapper=atari_wrapper,
+                record=record,
             )
             avg_return = np.mean(episodic_returns)
 

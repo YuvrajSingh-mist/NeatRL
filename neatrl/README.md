@@ -78,6 +78,8 @@ pip install -e .[dev]
 - Video recording capabilities
 - Comprehensive documentation
 
+For the complete changelog, see [CHANGELOG.md](CHANGELOG.md).
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
