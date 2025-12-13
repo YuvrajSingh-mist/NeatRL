@@ -1,11 +1,44 @@
 # Deep Reinforcement Learning Projects
 
-This repository contains various implementations of deep reinforcement learning algorithms across different environments. Each subfolder represents a specific environment or implementation of reinforcement learning techniques.
+This repository contains various ONE-FILE implementations of deep reinforcement learning algorithms.
 
+
+## 🚀 Primary Use: Training with NeatRL Library
+
+**NeatRL** is the main training library in this repository. It provides high-quality implementations of popular RL algorithms with a focus on simplicity, performance, and ease of use.
+
+### Quick Training with NeatRL
+
+```bash
+# Install NeatRL
+pip install neatrl
+
+# Train DQN on CartPole in 3 lines
+from neatrl import train_dqn
+
+model = train_dqn(
+    env_id="CartPole-v1",
+    total_timesteps=10000,
+    seed=42
+)
+```
+
+### Advanced Training Features
+
+- **Experiment Tracking**: Built-in Weights & Biases integration
+- **Video Recording**: Automatic training progress videos
+- **Hyperparameter Tuning**: Easy configuration of all training parameters
+- **Multiple Environments**: Support for Gymnasium environments
+- **Production Ready**: Clean APIs and comprehensive error handling
+
+📖 **[Complete NeatRL Documentation](./neatrl/README.md)**
 
 ## Project Structure
 
-### Value-Based Methods
+### NeatRL Library (Primary Training Tool)
+- **[neatrl/](./neatrl)**: Main NeatRL library with DQN implementation and training utilities
+
+### Additional Algorithm Implementations
 - **[DQN](/DQN)**: Deep Q-Network implementation for CartPole and LunarLander environments
 - **[DQN-atari](/DQN-atari)**: DQN adapted for Atari games with convolutional networks
 - **[DQN-flappy](/DQN-flappy)**: DQN implementation for FlappyBird environment
@@ -51,50 +84,6 @@ This repository contains various implementations of deep reinforcement learning 
 - **Unity Integration**: ML-Agents support for training in Unity environments
 - **Trained Models**: Saved model weights and training logs for reproducible results
 - **Comprehensive Logging**: Track metrics like Q-values, advantage, episode returns, and exploration statistics
-
-## Getting Started
-
-### Prerequisites
-
-```bash
-# Install the core requirements
-pip install torch gymnasium numpy matplotlib tqdm tensorboard wandb stable-baselines3
-
-# For Atari environments
-pip install gymnasium[atari] autorom[accept-rom-license] opencv-python
-
-# For video recording
-pip install imageio opencv-python
-```
-
-### Running Experiments
-
-Each project directory contains its own `train.py` script. Here are examples for different algorithm categories:
-
-```bash
-# Value-Based Methods
-cd DQN && python train.py              # Standard DQN
-cd DQN-atari && python train.py        # DQN for Atari
-cd Duel-DQN && python train.py         # Dueling DQN
-cd DQN-Taxi && python train.py         # DQN for Taxi
-
-# Policy-Based Methods
-cd REINFORCE && python train.py        # Basic policy gradient
-cd A2C && python train.py              # Advantage Actor-Critic
-cd PPO && python train.py              # Proximal Policy Optimization
-
-# Continuous Control (Actor-Critic)
-cd DDPG && python train.py             # Deep Deterministic Policy Gradient
-cd TD3 && python train.py              # Twin Delayed DDPG
-cd SAC && python train.py              # Soft Actor-Critic
-
-# Advanced Methods
-cd RND && python train.py              # Curiosity-driven exploration
-cd FlappyBird-PPO && python flappy.py  # Game-specific PPO
-
-# Unity ML-Agents
-cd ml-agents-train && python game.py   # Unity environment training
-```
 
 ## Reinforcement Learning Concepts
 
