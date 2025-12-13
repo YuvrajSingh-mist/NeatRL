@@ -41,7 +41,7 @@ model = train_dqn(
 
 ## 📚 Documentation
 
-📖 **[Complete Documentation](./docs)**
+📖 **[Complete Documentation](https://github.com/YuvrajSingh-mist/NeatRL/tree/master/neatrl/docs)**
 
 The docs include:
 - Detailed usage examples
