@@ -10,7 +10,6 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 from stable_baselines3.common.buffers import ReplayBuffer
 import wandb
-from huggingface_hub import HfApi, upload_folder
 import cv2
 
 import imageio
@@ -136,14 +135,14 @@ def evaluate(model, device, run_name, num_eval_eps = 10, record = False):
 
     eval_env.close()
     
-    # # Save video
-    # if frames:
-    #     os.makedirs(f"videos/{run_name}/eval", exist_ok=True)
-    #     imageio.mimsave(
-    #         f"videos/{run_name}/eval/eval_video.mp4",
-    #         frames,
-    #         fps=30
-    #     )
+    # Save video
+    if frames:
+        os.makedirs(f"videos/{run_name}/eval", exist_ok=True)
+        imageio.mimsave(
+            f"videos/{run_name}/eval/eval_video.mp4",
+            frames,
+            fps=30
+        )
     
     return returns, frames
 
@@ -243,26 +242,7 @@ for step in tqdm(range(args.total_timesteps)):
                 })
         
         
-    # if args.capture_video:
-    #     frame = env.render()                     # Render as RGB array
-      # If the episode ended this step
-        # if done :
-        #     cv2.putText(frame, f"Episode Done!", (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 
-        #                 1, (0, 0, 255), 2, cv2.LINE_AA)
-        #     if reward > 200:
-        #         cv2.putText(frame, "SUCCESS!", (10, 110), cv2.FONT_HERSHEY_SIMPLEX, 
-        #                     1, (0, 255, 0), 2, cv2.LINE_AA)
-        #     else:
-        #         cv2.putText(frame, "FAILED!", (10, 110), cv2.FONT_HERSHEY_SIMPLEX, 
-        #                     1, (0, 0, 255), 2, cv2.LINE_AA)
-
-        # # Overlay step count
-        # cv2.putText(frame, f"Step: {step}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 
-        #             1, (255, 255, 255), 2, cv2.LINE_AA)
-
-        # # Display the window
-        # cv2.imshow("CartPole Training", frame)
-        # cv2.waitKey(1)
+   
             
        
         # Update target network
@@ -275,9 +255,9 @@ for step in tqdm(range(args.total_timesteps)):
             # ===== MODEL EVALUATION & SAVING =====
     if args.save_model and step % 1000 == 0:
         # Save model
-        # model_path = f"runs/{run_name}/model_{step}.pth"
-        # torch.save(q_network.state_dict(), model_path)
-        # print(f"Model saved to {model_path}")
+        model_path = f"runs/{run_name}/model_{step}.pth"
+        torch.save(q_network.state_dict(), model_path)
+        print(f"Model saved to {model_path}")
         
         # Evaluate model
         episodic_returns, eval_frames = evaluate(q_network, device, run_name)
@@ -294,15 +274,7 @@ for step in tqdm(range(args.total_timesteps)):
                 "val_step": step
             })
         print(f"Evaluation returns: {episodic_returns}")
-        # Log evaluation video to WandB
-        # if args.use_wandb and eval_frames:
-        #     val_video_path = f"videos/{run_name}/eval/rl-video-episode-{step}.mp4"
-            
-        #     imageio.mimsave(val_video_path, eval_frames, fps=30)
-            
-        #     eval_frames = np.array(eval_frames).transpose(0, 3, 1, 2)
-        #     wandb.log({"eval_video": wandb.Video(eval_frames, fps=30)})
-        
+       
         
     if done:
         obs, _ = env.reset()
