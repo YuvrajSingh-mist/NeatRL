@@ -16,17 +16,11 @@ class CustomQNet(nn.Module):
         super().__init__()
         self.fc1 = nn.Linear(state_dim, 128)
         self.fc2 = nn.Linear(128, 128)
-        self.fc3 = nn.Linear(128, 128)
-        self.fc4 = nn.Linear(128, 128)
-        self.fc5 = nn.Linear(128, 128)
         self.q_value = nn.Linear(128, action_dim)
 
     def forward(self, x):
         x = torch.relu(self.fc1(x))
         x = torch.relu(self.fc2(x))
-        x = torch.relu(self.fc3(x))
-        x = torch.relu(self.fc4(x))
-        x = torch.relu(self.fc5(x))
         return self.q_value(x)
 
 
@@ -49,7 +43,7 @@ def test_dqn_cartpole():
         end_e=0.05,
         exploration_fraction=0.5,
         learning_starts=1000,
-        train_frequency=10,
+        train_frequency=4,
         capture_video=True,
         use_wandb=True,
         wandb_project="cleanRL",
@@ -57,7 +51,11 @@ def test_dqn_cartpole():
         exp_name="DQN-CartPole-Test",
         custom_agent=CustomQNet(
             4, 2
-        ),  # Instantiate the custom agent with state_dim=4, action_dim=2 for CartPole
+        ), # CartPole state and action dimensions
+        atari_wrapper=False,
+        n_envs = 4, 
+        record=True,
+        eval_every=5000
     )
 
     print(f"Training completed! Model type: {type(model)}")

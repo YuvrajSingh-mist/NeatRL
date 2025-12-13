@@ -17,7 +17,6 @@ dependencies = [
     "torch",
     "numpy",
     "gymnasium",
-    "torchinfo",
     "stable-baselines3",
     "tqdm",
     "wandb",
