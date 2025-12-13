@@ -89,10 +89,10 @@ DQN works with any Gymnasium environment. Here are some popular choices:
 
 ### Classic Control
 - `CartPole-v1` - Balance a pole on a cart
-- `MountainCar-v0` - Drive up a hill
-- `Acrobot-v1` - Swing up a two-link robot
-- `Pendulum-v1` - Swing up a pendulum
-
+<!-- - `MountainCar-v0` - Drive up a hill -->
+<!-- - `Acrobot-v1` - Swing up a two-link robot -->
+<!-- - `Pendulum-v1` - Swing up a pendulum -->
+<!-- 
 ### Box2D
 - `LunarLander-v2` - Land a spacecraft safely
 - `BipedalWalker-v3` - Make a robot walk
@@ -101,7 +101,7 @@ DQN works with any Gymnasium environment. Here are some popular choices:
 ### Atari Games
 - `ALE/Pong-v5` - Classic Pong game
 - `ALE/Breakout-v5` - Breakout game
-- `ALE/SpaceInvaders-v5` - Space Invaders
+- `ALE/SpaceInvaders-v5` - Space Invaders -->
 
 ## 📊 Experiment Tracking with Weights & Biases
 
@@ -155,122 +155,13 @@ Videos are:
 - Uploaded directly to W&B (no local storage)
 - Automatically cleaned up after upload
 
-## 🔧 Customizing Training
-
-### Hyperparameter Tuning
-
-```python
-# Conservative settings (more stable)
-conservative_config = {
-    "learning_rate": 1e-4,
-    "buffer_size": 50000,
-    "batch_size": 64,
-    "target_network_frequency": 1000,
-    "exploration_fraction": 0.8,
-}
-
-# Aggressive settings (faster learning)
-aggressive_config = {
-    "learning_rate": 1e-3,
-    "buffer_size": 100000,
-    "batch_size": 256,
-    "target_network_frequency": 100,
-    "exploration_fraction": 0.3,
-}
-
-model = train_dqn(
-    env_id="LunarLander-v2",
-    total_timesteps=200000,
-    **conservative_config,
-    use_wandb=True,
-    exp_name="conservative-tuning"
-)
-```
-
-### Environment-Specific Settings
-
-```python
-# For complex environments
-complex_env_config = {
-    "env_id": "ALE/Breakout-v5",
-    "total_timesteps": 1000000,
-    "buffer_size": 100000,
-    "learning_starts": 50000,  # Longer warmup
-    "train_frequency": 4,
-    "target_network_frequency": 1000,
-    "batch_size": 32,
-}
-
-# For simple environments
-simple_env_config = {
-    "env_id": "CartPole-v1",
-    "total_timesteps": 10000,
-    "buffer_size": 10000,
-    "learning_starts": 100,
-    "train_frequency": 1,
-    "batch_size": 128,
-}
-```
-
-## 📈 Evaluating Trained Models
-
-After training, evaluate your model's performance:
-
-```python
-from neatrl import evaluate
-import torch
-
-# Load or use trained model
-# model = train_dqn(...)  # Your trained model
-
-# Evaluate on 10 episodes
-returns, lengths = evaluate(
-    model=model,
-    device="cpu",  # or "cuda" if using GPU
-    run_name="evaluation-test",
-    num_eval_eps=10,
-    record=False  # Set to True to save evaluation videos
-)
-
-print(f"Average return: {sum(returns)/len(returns):.2f}")
-print(f"Average episode length: {sum(lengths)/len(lengths):.2f}")
-print(f"Best episode: {max(returns):.2f}")
-```
-
-## 🛠️ Troubleshooting
-
-### Common Issues
-
-**Training not converging:**
-- Try reducing `learning_rate`
-- Increase `buffer_size`
-- Adjust `exploration_fraction`
-
-**Poor performance:**
-- Check environment compatibility
-- Verify hyperparameters are appropriate for the environment
-- Ensure sufficient `total_timesteps`
-
-**W&B logging issues:**
-- Make sure `wandb login` has been run
-- Check `wandb_project` and `wandb_entity` values
-- Verify internet connection for uploads
-
-**Video recording problems:**
-- Ensure `gymnasium[other]` is installed for video dependencies
-- Check write permissions for temporary video storage
-
-### Getting Help
-
-- Check the [GitHub Issues](https://github.com/YuvrajSingh-mist/NeatRL/issues) for common problems
-- Review the [examples](./) in this directory
-- Join the discussion in [GitHub Discussions](https://github.com/YuvrajSingh-mist/NeatRL/discussions)
 
 ## 📚 Examples
 
 Check out these example scripts:
 
 - [`run_dqn_cartpole.py`](./run_dqn_cartpole.py) - Basic DQN training on CartPole
+- ['run_dqn_atari.py`](./run_dqn_atari.py) - DQN training on Atari-Breakout
 - *More examples coming soon...*
 
 ---

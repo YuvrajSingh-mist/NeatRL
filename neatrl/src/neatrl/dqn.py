@@ -8,16 +8,17 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import wandb
 from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
+import ale_py
 
-import wandb
-
+gym.register_envs(ale_py)
 
 # ===== CONFIGURATION =====
 class Config:
     # Experiment settings
-    exp_name = "DQN-CartPole"
+    exp_name = "DQN"
     seed = 42
     env_id = "CartPole-v1"
 
@@ -36,15 +37,14 @@ class Config:
     train_frequency = 10
 
     # Logging & saving
-    capture_video = True
-    save_model = True
-    upload_model = True
-    hf_entity = ""  # Your Hugging Face username
-
-    # WandB settings
-    use_wandb = True
+    capture_video = False
+    use_wandb = False
     wandb_project = "cleanRL"
-    wandb_entity = ""  # Your WandB username/team
+    wandb_entity = ""
+    eval_every = 1000
+    save_every = 1000
+    upload_every = 100
+    atari_wrapper = False
 
 
 class QNet(nn.Module):
@@ -73,11 +73,18 @@ class LinearEpsilonDecay(nn.Module):
         return max(slope * current_timestep + self.initial_eps, self.end_eps)
 
 
-def make_env(env_id, seed, capture_video, run_name, eval_mode=False):
+def make_env(env_id, seed, atari_wrapper=False):
     """Create environment with video recording"""
     env = gym.make(env_id, render_mode="rgb_array")
+    
+    if atari_wrapper:
+        
+        from gym.wrappers import AtariPreprocessing, FrameStack
+        
+        env = AtariPreprocessing(env, grayscale_obs=True, scale_obs=True)
+        env = FrameStack(env, num_stack=4)
+    
     env = gym.wrappers.RecordEpisodeStatistics(env)
-
     env.action_space.seed(seed)
 
     return env
@@ -87,9 +94,6 @@ def evaluate(model, device, run_name, num_eval_eps=10, record=False):
     eval_env = make_env(
         env_id=Config.env_id,
         seed=Config.seed,
-        capture_video=True,
-        run_name=run_name,
-        eval_mode=True,
     )
     eval_env.action_space.seed(Config.seed)
 
@@ -121,8 +125,6 @@ def evaluate(model, device, run_name, num_eval_eps=10, record=False):
             episode_reward += reward
 
         returns.append(episode_reward)
-        # if eps == 0:  # Save frames only for the first episode (optional)
-        #     frames = episode_frames.copy()  # Avoid memory issues
 
     # Save video
     if frames:
@@ -143,28 +145,29 @@ def evaluate(model, device, run_name, num_eval_eps=10, record=False):
 
 
 def train_dqn(
-    env_id="CartPole-v1",
-    total_timesteps=20000,
-    seed=42,
-    learning_rate=2.5e-4,
-    buffer_size=10000,
-    gamma=0.99,
-    tau=1.0,
-    target_network_frequency=50,
-    batch_size=128,
-    start_e=1.0,
-    end_e=0.05,
-    exploration_fraction=0.5,
-    learning_starts=1000,
-    train_frequency=10,
-    capture_video=False,
-    use_wandb=False,
-    wandb_project="cleanRL",
-    wandb_entity="",
-    exp_name="DQN",
-    eval_every=1000,
-    save_every=1000,
-    upload_every=100,
+    env_id=Config.env_id,
+    total_timesteps=Config.total_timesteps,
+    seed=Config.seed,
+    learning_rate=Config.learning_rate,
+    buffer_size=Config.buffer_size,
+    gamma=Config.gamma,
+    tau=Config.tau,
+    target_network_frequency=Config.target_network_frequency,
+    batch_size=Config.batch_size,
+    start_e=Config.start_e,
+    end_e=Config.end_e,
+    exploration_fraction=Config.exploration_fraction,
+    learning_starts=Config.learning_starts,
+    train_frequency=Config.train_frequency,
+    capture_video=Config.capture_video,
+    use_wandb=Config.use_wandb,
+    wandb_project=Config.wandb_project,
+    wandb_entity=Config.wandb_entity,
+    exp_name=Config.exp_name,
+    eval_every=Config.eval_every,
+    save_every=Config.save_every,
+    upload_every=Config.upload_every,
+    atari_wrapper=Config.atari_wrapper,
 ):
     """
     Train a DQN agent on a Gymnasium environment.
@@ -192,6 +195,7 @@ def train_dqn(
         eval_every: Frequency of evaluation during training
         save_every: Frequency of saving the model
         upload_every: Frequency of uploading the agent videos to wandb
+        atari_wrapper: Whether to apply Atari preprocessing wrappers
     Returns:
         Trained Q-network model
     """
@@ -228,7 +232,7 @@ def train_dqn(
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.benchmark = False
 
-    env = make_env(env_id, seed, capture_video, run_name)
+    env = make_env(env_id, seed, atari_wrapper=atari_wrapper)
     q_network = QNet(env.observation_space.shape[0], env.action_space.n).to(device)
     target_net = QNet(env.observation_space.shape[0], env.action_space.n).to(device)
     target_net.load_state_dict(q_network.state_dict())
@@ -351,7 +355,7 @@ def train_dqn(
             obs = new_obs
 
         print("SPS: ", int(step / (time.time() - start_time)), end="\r")
-        
+
         if use_wandb:
             wandb.log(
                 {

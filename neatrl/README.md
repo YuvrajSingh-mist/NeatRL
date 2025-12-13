@@ -1,10 +1,5 @@
 # 🎯 NeatRL
 
-[![CI](https://github.com/YuvrajSingh-mist/NeatRL/actions/workflows/ci.yml/badge.svg)](https://github.com/YuvrajSingh-mist/NeatRL/actions/workflows/ci.yml)
-[![PyPI version](https://badge.fury.io/py/neatrl.svg)](https://pypi.org/project/neatrl/)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
 **A clean, modern Python library for reinforcement learning algorithms**
 
 NeatRL provides high-quality implementations of popular RL algorithms with a focus on simplicity, performance, and ease of use. Built with PyTorch and designed for both research and production use.
@@ -46,7 +41,7 @@ model = train_dqn(
 
 ## 📚 Documentation
 
-📖 **[Complete Documentation](./docs/README.md)**
+📖 **[Complete Documentation](./docs)**
 
 The docs include:
 - Detailed usage examples

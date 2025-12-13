@@ -4,6 +4,50 @@ This repository contains an implementation of Deep Q-Network (DQN) for solving t
 
 ![CartPole DQN Training Visualization](images/image.png)
 
+## 🚀 Quick Training with NeatRL Library
+
+**For the easiest way to train a DQN agent, use the NeatRL library** - it's simpler and more user-friendly than this individual implementation.
+
+### Install NeatRL
+
+```bash
+pip install neatrl
+```
+
+### Train DQN on CartPole (3 lines!)
+
+```python
+from neatrl import train_dqn
+
+model = train_dqn(
+    env_id="CartPole-v1",
+    total_timesteps=10000,
+    seed=42
+)
+
+print("Training completed! 🎉")
+```
+
+### Advanced Training with Experiment Tracking
+
+```python
+from neatrl import train_dqn
+
+model = train_dqn(
+    env_id="CartPole-v1",
+    total_timesteps=50000,
+    seed=42,
+    capture_video=True,        # Record training videos
+    use_wandb=True,           # Enable W&B logging
+    wandb_project="my-rl-experiments",
+    exp_name="cartpole-dqn"
+)
+```
+
+**📖 [Complete NeatRL Documentation](../neatrl/docs/DQN/README.md)** - Includes detailed usage examples, hyperparameter tuning guides, and troubleshooting tips.
+
+---
+
 ## Overview
 
 The main training script (`train.py`) implements a DQN agent to solve the CartPole-v1 environment, where the goal is to balance a pole on a moving cart. The agent learns to take actions (move left or right) to keep the pole upright for as long as possible.
@@ -18,28 +62,15 @@ The main training script (`train.py`) implements a DQN agent to solve the CartPo
 - **Logging**: Includes logging to TensorBoard and Weights & Biases (wandb) for experiment tracking
 - **Video Recording**: Records videos during training and evaluation for visualization
 
-## Requirements
-
-```
-gymnasium
-torch
-numpy
-tqdm
-stable-baselines3
-wandb
-imageio
-opencv-python
-tensorboard
-huggingface_hub
-```
 
 ## Configuration
 
-The project is configured through the `Config` class, which includes the following parameters:
+The project is configured through the `Config` class in `train.py`, which includes the following parameters:
 
-- **Environment Settings**:
-  - `env_id`: The Gym environment ID (default: "CartPole-v1")
+- **Experiment Settings**:
+  - `exp_name`: Experiment name for logging (default: "DQN")
   - `seed`: Random seed for reproducibility (default: 42)
+  - `env_id`: The Gym environment ID (default: "CartPole-v1")
 
 - **Training Parameters**:
   - `total_timesteps`: Total number of timesteps to train (default: 20,000)
@@ -56,21 +87,15 @@ The project is configured through the `Config` class, which includes the followi
   - `train_frequency`: Frequency of training steps (default: 10)
 
 - **Logging & Saving**:
-  - `capture_video`: Whether to capture videos (default: True)
-  - `save_model`: Whether to save model checkpoints (default: True)
-  - `upload_model`: Whether to upload model to Hugging Face Hub (default: True)
-  - `hf_entity`: Hugging Face username (default: "")
-  - `use_wandb`: Whether to use Weights & Biases for logging (default: True)
+  - `capture_video`: Whether to capture videos (default: False)
+  - `use_wandb`: Whether to use Weights & Biases for logging (default: False)
   - `wandb_project`: WandB project name (default: "cleanRL")
   - `wandb_entity`: WandB username/team (default: "")
+  - `eval_every`: Frequency of evaluation during training (default: 1,000)
+  - `save_every`: Frequency of saving the model (default: 1,000)
+  - `upload_every`: Frequency of uploading videos to wandb (default: 100)
 
-## Usage
 
-To run the training script:
-
-```bash
-python train.py
-```
 
 ## Model Architecture
 
@@ -114,7 +139,7 @@ Training metrics are logged to both TensorBoard and Weights & Biases (if enabled
 - Episodic lengths
 - TD loss
 - Q-values
-<!-- - Steps per second (SPS) -->
+- Steps per second (SPS)
 - Exploration rate (epsilon)
 
 ## Results
