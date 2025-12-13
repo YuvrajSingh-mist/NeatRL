@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-script for DQN training on CartPole using neatrl library.
+script for DQN training on LunarLander using neatrl library.
 """
 
 import torch
@@ -24,17 +24,17 @@ class CustomQNet(nn.Module):
         return self.q_value(x)
 
 
-def test_dqn_acrobot():
-    """Test DQN training on Acrobot-v1."""
-    print("Testing DQN training on Acrobot-v1 with neatrl...")
+def test_dqn_lunarlander():
+    """Test DQN training on LunarLander-v2."""
+    print("Testing DQN training on LunarLander-v2 with neatrl...")
 
-    # Train DQN on Acrobot
+    # Train DQN on LunarLander
     model = train_dqn(
-        env_id="Acrobot-v1",
-        total_timesteps=1000000,
+        env_id="LunarLander-v2",
+        total_timesteps=200000,
         seed=42,
         learning_rate=2.5e-4,
-        buffer_size=50000,
+        buffer_size=100000,
         gamma=0.99,
         tau=1.0,
         target_network_frequency=50,
@@ -48,10 +48,10 @@ def test_dqn_acrobot():
         use_wandb=True,
         wandb_project="cleanRL",
         wandb_entity="",
-        exp_name="DQN-Acrobot-Test",
-        custom_agent=CustomQNet(6, 3),  # Acrobot state and action dimensions
+        exp_name="DQN-LunarLander-Test",
+        custom_agent=CustomQNet(8, 4),  # LunarLander state and action dimensions
         atari_wrapper=False,
-        n_envs=4,
+        n_envs=1,
         record=True,
         eval_every=5000,
     )
@@ -61,7 +61,7 @@ def test_dqn_acrobot():
 
     # Test model inference
     print("Testing model inference...")
-    test_obs = torch.randn(1, 4)  # CartPole observation shape
+    test_obs = torch.randn(1, 8)  # LunarLander observation shape
     with torch.no_grad():
         q_values = model(test_obs)
         action = q_values.argmax().item()
@@ -74,4 +74,4 @@ def test_dqn_acrobot():
 
 
 if __name__ == "__main__":
-    test_dqn_acrobot()
+    test_dqn_lunarlander()

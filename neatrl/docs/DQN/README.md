@@ -90,14 +90,12 @@ DQN works with any Gymnasium environment. Here are some popular choices:
 
 ### Classic Control
 - `CartPole-v1` - Balance a pole on a cart
-<!-- - `MountainCar-v0` - Drive up a hill -->
+- `MountainCar-v0` - Drive up a hill
 - `Acrobot-v1` - Swing up a two-link robot
-<!-- - `Pendulum-v1` - Swing up a pendulum -->
 
 ### Box2D
 - `LunarLander-v2` - Land a spacecraft safely
-- `BipedalWalker-v3` - Make a robot walk
-- `CarRacing-v2` - Race a car around a track
+- `CarRacing-v2` - Race a car around a track if discrete action space is chosen
 
 
 ### Atari Games
@@ -164,7 +162,11 @@ Videos are:
 Check out these example scripts:
 
 - [`run_dqn_cartpole.py`](./run_dqn_cartpole.py) - Basic DQN training on CartPole
-- ['run_dqn_atari.py`](./run_dqn_atari.py) - DQN training on Atari-Breakout
+- [`run_dqn_mountaincar.py`](./run_dqn_mountaincar.py) - DQN training on MountainCar
+- [`run_dqn_acrobot.py`](./run_dqn_acrobot.py) - DQN training on Acrobot
+- [`run_dqn_lunarlander.py`](./run_dqn_lunarlander.py) - DQN training on LunarLander
+- [`run_dqn_carracing.py`](./run_dqn_carracing.py) - DQN training on CarRacing (discrete)
+- [`run_dqn_atari.py`](./run_dqn_atari.py) - DQN training on Atari-Breakout
 - *More examples coming soon...*
 
 ---
