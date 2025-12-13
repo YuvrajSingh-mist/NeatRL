@@ -15,7 +15,7 @@ def test_dqn_cartpole():
     # Train DQN on CartPole
     model = train_dqn(
         env_id="CartPole-v1",
-        total_timesteps=100000,
+        total_timesteps=1000000,
         seed=42,
         learning_rate=2.5e-4,
         buffer_size=50000,
