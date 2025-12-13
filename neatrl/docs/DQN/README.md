@@ -39,48 +39,49 @@ model = train_dqn(
 )
 ```
 
-### Advanced Configuration
+### Atari Games Training
 
-Fine-tune your DQN training with custom hyperparameters:
+Train DQN on Atari games like Breakout with convolutional networks:
 
 ```python
+import torch.nn as nn
 from neatrl import train_dqn
 
+# Define convolutional Q-network for Atari
+class AtariQNet(nn.Module):
+    def __init__(self, state_space, action_space):
+        super().__init__()
+        self.conv1 = nn.Conv2d(state_space, 32, kernel_size=8, stride=4)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
+        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
+        self.flatten = nn.Flatten()
+        self.fc1 = nn.Linear(64 * 7 * 7, 512)
+        self.fc2 = nn.Linear(512, action_space)
+
+    def forward(self, x):
+        x = torch.relu(self.conv1(x))
+        x = torch.relu(self.conv2(x))
+        x = torch.relu(self.conv3(x))
+        x = self.flatten(x)
+        x = torch.relu(self.fc1(x))
+        return self.fc2(x)
+
+# Train on Breakout
 model = train_dqn(
-    env_id="LunarLander-v2",
-    total_timesteps=100000,
+    env_id="BreakoutNoFrameskip-v4",
+    total_timesteps=1000000,
     seed=42,
-
-    # Network hyperparameters
     learning_rate=2.5e-4,
-    gamma=0.99,
-    tau=1.0,
-
-    # Training hyperparameters
     buffer_size=100000,
-    batch_size=128,
-    target_network_frequency=500,
-
-    # Exploration
-    start_e=1.0,
-    end_e=0.05,
-    exploration_fraction=0.5,
-
-    # Training schedule
-    learning_starts=1000,
-    train_frequency=4,
-
-    # Monitoring & logging
-    capture_video=True,
+    gamma=0.99,
+    batch_size=32,
+    atari_wrapper=True,  # Apply Atari preprocessing
+    custom_agent=AtariQNet(4, 4),  # 4 stacked frames, 4 actions
     use_wandb=True,
-    wandb_project="lunar-lander-experiments",
-    exp_name="dqn-lunar-lander",
-
-    # Evaluation & saving
-    eval_every=1000,
-    save_every=5000,
-    upload_every=100,  # Upload videos every 100 steps
+    wandb_project="atari-experiments",
+    exp_name="dqn-breakout"
 )
+
 ```
 
 ## 🎮 Supported Environments
@@ -90,18 +91,20 @@ DQN works with any Gymnasium environment. Here are some popular choices:
 ### Classic Control
 - `CartPole-v1` - Balance a pole on a cart
 <!-- - `MountainCar-v0` - Drive up a hill -->
-<!-- - `Acrobot-v1` - Swing up a two-link robot -->
+- `Acrobot-v1` - Swing up a two-link robot
 <!-- - `Pendulum-v1` - Swing up a pendulum -->
-<!-- 
+
 ### Box2D
 - `LunarLander-v2` - Land a spacecraft safely
 - `BipedalWalker-v3` - Make a robot walk
 - `CarRacing-v2` - Race a car around a track
 
+
 ### Atari Games
+- `BreakoutNoFrameskip-v4` - Breakout game
 - `ALE/Pong-v5` - Classic Pong game
-- `ALE/Breakout-v5` - Breakout game
-- `ALE/SpaceInvaders-v5` - Space Invaders -->
+- `ALE/SpaceInvaders-v5` - Space Invaders
+- and many more...
 
 ## 📊 Experiment Tracking with Weights & Biases
 

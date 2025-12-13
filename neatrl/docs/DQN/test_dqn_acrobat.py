@@ -24,13 +24,13 @@ class CustomQNet(nn.Module):
         return self.q_value(x)
 
 
-def test_dqn_cartpole():
-    """Test DQN training on CartPole-v1."""
-    print("Testing DQN training on CartPole-v1 with neatrl...")
+def test_dqn_acrobot():
+    """Test DQN training on Acrobot-v1."""
+    print("Testing DQN training on Acrobot-v1 with neatrl...")
 
-    # Train DQN on CartPole
+    # Train DQN on Acrobot
     model = train_dqn(
-        env_id="CartPole-v1",
+        env_id="Acrobot-v1",
         total_timesteps=1000000,
         seed=42,
         learning_rate=2.5e-4,
@@ -48,8 +48,8 @@ def test_dqn_cartpole():
         use_wandb=True,
         wandb_project="cleanRL",
         wandb_entity="",
-        exp_name="DQN-CartPole-Test",
-        custom_agent=CustomQNet(4, 2),  # CartPole state and action dimensions
+        exp_name="DQN-Acrobot-Test",
+        custom_agent=CustomQNet(6, 3),  # Acrobot state and action dimensions
         atari_wrapper=False,
         n_envs=4,
         record=True,
@@ -74,4 +74,4 @@ def test_dqn_cartpole():
 
 
 if __name__ == "__main__":
-    test_dqn_cartpole()
+    test_dqn_acrobot()

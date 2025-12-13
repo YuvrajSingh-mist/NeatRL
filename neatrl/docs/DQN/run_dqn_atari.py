@@ -4,14 +4,13 @@ script for DQN training on Atari-Breakout using neatrl library.
 """
 
 import torch
+import torch.nn as nn
 
 from neatrl import train_dqn
 
-import torch.nn as nn
 
 class QNet(nn.Module):
     def __init__(self, state_space, action_space):
-        super(QNet, self).__init__()
         print(f"State space: {state_space}, Action space: {action_space}")
         self.conv1 = nn.Conv2d(state_space, 32, kernel_size=8, stride=4)
         self.conv2 = nn.Conv2d(32, 32, kernel_size=4, stride=2)
@@ -20,15 +19,30 @@ class QNet(nn.Module):
         self.fc1 = nn.Linear(64 * 3 * 3, 512)
         self.fc2 = nn.Linear(512, 512)
         self.q_value = nn.Linear(512, action_space)
-    def forward(self, x):
-       
-        return self.q_value(self.fc2(torch.relu(self.fc1(self.flatten(torch.relu(self.conv3(torch.relu(self.conv2(torch.relu(self.conv1(x)))))))))))
-    
-def test_dqn_atari():
-    """Test DQN training on CartPole-v1."""
-    print("Testing DQN training on CartPole-v1 with neatrl...")
 
-    # Train DQN on CartPole
+    def forward(self, x):
+        return self.q_value(
+            self.fc2(
+                torch.relu(
+                    self.fc1(
+                        self.flatten(
+                            torch.relu(
+                                self.conv3(
+                                    torch.relu(self.conv2(torch.relu(self.conv1(x))))
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+
+def test_dqn_atari():
+    """Test DQN training on Breakout."""
+    print("Testing DQN training on Breakout with neatrl...")
+
+    # Train DQN on Breakout
     model = train_dqn(
         env_id="BreakoutNoFrameskip-v4",
         total_timesteps=1000000,
@@ -51,12 +65,12 @@ def test_dqn_atari():
         exp_name="DQN-Atari-Test",
         custom_agent=QNet(
             4, 4
-        ), # Atari state (4 stacked frames) and action dimensions (4 actions for Breakout)
+        ),  # Atari state (4 stacked frames) and action dimensions (4 actions for Breakout)
         atari_wrapper=True,
-        n_envs = 4, 
+        n_envs=4,
         record=True,
         eval_every=5000,
-        device = "cpu"
+        device="cpu",
     )
 
     print(f"Training completed! Model type: {type(model)}")
