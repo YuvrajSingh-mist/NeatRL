@@ -109,14 +109,9 @@ pip install torch pettingzoo[atari] supersuit wandb tqdm imageio opencv-python g
 #### Main Self-Play Training
 ```bash
 cd MARL
-python train.py --env_id pong_v3 --total_timesteps 15000000
-```
-
-#### Alternative Self-Play Driver
-```bash
-cd MARL/Self Play
 python self_play.py --env_id pong_v3 --total_timesteps 15000000
 ```
+
 
 ### Key Hyperparameters
 
@@ -131,25 +126,6 @@ ENTROPY_COEFF = 0.01          # Entropy regularization
 total_timesteps = 15000000    # Total training steps
 ```
 
-### Interactive Play
-
-#### Human vs AI
-```bash
-python play.py "pt files/Pong-MARL.pt"
-```
-
-**Controls:**
-- `W` or `↑`: Move right
-- `S` or `↓`: Move left
-- `F`: Fire
-- `D`: Fire right
-- `A`: Fire left
-- `Q`: Quit
-
-#### AI vs AI
-```bash
-python play.py "pt files/Pong-MARL.pt" --ai_vs_ai
-```
 
 ## Results and Performance
 

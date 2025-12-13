@@ -1,96 +1,60 @@
 import torch
-import numpy as np
-import cv2
-import sys
-import time
+from ippo import Actor, Config
+import gymnasium as gym
 from pettingzoo.atari import pong_v3
-import supersuit as ss
+import supersuit
+import argparse
+import imageio
 
-# Import your Agent class from the correct path
-from ippo import Agent
+# --- CLI ---
+def parse_args():
+    parser = argparse.ArgumentParser(description="Play Pong with trained IPPO agent.")
+    parser.add_argument('--checkpoint', type=str, required=True, help='Path to .pt checkpoint')
+    parser.add_argument('--episodes', type=int, default=5, help='Number of episodes to play')
+    parser.add_argument('--record', action='store_true', help='Record gameplay to MP4')
+    parser.add_argument('--output', type=str, default='ippo_pong_play.mp4', help='Output MP4 filename')
+    return parser.parse_args()
 
-# --- Load Model ---
-def load_agent(model_path, action_space):
-    agent = Agent(action_space)
-    agent.load_state_dict(torch.load(model_path, map_location="cuda")['model_state_dict'])
-    agent.eval()
-    return agent
+# --- Main ---
+def main():
+    args = parse_args()
+    # Load config and model
+    state_dict = torch.load(args.checkpoint, map_location='cpu')
+    config = Config()
+    actor = Actor(config).eval()
+    actor.load_state_dict(state_dict["model_state"])
 
-# --- Preprocessing ---
-def preprocess_obs(obs):
-    # obs: (H, W, C) or (C, H, W) -> (1, H, W, C)
-    if obs.shape[-1] != 6:
-        obs = np.repeat(obs, 6 // obs.shape[-1], axis=-1)
-    obs = torch.tensor(obs, dtype=torch.float32).unsqueeze(0)
-    return obs
-
-# --- Main Play Loop ---
-def play_pong(model_path):
     env = pong_v3.env(render_mode="rgb_array")
-    env = ss.max_observation_v0(env, 2)
-    env = ss.frame_skip_v0(env, 4)
-    env = ss.color_reduction_v0(env, mode="B")
-    env = ss.resize_v1(env, x_size=84, y_size=84)
-    env = ss.frame_stack_v1(env, 4)
-    env = ss.agent_indicator_v0(env, type_only=False)
+    env = supersuit.frame_stack_v1(env, 4)
+    env = supersuit.resize_v1(env, 84, 84)
+    env = supersuit.color_reduction_v0(env, mode='full')
+    env = supersuit.agent_indicator_v0(env)
+    env = supersuit.resize_v1(env, 64, 64)
+    env.reset()
 
-    possible_agents = env.possible_agents
-    ai_agent_name = possible_agents[0]  # 'first_0'
-    human_agent_name = possible_agents[1]  # 'second_0'
-
-    env.reset(seed=42)
-    obs, _, _, _, _ = env.last()
-    action_space = env.action_space(ai_agent_name).n
-    agent = load_agent(model_path, action_space)
-
-    done = False
-    while not done:
-        for agent_name in env.agent_iter():
-            obs, reward, terminated, truncated, info = env.last()
-            done = terminated or truncated
-            if done:
-                env.step(None)
-                continue
-            if agent_name == ai_agent_name:
-                # obs_tensor = preprocess_obs(obs).to('cuda' if torch.cuda.is_available() else 'cpu')
-                with torch.no_grad():
-                    action, _, _ = agent.get_action(obs, deterministic=True)
-                    action = action.cpu().item()
-            else:
-                # Human plays using keyboard
-                frame = env.render()
-                # Display controls on the frame
-                controls = "Controls: W=Right, S=Left, F=Fire, D=Fire Right, A=Fire Left, Q=Quit"
-                cv2.putText(frame, controls, (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
-                cv2.imshow("Pong - You are Player 2", frame)
-                key = cv2.waitKey(50) & 0xFF
-                
-                # Map keys to actions
-                if key == ord('q'):  # Quit
-                    print("Quitting game...")
-                    cv2.destroyAllWindows()
-                    sys.exit(0)
-                elif key == ord('w') or key == 82:  # Up arrow or W
-                    action = 2  # Move right
-                elif key == ord('s') or key == 84:  # Down arrow or S
-                    action = 3  # Move left
-                elif key == ord('f'):  # F key
-                    action = 1  # Fire
-                elif key == ord('d'):  # D key
-                    action = 4  # Fire right
-                elif key == ord('a'):  # A key
-                    action = 5  # Fire left
-                else:
-                    action = 0  # NOOP
-            env.step(action)
-            if done:
-                break
-    print("Game Over!")
-    cv2.destroyAllWindows()
+    frames = []
+    for ep in range(args.episodes):
+        env.reset()
+        terminated = {agent: False for agent in env.agents}
+        truncated = {agent: False for agent in env.agents}
+        obs = {agent: env.observe(agent) for agent in env.agents}
+        while not all(terminated.values()) and not all(truncated.values()):
+            actions = {}
+            for agent in env.agents:
+                if not terminated[agent] and not truncated[agent]:
+                    obs_tensor = torch.tensor(obs[agent], dtype=torch.float32).unsqueeze(0)
+                    with torch.no_grad():
+                        logits = actor(obs_tensor, agent)
+                        action = torch.argmax(logits, dim=-1).item()
+                    actions[agent] = action
+            next_obs, rewards, terminated, truncated, infos = env.step(actions)
+            obs = next_obs
+            if args.record:
+                frames.append(env.render())
+    if args.record and frames:
+        imageio.mimsave(args.output, frames, fps=30)
+        print(f"Saved gameplay to {args.output}")
+    env.close()
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python play.py <model_path>")
-        sys.exit(1)
-    model_path = sys.argv[1]
-    play_pong(model_path)
+    main()
