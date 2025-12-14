@@ -52,7 +52,7 @@ def test_dqn_lunarlander():
         custom_agent=CustomQNet(8, 4),  # LunarLander state and action dimensions
         atari_wrapper=False,
         n_envs=1,
-        record=True,
+        capture_video=True,
         eval_every=5000,
     )
 

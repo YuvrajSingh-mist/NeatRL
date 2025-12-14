@@ -62,7 +62,7 @@ def test_dqn_carracing():
         custom_agent=CarRacingQNet(3, 5),  # Assuming 3 channels, 5 discrete actions
         atari_wrapper=False,  # CarRacing needs custom preprocessing
         n_envs=1,
-        record=True,
+        capture_video=True,
         eval_every=5000,
     )
 

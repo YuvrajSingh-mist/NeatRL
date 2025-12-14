@@ -115,7 +115,7 @@ The `train_dqn` function accepts the following arguments for customizing your DQ
 | `custom_agent` | nn.Module | `None` | Custom Q-network class/instance (overrides default) |
 | `num_eval_eps` | int | `10` | Number of episodes for evaluation |
 | `n_envs` | int | `4` | Number of parallel environments for vectorized training |
-| `record` | bool | `False` | Whether to record evaluation videos |
+| `capture_video` | bool | `False` | Whether to record evaluation videos |
 | `device` | str | `"cpu"` | Device for training ("cpu", "cuda", "mps") |
 
 ## 🎮 Supported Environments
@@ -126,11 +126,38 @@ DQN works with any Gymnasium environment. Here are some popular choices:
 - `CartPole-v1` - Balance a pole on a cart
 - `MountainCar-v0` - Drive up a hill
 - `Acrobot-v1` - Swing up a two-link robot
-- `FrozenLake-v1` - Navigate ice lake to goal (discrete states, requires one-hot encoding)
+
+### Grid Environments
+NeatRL now supports grid-based environments with automatic one-hot encoding for discrete states!
+
+**Example: FrozenLake**
+
+```python
+from neatrl import train_dqn
+
+# Train DQN on FrozenLake with automatic one-hot encoding
+model = train_dqn(
+    env_id="FrozenLake-v1",
+    total_timesteps=50000,
+    seed=42,
+    grid_env=True,  # Enable one-hot encoding for discrete states
+    use_wandb=True,
+    wandb_project="grid-experiments",
+    exp_name="dqn-frozenlake"
+)
+```
+
+The `grid_env=True` parameter automatically applies one-hot encoding to discrete state observations, making them suitable for neural network input.
 
 ### Box2D
 - `LunarLander-v2` - Land a spacecraft safely
 - `CarRacing-v2` - Race a car around a track if discrete action space is chosen
+
+## Toy Text
+
+- `FrozenLake-v1` - Navigate a slippery frozen lake
+- `Taxi-v3` - Pick up and drop off passengers
+- `CliffWalking-v0` - Avoid cliffs while walking
 
 
 ### Atari Games

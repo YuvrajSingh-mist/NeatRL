@@ -12,6 +12,7 @@ NeatRL provides high-quality implementations of popular RL algorithms with a foc
 - 🎮 **Gymnasium Compatible**: Works with all Gymnasium environments
 - 🔧 **Easy to Extend**: Modular design for adding new algorithms
 - 📈 **State-of-the-Art**: Implements modern RL techniques and best practices
+- 🏗️ **Grid Environment Support**: Automatic one-hot encoding for discrete grid environments
 
 ## 🏗️ Supported Algorithms
 

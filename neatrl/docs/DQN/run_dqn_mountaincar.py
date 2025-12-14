@@ -52,7 +52,7 @@ def test_dqn_mountaincar():
         custom_agent=CustomQNet(2, 3),  # MountainCar state and action dimensions
         atari_wrapper=False,
         n_envs=1,
-        record=True,
+        capture_video=True,
         eval_every=5000,
     )
 
