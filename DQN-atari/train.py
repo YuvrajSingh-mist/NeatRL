@@ -1,7 +1,6 @@
 import os
 import random
 import time
-
 import ale_py
 import gymnasium as gym
 import imageio
@@ -11,7 +10,7 @@ import torch.nn as nn
 import torch.optim as optim
 from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
-
+from gymnasium.wrappers import AtariPreprocessing, FrameStackObservation
 import wandb
 
 gym.register_envs(ale_py)
@@ -39,24 +38,23 @@ class Config:
     train_frequency = 10
     num_eval_eps = 10
     grid_env = False
-    
+
     eval_every = 1000
     save_every = 1000
     upload_every = 100
     atari_wrapper = False
     n_envs = 4
-    record = False
+    capture_video = False
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # Custom agent
     custom_agent = None  # Custom neural network class or instance
-    
+
     # Logging & saving
     capture_video = False
     use_wandb = False
     wandb_project = "cleanRL"
     wandb_entity = ""
 
-    
 
 class QNet(nn.Module):
     def __init__(self, state_space, action_space):
@@ -84,14 +82,29 @@ class LinearEpsilonDecay(nn.Module):
         return max(slope * current_timestep + self.initial_eps, self.end_eps)
 
 
-def make_env(env_id, seed, idx, atari_wrapper=False):
+class OneHotWrapper(gym.ObservationWrapper):
+    def __init__(self, env, obs_shape=16):
+        super().__init__(env)
+        self.observation_space = gym.spaces.Box(0, 1, (obs_shape,), dtype=np.float32)
+
+    def observation(self, obs):
+        one_hot = torch.zeros(16, dtype=torch.float32)
+        one_hot[obs] = 1.0
+        return one_hot.numpy()
+
+
+def make_env(env_id, seed, idx, atari_wrapper=False, grid_env=False):
     def thunk():
         """Create environment with video recording"""
         env = gym.make(env_id, render_mode="rgb_array")
 
-        if atari_wrapper:
-            from gymnasium.wrappers import AtariPreprocessing, FrameStackObservation
+        # Special handling for FrozenLake discrete states
+        if grid_env:
+        
+            env = OneHotWrapper(env, obs_shape=env.observation_space.n)
 
+        if atari_wrapper:
+            
             env = AtariPreprocessing(env, grayscale_obs=True, scale_obs=True)
             env = FrameStackObservation(env, stack_size=4)
 
@@ -103,10 +116,19 @@ def make_env(env_id, seed, idx, atari_wrapper=False):
     return thunk
 
 
+
+
 def evaluate(
-    env_id, model, device, seed, atari_wrapper=False, num_eval_eps=10, record=False
+    env_id,
+    model,
+    device,
+    seed,
+    atari_wrapper=False,
+    num_eval_eps=10,
+    capture_video=False,
+    grid_env=False,
 ):
-    eval_env = make_env(idx=0, env_id=env_id, seed=seed, atari_wrapper=atari_wrapper)()
+    eval_env = make_env(idx=0, env_id=env_id, seed=seed, atari_wrapper=atari_wrapper, grid_env=grid_env)()
     eval_env.action_space.seed(seed)
 
     model = model.to(device)
@@ -121,13 +143,12 @@ def evaluate(
         # episode_frames = []
 
         while not done:
-            if record:
+            if capture_video:
                 frame = eval_env.render()
                 frames.append(frame)
 
-            # with torch.no_grad():
             action = (
-                model(torch.tensor(obs, device=device).unsqueeze(0)).argmax().item()
+                model(torch.tensor(obs, device=device, dtype=torch.float32).unsqueeze(0)).argmax().item()
             )
             obs, reward, terminated, truncated, _ = eval_env.step(action)
             done = terminated or truncated
@@ -152,6 +173,38 @@ def evaluate(
     model.train()
     eval_env.close()
     return returns, frames
+
+
+def validate_q_network_dimensions(q_network, obs_dim, action_dim):
+    """
+    Validate that the Q-network's input and output dimensions match the environment.
+    
+    Args:
+        q_network: The neural network model (nn.Module)
+        obs_dim: Expected observation dimension
+        action_dim: Expected action dimension
+    """
+    # Find first Linear layer for input dimension
+    first_layer = None
+    for module in q_network.modules():
+        if isinstance(module, nn.Linear):
+            first_layer = module
+            break
+    if first_layer is None:
+        raise ValueError("Q-network must have at least one Linear layer for dimension validation.")
+    if first_layer.in_features != obs_dim:
+        raise ValueError(f"Q-network input dimension {first_layer.in_features} does not match observation dimension {obs_dim}.")
+    
+    # Find last Linear layer for output dimension
+    last_layer = None
+    for module in reversed(list(q_network.modules())):
+        if isinstance(module, nn.Linear):
+            last_layer = module
+            break
+    if last_layer is None:
+        raise ValueError("Q-network must have at least one Linear layer for dimension validation.")
+    if last_layer.out_features != action_dim:
+        raise ValueError(f"Q-network output dimension {last_layer.out_features} does not match action dimension {action_dim}.")
 
 
 def train_dqn(
@@ -180,8 +233,9 @@ def train_dqn(
     custom_agent=Config.custom_agent,
     num_eval_eps=Config.num_eval_eps,
     n_envs=Config.n_envs,
-    record=Config.record,
+    capture_video=Config.capture_video,
     device=Config.device,
+    grid_env=Config.grid_env,
 ):
     """
     Train a DQN agent on a Gymnasium environment.
@@ -212,8 +266,9 @@ def train_dqn(
         agent: Custom neural network class or instance (nn.Module subclass or instance, optional, defaults to QNet)
         num_eval_eps: Number of evaluation episodes
         n_envs : Number of parallel environments for the replay buffer
-        record: Whether to record evaluation videos
+        capture_video: Whether to record evaluation videos
         device: Device to use for training (e.g., "cpu", "cuda")
+        grid_env: Whether the environment uses discrete grid observations
     Returns:
         Trained Q-network model
     """
@@ -261,28 +316,32 @@ def train_dqn(
         print(f"Using {n_envs} parallel environments for experience collection.")
         env = gym.vector.SyncVectorEnv(
             [
-                make_env(env_id, seed, idx=i, atari_wrapper=atari_wrapper)
+                make_env(env_id, seed, idx=i, atari_wrapper=atari_wrapper, grid_env=grid_env)
                 for i in range(n_envs)
             ]
         )
     else:
-        env = make_env(env_id, seed, idx=0, atari_wrapper=atari_wrapper)()
+        env = make_env(env_id, seed, idx=0, atari_wrapper=atari_wrapper, grid_env=grid_env)()
+
+    # Compute observation and action dimensions
+    obs_shape = (
+        env.single_observation_space.shape[0]
+        if n_envs > 1
+        else env.observation_space.shape[0]
+    )
+    action_shape = env.single_action_space.n if n_envs > 1 else env.action_space.n
 
     # Use custom agent if provided, otherwise use default QNet
     if custom_agent is not None:
         if isinstance(custom_agent, nn.Module):
+            # Validate custom agent's dimensions first
+            validate_q_network_dimensions(custom_agent, obs_shape, action_shape)
+            
             q_network = custom_agent.to(device)
             target_net = custom_agent.to(device)
         else:
             raise ValueError("agent must be an instance of nn.Module")
     else:
-        obs_shape = (
-            env.single_observation_space.shape[0]
-            if n_envs > 1
-            else env.observation_space.shape[0]
-        )
-        action_shape = env.single_action_space.n if n_envs > 1 else env.action_space.n
-
         q_network = QNet(obs_shape, action_shape).to(device)
         target_net = QNet(obs_shape, action_shape).to(device)
 
@@ -315,6 +374,7 @@ def train_dqn(
         eps = eps_decay(step, exploration_fraction)
         rnd = random.random()
 
+
         if rnd < eps:
             if n_envs > 1:
                 # Sample one action per environment
@@ -325,9 +385,10 @@ def train_dqn(
                 action = env.action_space.sample()
         else:
             with torch.no_grad():
-                q_values = q_network(torch.tensor(obs, device=device))
-                action = q_values.argmax(dim=-1).cpu().numpy()
-
+                q_values = q_network(torch.tensor(obs, device=device, dtype=torch.float32))
+                action = q_values.argmax(dim=-1).cpu().numpy() if n_envs > 1 else int(q_values.argmax(dim=-1).item())
+                
+        
         new_obs, reward, terminated, truncated, info = env.step(action)
         done = np.logical_or(terminated, truncated)
 
@@ -415,7 +476,8 @@ def train_dqn(
                 seed,
                 num_eval_eps=num_eval_eps,
                 atari_wrapper=atari_wrapper,
-                record=record,
+                record=capture_video,
+                grid_env=grid_env,
             )
             avg_return = np.mean(episodic_returns)
 
@@ -454,7 +516,8 @@ def train_dqn(
             seed,
             atari_wrapper=atari_wrapper,
             num_eval_eps=num_eval_eps,
-            record=True,
+            capture_video=True,
+            grid_env=grid_env,
         )
         imageio.mimsave(train_video_path, frames, fps=30)
         print(f"Final training video saved to {train_video_path}")

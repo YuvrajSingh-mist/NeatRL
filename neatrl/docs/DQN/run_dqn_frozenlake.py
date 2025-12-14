@@ -6,6 +6,7 @@ script for DQN training on FrozenLake using neatrl library.
 import torch
 import torch.nn as nn
 import gymnasium as gym
+
 from neatrl import train_dqn
 
 
@@ -28,6 +29,7 @@ def test_dqn_frozenlake():
     """Test DQN training on FrozenLake-v1."""
     print("Testing DQN training on FrozenLake-v1 with neatrl...")
 
+    # Note: FrozenLake has discrete states, automatically one-hot encoded in make_env
 
     # Train DQN on FrozenLake
     model = train_dqn(
@@ -45,7 +47,7 @@ def test_dqn_frozenlake():
         exploration_fraction=0.8,
         learning_starts=1000,
         train_frequency=4,
-        capture_video=False,  # FrozenLake is text-based
+        capture_video=True,  # FrozenLake is text-based
         use_wandb=True,
         wandb_project="cleanRL",
         wandb_entity="",
@@ -53,7 +55,6 @@ def test_dqn_frozenlake():
         custom_agent=FrozenLakeQNet(16, 4),  # 16 one-hot states, 4 actions
         atari_wrapper=False,
         n_envs=1,
-        record=False,
         eval_every=5000,
         grid_env=True,
     )
@@ -61,6 +62,40 @@ def test_dqn_frozenlake():
     print(f"Training completed! Model type: {type(model)}")
     print(f"Model device: {next(model.parameters()).device}")
 
+    # Test model inference
+    print("Testing model inference...")
+    class OneHotWrapper(gym.ObservationWrapper):
+        def __init__(self, env):
+            super().__init__(env)
+            self.observation_space = gym.spaces.Box(0, 1, (16,), dtype=float)
+
+        def observation(self, obs):
+            one_hot = torch.zeros(16)
+            one_hot[obs] = 1.0
+            return one_hot.numpy()
+
+    env = gym.make("FrozenLake-v1", render_mode="rgb_array")
+    env = OneHotWrapper(env)
+    env = gym.wrappers.RecordEpisodeStatistics(env)
+    obs, _ = env.reset()
+    done = False
+    total_reward = 0
+    steps = 0
+
+    while not done and steps < 100:
+        with torch.no_grad():
+            q_values = model(torch.tensor(obs, dtype=torch.float32).unsqueeze(0))
+            action = q_values.argmax().item()
+        obs, reward, terminated, truncated, _ = env.step(action)
+        done = terminated or truncated
+        total_reward += reward
+        steps += 1
+
+    print(f"Test episode reward: {total_reward}, steps: {steps}")
+    print("Test completed successfully!")
+
+    env.close()
+    return model
 
 
 if __name__ == "__main__":

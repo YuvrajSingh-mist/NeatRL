@@ -20,17 +20,15 @@ dependencies = [
     "stable-baselines3",
     "tqdm",
     "wandb",
-    "huggingface_hub",
-    "imageio",
-    "opencv-python",
     "imageio[ffmpeg]",
-    "gymnasium[other]",
-    "gymnasium[classic-control]",
-    "ale_py"
-
+    "opencv-python",
+    "wandb[media]"
 ]
 
 [project.optional-dependencies]
+atari = ["gymnasium[atari]", "ale-py"]
+classic = ["gymnasium[classic-control]"]
+box2d = ["swig", "gymnasium[box2d]"]
 dev = [
     "ruff",
     "mypy",
