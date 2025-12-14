@@ -3,9 +3,9 @@
 script for DQN training on FrozenLake using neatrl library.
 """
 
+import gymnasium as gym
 import torch
 import torch.nn as nn
-import gymnasium as gym
 
 from neatrl import train_dqn
 
@@ -64,6 +64,7 @@ def test_dqn_frozenlake():
 
     # Test model inference
     print("Testing model inference...")
+
     class OneHotWrapper(gym.ObservationWrapper):
         def __init__(self, env):
             super().__init__(env)

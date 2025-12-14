@@ -68,7 +68,6 @@ def test_dqn_atari():
         ),  # Atari state (4 stacked frames) and action dimensions (4 actions for Breakout)
         atari_wrapper=True,
         n_envs=4,
-        capture_video=True,
         eval_every=5000,
         device="cpu",
     )

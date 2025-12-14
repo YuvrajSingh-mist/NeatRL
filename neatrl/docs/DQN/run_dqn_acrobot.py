@@ -52,7 +52,6 @@ def test_dqn_acrobot():
         custom_agent=CustomQNet(6, 3),  # Acrobot state and action dimensions
         atari_wrapper=False,
         n_envs=1,
-        capture_video=True,
         eval_every=5000,
     )
 

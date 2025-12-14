@@ -26,7 +26,7 @@ NeatRL provides high-quality implementations of popular RL algorithms with a foc
 python -m venv neatrl-env
 source neatrl-env/bin/activate  # On Windows use `neatrl-env\Scripts
 
-pip install neatrl
+pip install neatrl"[classic,box2d,dev,atari]"
 ```
 
 ## 🚀 Quick Start

@@ -52,7 +52,6 @@ def test_dqn_cartpole():
         custom_agent=CustomQNet(4, 2),  # CartPole state and action dimensions
         atari_wrapper=False,
         n_envs=4,
-        capture_video=True,
         eval_every=5000,
     )
 
