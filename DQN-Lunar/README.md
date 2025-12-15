@@ -27,6 +27,36 @@ In the LunarLander-v3 environment:
 - **Video recording** of agent performance during and after training
 - Evaluation mode for testing the trained agent
 
+## Using NeatRL
+
+For a more streamlined and production-ready DQN implementation, you can use [NeatRL](https://github.com/YuvrajSingh-mist/NeatRL), a clean Python library for reinforcement learning algorithms.
+
+### Installation
+
+```bash
+pip install neatrl
+```
+
+### Training on LunarLander
+
+```python
+from neatrl import train_dqn
+
+# Train DQN on LunarLander
+model = train_dqn(
+    env_id="LunarLander-v3",
+    total_timesteps=200000,
+    seed=42,
+    use_wandb=True,
+    wandb_project="lunar-lander-experiments",
+    exp_name="dqn-lunarlander"
+)
+
+print("Training completed! 🚀")
+```
+
+For a complete example script, see [run_dqn_lunarlander.py](https://github.com/YuvrajSingh-mist/NeatRL/blob/master/neatrl/docs/DQN/run_dqn_lunarlander.py).
+
 ## Architecture
 
 The DQN uses a simple yet effective neural network architecture:

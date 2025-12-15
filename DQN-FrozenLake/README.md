@@ -41,6 +41,39 @@ This project includes implementations of:
 - Tracking of training metrics
 - Integration with TensorBoard and WandB
 
+## Using NeatRL
+
+For a more streamlined and production-ready DQN implementation, you can use [NeatRL](https://github.com/YuvrajSingh-mist/NeatRL), a clean Python library for reinforcement learning algorithms.
+
+### Installation
+
+```bash
+pip install neatrl
+```
+
+### Training on FrozenLake
+
+```python
+from neatrl import train_dqn
+
+# Train DQN on FrozenLake with automatic one-hot encoding
+model = train_dqn(
+    env_id="FrozenLake-v1",
+    total_timesteps=50000,
+    seed=42,
+    grid_env=True,  # Enable one-hot encoding for discrete states
+    use_wandb=True,
+    wandb_project="frozen-lake-experiments",
+    exp_name="dqn-frozenlake"
+)
+
+print("Training completed! 🎉")
+```
+
+For a complete example script, see [run_dqn_frozenlake.py](https://github.com/YuvrajSingh-mist/NeatRL/blob/master/neatrl/docs/DQN/run_dqn_frozenlake.py).
+
+The `grid_env=True` parameter automatically applies one-hot encoding to the discrete state observations, making them suitable for neural network input without manual preprocessing.
+
 
 
 ```python

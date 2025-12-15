@@ -97,6 +97,9 @@ model = train_dqn(
 )
 ```
 
+**📖 [Complete NeatRL Documentation](../neatrl/docs/DQN/README.md)** - Includes detailed usage examples, hyperparameter tuning guides, and troubleshooting tips.
+
+
 ## Overview
 
 The main training script (`train.py`) implements a DQN agent to solve the BreakoutNoFrameskip-v4 environment, where the goal is to control a paddle to bounce a ball and break bricks. The agent learns to take actions (move left, right, or stay still) to maximize the score by breaking as many bricks as possible while keeping the ball in play.

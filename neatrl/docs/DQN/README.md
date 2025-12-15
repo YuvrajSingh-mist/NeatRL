@@ -104,6 +104,7 @@ The `train_dqn` function accepts the following arguments for customizing your DQ
 | `exploration_fraction` | float | `0.5` | Fraction of training steps for epsilon decay |
 | `learning_starts` | int | `1000` | Number of steps to collect before starting training |
 | `train_frequency` | int | `10` | How often to train the network (in steps) |
+| `max_grad_norm` | float | `0.0` | Maximum gradient norm for clipping (0.0 to disable) |
 | `capture_video` | bool | `False` | Whether to record training videos |
 | `use_wandb` | bool | `False` | Whether to log to Weights & Biases |
 | `wandb_project` | str | `"cleanRL"` | W&B project name |
