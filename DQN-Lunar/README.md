@@ -57,6 +57,25 @@ print("Training completed! 🚀")
 
 For a complete example script, see [run_dqn_lunarlander.py](https://github.com/YuvrajSingh-mist/NeatRL/blob/master/neatrl/docs/DQN/run_dqn_lunarlander.py).
 
+---
+
+## 🏃‍♂️ Running Directly (Without NeatRL)
+
+If you prefer to run this implementation directly instead of using the NeatRL library, follow these steps:
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/YuvrajSingh-mist/NeatRL.git
+cd NeatRL/DQN-Lunar
+
+# Install dependencies
+pip install -e .
+```
+
+---
+
 ## Architecture
 
 The DQN uses a simple yet effective neural network architecture:

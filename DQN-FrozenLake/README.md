@@ -74,7 +74,30 @@ For a complete example script, see [run_dqn_frozenlake.py](https://github.com/Yu
 
 The `grid_env=True` parameter automatically applies one-hot encoding to the discrete state observations, making them suitable for neural network input without manual preprocessing.
 
+---
 
+## 🏃‍♂️ Running Directly (Without NeatRL)
+
+If you prefer to run this implementation directly instead of using the NeatRL library, follow these steps:
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/YuvrajSingh-mist/NeatRL.git
+cd NeatRL/DQN-FrozenLake
+
+# Install dependencies
+pip install -e .
+```
+
+### Quick Start
+
+```bash
+# Run the training script directly
+python train.py
+```
+---
 
 ```python
 class Config:

@@ -99,6 +99,31 @@ model = train_dqn(
 
 **📖 [Complete NeatRL Documentation](../neatrl/docs/DQN/README.md)** - Includes detailed usage examples, hyperparameter tuning guides, and troubleshooting tips.
 
+---
+
+## 🏃‍♂️ Running Directly (Without NeatRL)
+
+If you prefer to run this implementation directly instead of using the NeatRL library, follow these steps:
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/YuvrajSingh-mist/NeatRL.git
+cd NeatRL/DQN-atari
+
+# Install dependencies
+pip install -e .
+```
+
+### Quick Start
+
+```bash
+# Run the training script directly
+python train.py
+```
+
+---
 
 ## Overview
 

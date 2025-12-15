@@ -179,3 +179,29 @@ For complete examples, check out these scripts in the [NeatRL repository](https:
 
 These examples demonstrate how to use NeatRL's flexible architecture to implement advanced DQN variants like Dueling DQN with minimal code.
 
+---
+
+## 🏃‍♂️ Running Directly (Without NeatRL)
+
+If you prefer to run this implementation directly instead of using the NeatRL library, follow these steps:
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/YuvrajSingh-mist/NeatRL.git
+cd NeatRL/Duel-DQN
+
+# Install dependencies
+pip install -e .
+```
+
+### Quick Start
+
+```bash
+# Run the training script directly
+python train.py
+```
+
+---
+

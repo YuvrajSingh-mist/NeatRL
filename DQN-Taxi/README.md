@@ -50,6 +50,36 @@ For a complete example script, see [run_dqn_taxi.py](https://github.com/YuvrajSi
 
 The `grid_env=True` parameter automatically applies one-hot encoding to the discrete state observations, making them suitable for neural network input without manual preprocessing.
 
+---
+
+## 🏃‍♂️ Running Directly (Without NeatRL)
+
+If you prefer to run this implementation directly instead of using the NeatRL library, follow these steps:
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/YuvrajSingh-mist/NeatRL.git
+cd NeatRL/DQN-Taxi
+
+# Install dependencies
+pip install -e .
+```
+
+Or install the required packages manually:
+
+```bash
+pip install torch torchvision numpy gymnasium stable-baselines3 tqdm imageio wandb
+```
+
+### Quick Start
+
+```bash
+# Run the training script directly
+python train.py
+```
+---
 
 ## Logging & Visualization
 - Training logs and metrics are saved for visualization in TensorBoard and/or WandB.
