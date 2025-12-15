@@ -86,10 +86,11 @@ class LinearEpsilonDecay(nn.Module):
 class OneHotWrapper(gym.ObservationWrapper):
     def __init__(self, env, obs_shape=16):
         super().__init__(env)
+        self.obs_shape = obs_shape
         self.observation_space = gym.spaces.Box(0, 1, (obs_shape,), dtype=np.float32)
 
     def observation(self, obs):
-        one_hot = torch.zeros(16, dtype=torch.float32)
+        one_hot = torch.zeros(self.obs_shape, dtype=torch.float32)
         one_hot[obs] = 1.0
         return one_hot.numpy()
 
@@ -494,7 +495,7 @@ def train_dqn(
                 seed,
                 num_eval_eps=num_eval_eps,
                 atari_wrapper=atari_wrapper,
-                record=capture_video,
+                capture_video=capture_video,
                 grid_env=grid_env,
             )
             avg_return = np.mean(episodic_returns)
@@ -534,7 +535,7 @@ def train_dqn(
             seed,
             atari_wrapper=atari_wrapper,
             num_eval_eps=num_eval_eps,
-            capture_video=True,
+            capture_video=capture_video,
             grid_env=grid_env,
         )
         imageio.mimsave(train_video_path, frames, fps=30)
