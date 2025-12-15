@@ -41,16 +41,16 @@ class QNet(nn.Module):
         return res
 
 
-def test_dqn_cliffwalking():
-    """Test DQN training on CliffWalking-v1."""
-    print("Testing DQN training on CliffWalking-v1 with neatrl...")
+def test_dqn_frozenlake():
+    """Test DQN training on FrozenLake-v1."""
+    print("Testing DQN training on FrozenLake-v1 with neatrl...")
 
-    # Train DQN on CliffWalking
+    # Train DQN on FrozenLake
     model = train_dqn(
-        env_id="CliffWalking-v1",
+        env_id="FrozenLake-v1",
         total_timesteps=100000,
         seed=42,
-        learning_rate=2e-4,
+        learning_rate=2.5e-4,
         buffer_size=10000,  # Reduced from 30K to save memory
         gamma=0.99,
         tau=1.0,
@@ -58,15 +58,15 @@ def test_dqn_cliffwalking():
         batch_size=4,
         start_e=1.0,
         end_e=0.05,
-        exploration_fraction=0.4,
+        exploration_fraction=0.5,
         learning_starts=1000,
         train_frequency=4,
         capture_video=False,  # Disabled to save memory during training
         use_wandb=True,
         wandb_project="cleanRL",
         wandb_entity="",
-        exp_name="DQN-CliffWalking-Test",
-        custom_agent=QNet(48, 4),  # CliffWalking state and action dimensions
+        exp_name="DQN-FrozenLake-Test",
+        custom_agent=QNet(16, 4),  # FrozenLake state and action dimensions
         atari_wrapper=False,
         n_envs=4,
         eval_every=5000,
@@ -92,4 +92,4 @@ def test_dqn_cliffwalking():
 
 
 if __name__ == "__main__":
-    test_dqn_cliffwalking()
+    test_dqn_frozenlake()

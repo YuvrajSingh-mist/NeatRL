@@ -6,18 +6,16 @@ NeatRL provides high-quality implementations of popular RL algorithms with a foc
 
 ## ✨ Features
 
-- 🚀 **Fast & Efficient**: Optimized implementations using PyTorch
-- 🎯 **Production Ready**: Clean APIs and comprehensive error handling
 - 📊 **Experiment Tracking**: Built-in support for Weights & Biases logging
-- 🎮 **Gymnasium Compatible**: Works with all Gymnasium environments
+- 🎮 **Gymnasium Compatible**: Works with Gymnasium environments and adding many more!
 - 🔧 **Easy to Extend**: Modular design for adding new algorithms
 - 📈 **State-of-the-Art**: Implements modern RL techniques and best practices
-- 🏗️ **Grid Environment Support**: Automatic one-hot encoding for discrete grid environments
 
 ## 🏗️ Supported Algorithms
 
 ### Current Implementations
 - **DQN** (Deep Q-Network) - Classic value-based RL algorithm
+- **Dueling DQN** - Enhanced DQN with separate value and advantage streams
 - *More algorithms coming soon...*
 
 ## 📦 Installation

@@ -106,7 +106,76 @@ The Dueling DQN algorithm demonstrates several advantages:
 
 The agent successfully learns to navigate the cliff environment by taking the longer but safer path along the top of the grid, avoiding the risky cliff edge.
 
-## Visualization
+## Using NeatRL
 
-Trained agent performance is recorded as videos in the `videos/` directory, showing the learned navigation policy avoiding the cliff while reaching the goal.
+You can train a Dueling DQN agent using the NeatRL library with just a few lines of code:
+
+### Installation
+
+```bash
+pip install neatrl
+```
+
+### Quick Start
+
+```python
+import torch.nn as nn
+from neatrl import train_dqn
+
+# Define Dueling DQN architecture
+class DuelingQNet(nn.Module):
+    def __init__(self, state_space, action_space):
+        super().__init__()
+        
+        # Shared feature extractor
+        self.features = nn.Sequential(
+            nn.Linear(state_space, 64),
+            nn.ReLU(),
+            nn.Linear(64, 64),
+            nn.ReLU()
+        )
+        
+        # Value stream
+        self.values = nn.Sequential(
+            nn.Linear(64, 64),
+            nn.ReLU(),
+            nn.Linear(64, 1)
+        )
+        
+        # Advantage stream
+        self.advantages = nn.Sequential(
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Linear(32, action_space)
+        )
+        
+    def forward(self, x):
+        feat = self.features(x)
+        values = self.values(feat)
+        advantages = self.advantages(feat)
+        # Q(s,a) = V(s) + A(s,a) - mean(A(s))
+        q_values = values + advantages - advantages.mean(dim=1, keepdim=True)
+        return q_values
+
+# Train on CliffWalking
+model = train_dqn(
+    env_id="CliffWalking-v0",
+    total_timesteps=100000,
+    custom_agent=DuelingQNet(48, 4),
+    grid_env=True,  # Enable one-hot encoding for discrete states
+    learning_rate=2e-4,
+    buffer_size=10000,
+    use_wandb=True,
+    exp_name="Dueling-DQN-CliffWalking"
+)
+```
+
+### Example Scripts
+
+For complete examples, check out these scripts in the [NeatRL repository](https://github.com/YuvrajSingh-mist/NeatRL/tree/master/neatrl/docs/Dueling-DQN):
+
+- **CliffWalking**: [`run_duel_dqn_cliff.py`](https://github.com/YuvrajSingh-mist/NeatRL/blob/master/neatrl/docs/Dueling-DQN/run_duel_dqn_cliff.py)
+- **FrozenLake**: [`run_duel_dqn_frozenlake.py`](https://github.com/YuvrajSingh-mist/NeatRL/blob/master/neatrl/docs/Dueling-DQN/run_duel_dqn_frozenlake.py)
+
+These examples demonstrate how to use NeatRL's flexible architecture to implement advanced DQN variants like Dueling DQN with minimal code.
 

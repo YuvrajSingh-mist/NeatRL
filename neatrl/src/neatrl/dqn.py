@@ -181,15 +181,13 @@ def evaluate(
     return returns, frames
 
 
-
 def calculate_param_norm(model):
     """Calculate the L2 norm of all parameters in a model."""
     total_norm = 0.0
     for p in model.parameters():
         param_norm = p.data.norm(2)
         total_norm += param_norm.item() ** 2
-    return total_norm ** 0.5
-
+    return total_norm**0.5
 
 
 def validate_q_network_dimensions(q_network, obs_dim, action_dim):
@@ -352,7 +350,7 @@ def train_dqn(
         env = make_env(
             env_id, seed, idx=0, atari_wrapper=atari_wrapper, grid_env=grid_env
         )()
-    
+
     # Determine if we're dealing with discrete observation spaces
     if n_envs > 1:
         is_discrete_obs = isinstance(env.single_observation_space, gym.spaces.Discrete)
@@ -360,13 +358,13 @@ def train_dqn(
     else:
         is_discrete_obs = isinstance(env.observation_space, gym.spaces.Discrete)
         obs_space = env.observation_space
-    
+
     # Compute observation dimensions
     if is_discrete_obs:
         obs_shape = obs_space.n
     else:
         obs_shape = obs_space.shape[0]
-    
+
     # Compute action dimensions
     action_shape = env.single_action_space.n if n_envs > 1 else env.action_space.n
 
@@ -493,24 +491,56 @@ def train_dqn(
             if max_grad_norm != 0.0:
                 # Calculate gradient norm before clipping
                 total_norm_before = torch.norm(
-                    torch.stack([torch.norm(p.grad.detach(), 2) for p in q_network.parameters() if p.grad is not None]), 2
+                    torch.stack(
+                        [
+                            torch.norm(p.grad.detach(), 2)
+                            for p in q_network.parameters()
+                            if p.grad is not None
+                        ]
+                    ),
+                    2,
                 )
-                
+
                 # Log gradient norm
                 if use_wandb:
-                    wandb.log({"gradients/norm_before_clip": total_norm_before.item(), "step": step})
-                
+                    wandb.log(
+                        {
+                            "gradients/norm_before_clip": total_norm_before.item(),
+                            "step": step,
+                        }
+                    )
+
                 # Apply gradient clipping
-                torch.nn.utils.clip_grad_norm_(q_network.parameters(), max_norm=max_grad_norm)
-                
+                torch.nn.utils.clip_grad_norm_(
+                    q_network.parameters(), max_norm=max_grad_norm
+                )
+
                 # Compute gradient norms after clipping
                 total_norm_after = torch.norm(
-                    torch.stack([torch.norm(p.grad.detach(), 2) for p in q_network.parameters() if p.grad is not None]), 2
+                    torch.stack(
+                        [
+                            torch.norm(p.grad.detach(), 2)
+                            for p in q_network.parameters()
+                            if p.grad is not None
+                        ]
+                    ),
+                    2,
                 )
-                
+
                 if use_wandb:
-                    wandb.log({"gradients/norm_after_clip": total_norm_after.item(), "step": step})
-                    wandb.log({"gradients/clip_ratio": total_norm_after.item() / (total_norm_before.item() + 1e-10), "step": step})
+                    wandb.log(
+                        {
+                            "gradients/norm_after_clip": total_norm_after.item(),
+                            "step": step,
+                        }
+                    )
+                    wandb.log(
+                        {
+                            "gradients/clip_ratio": total_norm_after.item()
+                            / (total_norm_before.item() + 1e-10),
+                            "step": step,
+                        }
+                    )
 
             optimizer.step()
 
@@ -529,23 +559,45 @@ def train_dqn(
         if step % target_network_frequency == 0:
             # Calculate norm of the target network parameters before update
             target_norm_before = calculate_param_norm(target_net)
-            
+
             # Perform soft update of target network
-            for q_params, target_params in zip(q_network.parameters(), target_net.parameters()):
-                target_params.data.copy_(tau * q_params.data + (1.0 - tau) * target_params.data)
-            
+            for q_params, target_params in zip(
+                q_network.parameters(), target_net.parameters()
+            ):
+                target_params.data.copy_(
+                    tau * q_params.data + (1.0 - tau) * target_params.data
+                )
+
             # Calculate norm of the target network parameters after update
             target_norm_after = calculate_param_norm(target_net)
-            
+
             # Calculate change in target network parameters
             target_norm_delta = abs(target_norm_after - target_norm_before)
-            
+
             # Log target network update statistics
             if use_wandb:
-                wandb.log({"target_network/norm_before_update": target_norm_before, "step": step})
-                wandb.log({"target_network/norm_after_update": target_norm_after, "step": step})
-                wandb.log({"target_network/norm_delta": target_norm_delta, "step": step})
-                wandb.log({"target_network/update_ratio": target_norm_delta / (target_norm_before + 1e-10), "step": step})
+                wandb.log(
+                    {
+                        "target_network/norm_before_update": target_norm_before,
+                        "step": step,
+                    }
+                )
+                wandb.log(
+                    {
+                        "target_network/norm_after_update": target_norm_after,
+                        "step": step,
+                    }
+                )
+                wandb.log(
+                    {"target_network/norm_delta": target_norm_delta, "step": step}
+                )
+                wandb.log(
+                    {
+                        "target_network/update_ratio": target_norm_delta
+                        / (target_norm_before + 1e-10),
+                        "step": step,
+                    }
+                )
 
         # Model evaluation & saving
         if step % eval_every == 0:

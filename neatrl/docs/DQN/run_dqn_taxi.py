@@ -11,15 +11,14 @@ from neatrl import train_dqn
 
 class QNet(nn.Module):
     def __init__(self, state_space, action_space):
-        super(QNet, self).__init__()
         print(f"State space: {state_space}, Action space: {action_space}")
         self.fc1 = nn.Linear(state_space, 256)
         self.fc2 = nn.Linear(256, 512)
         self.q_value = nn.Linear(512, action_space)
+
     def forward(self, x):
         return self.q_value(torch.relu(self.fc2(torch.relu(self.fc1(x)))))
-    
-    
+
 
 def test_dqn_taxi():
     """Test DQN training on Taxi-v3."""

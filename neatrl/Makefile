@@ -6,22 +6,22 @@ venv:
 	fi
 
 install: venv
-	. .venv/bin/activate && uv pip install -e .
+	uv pip install -e .
 
 install-dev: venv
-	. .venv/bin/activate && uv pip install -e .[dev]
+	uv pip install -e .[dev]
 
 lint: venv
-	. .venv/bin/activate && ruff check --fix .
+	uv run ruff check --fix .
 
 format:
-	. .venv/bin/activate && ruff format .
+	uv run ruff format .
 
 build: install-dev lint format
-	. .venv/bin/activate && python -m build
+	uv run python -m build
 
 upload: build lint format
-	. .venv/bin/activate && twine upload dist/*
+	uv run twine upload dist/*
 
 clean:
 	rm -rf dist/ build/ *.egg-info/ .venv/

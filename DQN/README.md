@@ -79,6 +79,30 @@ model = train_dqn(
 
 ---
 
+## 🏃‍♂️ Running Directly (Without NeatRL)
+
+If you prefer to run this implementation directly instead of using the NeatRL library, follow these steps:
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/YuvrajSingh-mist/NeatRL.git
+cd NeatRL/DQN
+
+# Install dependencies
+pip install -e .
+```
+
+
+### Quick Start
+
+```bash
+# Run the training script directly
+python train.py
+```
+---
+
 ## Overview
 
 The main training script (`train.py`) implements a DQN agent to solve the CartPole-v1 environment, where the goal is to balance a pole on a moving cart. The agent learns to take actions (move left or right) to keep the pole upright for as long as possible.
