@@ -28,7 +28,7 @@ def test_dqn_taxi():
     # Train DQN on Taxi
     model = train_dqn(
         env_id="Taxi-v3",
-        total_timesteps=6000000,
+        total_timesteps=3000000,
         seed=42,
         learning_rate=2.5e-4,
         buffer_size=20000,
@@ -48,7 +48,7 @@ def test_dqn_taxi():
         exp_name="DQN-Taxi-Test",
         custom_agent=QNet(500, 6),  # Taxi state and action dimensions (one-hot encoded)
         atari_wrapper=False,
-        n_envs=1,
+        n_envs=4,
         eval_every=50000,
         grid_env=True,  # Enable one-hot encoding for discrete states
     )

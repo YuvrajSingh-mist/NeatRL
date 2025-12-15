@@ -160,20 +160,21 @@ def evaluate(
 
         returns.append(episode_reward)
 
-    # Save video
-    if frames:
-        video = np.stack(frames)
-        video = np.transpose(video, (0, 3, 1, 2))
+        # Save video
+        if frames:
+            video = np.stack(frames)
+            video = np.transpose(video, (0, 3, 1, 2))
 
-        wandb.log(
-            {
-                "videos/eval_policy": wandb.Video(
-                    video,
-                    fps=30,
-                    format="mp4",
-                )
-            }
-        )
+            wandb.log(
+                {
+                    "videos/eval_policy": wandb.Video(
+                        video,
+                        fps=30,
+                        format="mp4",
+                    )
+                }
+            )
+            frames = []
     model.train()
     eval_env.close()
     return returns, frames

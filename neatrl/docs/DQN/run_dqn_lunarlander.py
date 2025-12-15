@@ -30,7 +30,7 @@ def test_dqn_lunarlander():
 
     # Train DQN on LunarLander
     model = train_dqn(
-        env_id="LunarLander-v2",
+        env_id="LunarLander-v3",
         total_timesteps=200000,
         seed=42,
         learning_rate=2.5e-4,
