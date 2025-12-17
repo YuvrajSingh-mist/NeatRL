@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 script for DQN training on MountainCar using neatrl library.
 """

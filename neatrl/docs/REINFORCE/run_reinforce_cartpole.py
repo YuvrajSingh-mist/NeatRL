@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 script for REINFORCE training on CartPole using neatrl library.
 """
@@ -53,9 +52,8 @@ def test_reinforce_cartpole():
         num_eval_eps=10,
         device="cpu",
         grid_env=False,
-        custom_agent=CustomPolicyNet(4, 2)
+        custom_agent=CustomPolicyNet(4, 2),
     )
-    
 
     print("REINFORCE training on CartPole-v1 completed successfully!")
     return model

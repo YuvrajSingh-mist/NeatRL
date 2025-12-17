@@ -1,6 +1,7 @@
 import os
 import random
 import time
+
 import ale_py
 import gymnasium as gym
 import imageio
@@ -63,21 +64,12 @@ class DuelingQNet(nn.Module):
         print(f"State space: {state_space}, Action space: {action_space}")
 
         self.features = nn.Sequential(
-            nn.Linear(state_space, 64),
-            nn.ReLU(),
-            nn.Linear(64, 64),
-            nn.ReLU()
+            nn.Linear(state_space, 64), nn.ReLU(), nn.Linear(64, 64), nn.ReLU()
         )
 
-        self.values = nn.Sequential(
-            nn.Linear(64, 64),
-            nn.ReLU(),
-            nn.Linear(64, 1)
-        )
+        self.values = nn.Sequential(nn.Linear(64, 64), nn.ReLU(), nn.Linear(64, 1))
         self.adv = nn.Sequential(
-            nn.Linear(64, 32),
-            nn.ReLU(),
-            nn.Linear(32, action_space)
+            nn.Linear(64, 32), nn.ReLU(), nn.Linear(32, action_space)
         )
 
     def forward(self, x):
@@ -491,7 +483,9 @@ def train_dueling_dqn(
             data = replay_buffer.sample(batch_size)
 
             with torch.no_grad():
-                target_q_values, target_values, target_adv, target_feat = target_net(data.next_observations)
+                target_q_values, target_values, target_adv, target_feat = target_net(
+                    data.next_observations
+                )
                 target_max = target_q_values.max(1)[0]
                 td_target = data.rewards.flatten() + gamma * target_max * (
                     1 - data.dones.flatten()

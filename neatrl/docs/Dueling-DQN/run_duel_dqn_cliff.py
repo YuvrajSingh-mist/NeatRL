@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 script for Dueling DQN training on CliffWalking using neatrl library.
 """
@@ -11,25 +10,16 @@ from neatrl import train_dueling_dqn
 
 class DuelingQNet(nn.Module):
     def __init__(self, state_space, action_space):
-        super(DuelingQNet, self).__init__()
+        super().__init__()
         print(f"State space: {state_space}, Action space: {action_space}")
 
         self.features = nn.Sequential(
-            nn.Linear(state_space, 64),
-            nn.ReLU(),
-            nn.Linear(64, 64),
-            nn.ReLU()
+            nn.Linear(state_space, 64), nn.ReLU(), nn.Linear(64, 64), nn.ReLU()
         )
 
-        self.values = nn.Sequential(
-            nn.Linear(64, 64),
-            nn.ReLU(),
-            nn.Linear(64, 1)
-        )
+        self.values = nn.Sequential(nn.Linear(64, 64), nn.ReLU(), nn.Linear(64, 1))
         self.adv = nn.Sequential(
-            nn.Linear(64, 32),
-            nn.ReLU(),
-            nn.Linear(32, action_space)
+            nn.Linear(64, 32), nn.ReLU(), nn.Linear(32, action_space)
         )
 
     def forward(self, x):
@@ -71,7 +61,7 @@ def test_dueling_dqn_cliffwalking():
         n_envs=4,
         eval_every=5000,
         max_grad_norm=4.0,
-        grid_env=True
+        grid_env=True,
     )
 
     print(f"Training completed! Model type: {type(model)}")

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 script for DQN training on Atari-Breakout using neatrl library.
 """

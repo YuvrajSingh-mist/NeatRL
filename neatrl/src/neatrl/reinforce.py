@@ -56,10 +56,11 @@ class Config:
     learning_starts = 1000
     train_frequency = 10
 
-#For discrete actions
+
+# For discrete actions
 class PolicyNet(nn.Module):
     def __init__(self, state_space, action_space):
-        super(PolicyNet, self).__init__()
+        super().__init__()
         print(f"State space: {state_space}, Action space: {action_space}")
         self.fc1 = nn.Linear(state_space, 32)
         self.fc2 = nn.Linear(32, 32)
@@ -72,9 +73,10 @@ class PolicyNet(nn.Module):
         return x
 
     def get_action(self, x):
-        
         action_probs = self.forward(x)
-        dist = torch.distributions.Categorical(action_probs)  # Create a categorical distribution from the probabilities
+        dist = torch.distributions.Categorical(
+            action_probs
+        )  # Create a categorical distribution from the probabilities
         action = dist.sample()  # Sample an action from the distribution
         return action, dist.log_prob(action)
 
@@ -122,7 +124,9 @@ def evaluate(
     atari_wrapper=False,
     grid_env=False,
 ):
-    eval_env = make_env(env_id, seed, idx=0, atari_wrapper=atari_wrapper, grid_env=grid_env)()
+    eval_env = make_env(
+        env_id, seed, idx=0, atari_wrapper=atari_wrapper, grid_env=grid_env
+    )()
     eval_env.action_space.seed(seed)
 
     model = model.to(device)
@@ -141,7 +145,9 @@ def evaluate(
                 frames.append(frame)
 
             with torch.no_grad():
-                action, _ = model.get_action(torch.tensor(obs, device=device, dtype=torch.float32))
+                action, _ = model.get_action(
+                    torch.tensor(obs, device=device, dtype=torch.float32)
+                )
                 # Handle both discrete and continuous action spaces
                 if isinstance(eval_env.action_space, gym.spaces.Discrete):
                     action = action.item()
@@ -193,9 +199,13 @@ def validate_policy_network_dimensions(policy_network, obs_dim, action_dim):
     """
     if isinstance(obs_dim, tuple):
         # For Atari-like, check if it has conv layers
-        has_conv = any(isinstance(module, nn.Conv2d) for module in policy_network.modules())
+        has_conv = any(
+            isinstance(module, nn.Conv2d) for module in policy_network.modules()
+        )
         if not has_conv:
-            print("Warning: Observation is multi-dimensional but network has no Conv2d layers.")
+            print(
+                "Warning: Observation is multi-dimensional but network has no Conv2d layers."
+            )
     else:
         # Find first Linear layer for input dimension
         first_layer = None
@@ -325,7 +335,9 @@ def train_reinforce(
             ]
         )
     else:
-        env = make_env(env_id, seed, idx=0, atari_wrapper=atari_wrapper, grid_env=grid_env)()
+        env = make_env(
+            env_id, seed, idx=0, atari_wrapper=atari_wrapper, grid_env=grid_env
+        )()
 
     # Determine if we're dealing with discrete observation spaces
     if n_envs > 1:
@@ -343,9 +355,17 @@ def train_reinforce(
 
     # Compute action dimensions
     if n_envs > 1:
-        action_shape = env.single_action_space.n if isinstance(env.single_action_space, gym.spaces.Discrete) else env.single_action_space.shape[0]
+        action_shape = (
+            env.single_action_space.n
+            if isinstance(env.single_action_space, gym.spaces.Discrete)
+            else env.single_action_space.shape[0]
+        )
     else:
-        action_shape = env.action_space.n if isinstance(env.action_space, gym.spaces.Discrete) else env.action_space.shape[0]
+        action_shape = (
+            env.action_space.n
+            if isinstance(env.action_space, gym.spaces.Discrete)
+            else env.action_space.shape[0]
+        )
 
     # Use custom agent if provided, otherwise use default PolicyNet
     if custom_agent is not None:
@@ -377,13 +397,14 @@ def train_reinforce(
         done = False
 
         while True:
-            action, log_prob = policy_network.get_action(torch.tensor(obs, device=device, dtype=torch.float32))
+            action, log_prob = policy_network.get_action(
+                torch.tensor(obs, device=device, dtype=torch.float32)
+            )
             # Handle both discrete and continuous action spaces
             if n_envs > 1:
                 action_space = env.single_action_space
                 # For vectorized environments, convert to numpy array of actions
-  
-                
+
                 action = action.detach().cpu().numpy()
             else:
                 action_space = env.action_space
@@ -392,14 +413,14 @@ def train_reinforce(
                     action = action.item()
                 else:
                     action = action.detach().cpu().numpy()
-            
+
             new_obs, reward, terminated, truncated, info = env.step(action)
             rewards.append(reward)
             log_probs.append(log_prob)
             done = np.logical_or(terminated, truncated)
             obs = new_obs
             if done.all():
-                break   
+                break
 
         # Calculate returns
         returns = []
@@ -450,7 +471,6 @@ def train_reinforce(
                             }
                         )
 
-
         # Calculate loss
         policy_loss = []
         for log_prob, R in zip(log_probs, returns):
@@ -492,10 +512,12 @@ def train_reinforce(
                     "step": step,
                 }
             )
-            #Apply gradient clipping
+            # Apply gradient clipping
             if max_grad_norm != 0.0:
                 # Apply gradient clipping
-                torch.nn.utils.clip_grad_norm_(policy_network.parameters(), max_norm=max_grad_norm)
+                torch.nn.utils.clip_grad_norm_(
+                    policy_network.parameters(), max_norm=max_grad_norm
+                )
 
                 # Compute gradient norms after clipping
                 total_norm_after = torch.norm(
@@ -516,17 +538,18 @@ def train_reinforce(
                         "step": step,
                     }
                 )
-               
 
         optimizer.step()
 
         # Log loss and metrics every 100 episodes
         if step % 100 == 0:
             if use_wandb:
-                wandb.log({
-                    "losses/policy_loss": loss.item(),
-                    "step": step,
-                })
+                wandb.log(
+                    {
+                        "losses/policy_loss": loss.item(),
+                        "step": step,
+                    }
+                )
 
         # Model evaluation & saving
         if step % eval_every == 0:
@@ -549,10 +572,12 @@ def train_reinforce(
         print("EPS: ", int(step / (time.time() - start_time + 1e-8)), end="\r")
 
         if use_wandb:
-            wandb.log({
-                "charts/EPS": int(step / (time.time() - start_time + 1e-8)),
-                "charts/episode": step,
-            })
+            wandb.log(
+                {
+                    "charts/EPS": int(step / (time.time() - start_time + 1e-8)),
+                    "charts/episode": step,
+                }
+            )
 
         if step % save_every == 0 and step > 0:
             model_path = f"runs/{run_name}/models/reinforce_model_episode_{step}.pth"

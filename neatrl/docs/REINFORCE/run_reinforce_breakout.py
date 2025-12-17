@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 script for REINFORCE training on Atari Breakout using neatrl library.
 """
@@ -25,7 +24,7 @@ def test_reinforce_breakout():
         eval_every=100,
         save_every=1000,
         atari_wrapper=True,  # Enable Atari preprocessing
-        n_envs=4,            # Use 4 parallel environments
+        n_envs=4,  # Use 4 parallel environments
         num_eval_eps=10,
         device="cpu",
         grid_env=False,

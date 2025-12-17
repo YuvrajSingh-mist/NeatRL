@@ -1,16 +1,17 @@
-#!/usr/bin/env python3
 """
 script for REINFORCE training on FrozenLake using neatrl library.
 """
 
-from neatrl import train_reinforce
 import torch
 import torch.nn as nn
 
-#For discrete actions
+from neatrl import train_reinforce
+
+
+# For discrete actions
 class PolicyNet(nn.Module):
     def __init__(self, state_space, action_space):
-        super(PolicyNet, self).__init__()
+        super().__init__()
         print(f"State space: {state_space}, Action space: {action_space}")
         self.fc1 = nn.Linear(state_space, 32)
         self.fc2 = nn.Linear(32, 32)
@@ -23,9 +24,10 @@ class PolicyNet(nn.Module):
         return x
 
     def get_action(self, x):
-        
         action_probs = self.forward(x)
-        dist = torch.distributions.Categorical(action_probs)  # Create a categorical distribution from the probabilities
+        dist = torch.distributions.Categorical(
+            action_probs
+        )  # Create a categorical distribution from the probabilities
         action = dist.sample()  # Sample an action from the distribution
         return action, dist.log_prob(action)
 
@@ -37,23 +39,23 @@ def test_reinforce_frozenlake():
     # Train REINFORCE on FrozenLake with one-hot encoding
     model = train_reinforce(
         env_id="FrozenLake-v1",
-        total_steps=100000,
+        total_steps=1000000,
         seed=42,
         learning_rate=2e-4,
         gamma=0.99,
-        capture_video=False,
-        use_wandb=False,
+        capture_video=True,
+        use_wandb=True,
         wandb_project="cleanRL",
         wandb_entity="",
         exp_name="REINFORCE-FrozenLake",
-        eval_every=100,
-        save_every=1000,
+        eval_every=10000,
+        save_every=10000,
         atari_wrapper=False,
         n_envs=4,
         num_eval_eps=10,
         device="cpu",
         grid_env=True,  # Enable one-hot encoding for discrete states
-        custom_agent=PolicyNet(16, 4)
+        custom_agent=PolicyNet(16, 4),
     )
 
     print("REINFORCE training on FrozenLake-v1 completed successfully!")

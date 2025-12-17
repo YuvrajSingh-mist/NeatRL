@@ -487,9 +487,9 @@ def train_dqn(
             loss = nn.functional.mse_loss(old_val, td_target)
             loss.backward()
 
-              # Log gradient norm per layer
+            # Log gradient norm per layer
             if use_wandb:
-                for name, param in policy_network.named_parameters():
+                for name, param in q_network.named_parameters():
                     if param.grad is not None:
                         grad_norm = torch.norm(param.grad.detach(), 2).item()
                         wandb.log(
@@ -498,7 +498,6 @@ def train_dqn(
                                 "step": step,
                             }
                         )
-
 
             # Calculate gradient norm before clipping
             total_norm_before = torch.norm(
@@ -521,8 +520,6 @@ def train_dqn(
                 )
             # Calculate gradient norm before clipping
             if max_grad_norm != 0.0:
-               
-
                 # Apply gradient clipping
                 torch.nn.utils.clip_grad_norm_(
                     q_network.parameters(), max_norm=max_grad_norm

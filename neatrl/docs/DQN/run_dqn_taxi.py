@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 script for DQN training on Taxi using neatrl library.
 """
