@@ -39,6 +39,7 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["neatrl*"]
 
 [tool.ruff]
 line-length = 88

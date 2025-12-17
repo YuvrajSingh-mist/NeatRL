@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-script for DQN training on CartPole using neatrl library.
+script for Dueling DQN training on CliffWalking using neatrl library.
 """
 
 import torch
 import torch.nn as nn
 
-from neatrl import train_dqn
+from neatrl import train_dueling_dqn
 
 
-class QNet(nn.Module):
+class DuelingQNet(nn.Module):
     def __init__(self, state_space, action_space):
-        super(QNet, self).__init__()
+        super(DuelingQNet, self).__init__()
         print(f"State space: {state_space}, Action space: {action_space}")
 
         self.features = nn.Sequential(
@@ -33,21 +33,21 @@ class QNet(nn.Module):
         )
 
     def forward(self, x):
-
         feat = self.features(x)
         values = self.values(feat)
         adv = self.adv(feat)
-        res = values + adv - adv.mean(dim=-1, keepdim=True) #adding stuf --> big big grads thus normalize babyyy!
-        return res
+        # Dueling architecture: Q = V + A - mean(A)
+        q_values = values + adv - adv.mean(dim=1, keepdim=True)
+        return q_values, values, adv, feat
 
 
-def test_dqn_cliffwalking():
-    """Test DQN training on CliffWalking-v1."""
-    print("Testing DQN training on CliffWalking-v1 with neatrl...")
+def test_dueling_dqn_cliffwalking():
+    """Test Dueling DQN training on CliffWalking-v0."""
+    print("Testing Dueling DQN training on CliffWalking-v0 with neatrl...")
 
-    # Train DQN on CliffWalking
-    model = train_dqn(
-        env_id="CliffWalking-v1",
+    # Train Dueling DQN on CliffWalking
+    model = train_dueling_dqn(
+        env_id="CliffWalking-v0",
         total_timesteps=100000,
         seed=42,
         learning_rate=2e-4,
@@ -65,8 +65,8 @@ def test_dqn_cliffwalking():
         use_wandb=True,
         wandb_project="cleanRL",
         wandb_entity="",
-        exp_name="DQN-CliffWalking-Test",
-        custom_agent=QNet(48, 4),  # CliffWalking state and action dimensions
+        exp_name="Dueling-DQN-CliffWalking-Test",
+        custom_agent=DuelingQNet(48, 4),  # CliffWalking state and action dimensions
         atari_wrapper=False,
         n_envs=4,
         eval_every=5000,
@@ -79,9 +79,9 @@ def test_dqn_cliffwalking():
 
     # Test model inference
     print("Testing model inference...")
-    test_obs = torch.randn(1, 4)  # CartPole observation shape
+    test_obs = torch.randn(1, 48)  # CliffWalking observation shape (one-hot encoded)
     with torch.no_grad():
-        q_values = model(test_obs)
+        q_values, values, adv, feat = model(test_obs)
         action = q_values.argmax().item()
 
     print(f"Q-values shape: {q_values.shape}")
@@ -92,4 +92,4 @@ def test_dqn_cliffwalking():
 
 
 if __name__ == "__main__":
-    test_dqn_cliffwalking()
+    test_dueling_dqn_cliffwalking()

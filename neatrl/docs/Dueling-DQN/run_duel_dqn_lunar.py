@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-script for Dueling DQN training on FrozenLake using neatrl library.
+script for Dueling DQN training on LunarLander using neatrl library.
 """
 
 import torch
@@ -41,16 +41,16 @@ class DuelingQNet(nn.Module):
         return q_values, values, adv, feat
 
 
-def test_dueling_dqn_frozenlake():
-    """Test Dueling DQN training on FrozenLake-v1."""
-    print("Testing Dueling DQN training on FrozenLake-v1 with neatrl...")
+def test_dueling_dqn_lunarlander():
+    """Test Dueling DQN training on LunarLander-v2."""
+    print("Testing Dueling DQN training on LunarLander-v2 with neatrl...")
 
-    # Train Dueling DQN on FrozenLake
+    # Train Dueling DQN on LunarLander
     model = train_dueling_dqn(
-        env_id="FrozenLake-v1",
+        env_id="LunarLander-v2",
         total_timesteps=100000,
         seed=42,
-        learning_rate=2.5e-4,
+        learning_rate=2e-4,
         buffer_size=10000,  # Reduced from 30K to save memory
         gamma=0.99,
         tau=1.0,
@@ -58,20 +58,20 @@ def test_dueling_dqn_frozenlake():
         batch_size=4,
         start_e=1.0,
         end_e=0.05,
-        exploration_fraction=0.5,
+        exploration_fraction=0.4,
         learning_starts=1000,
         train_frequency=4,
         capture_video=False,  # Disabled to save memory during training
         use_wandb=True,
         wandb_project="cleanRL",
         wandb_entity="",
-        exp_name="Dueling-DQN-FrozenLake-Test",
-        custom_agent=DuelingQNet(16, 4),  # FrozenLake state and action dimensions
+        exp_name="Dueling-DQN-LunarLander-Test",
+        custom_agent=DuelingQNet(8, 4),  # LunarLander state and action dimensions
         atari_wrapper=False,
         n_envs=4,
         eval_every=5000,
         max_grad_norm=4.0,
-        grid_env=True
+        grid_env=False
     )
 
     print(f"Training completed! Model type: {type(model)}")
@@ -79,7 +79,7 @@ def test_dueling_dqn_frozenlake():
 
     # Test model inference
     print("Testing model inference...")
-    test_obs = torch.randn(1, 16)  # FrozenLake observation shape (one-hot encoded)
+    test_obs = torch.randn(1, 8)  # LunarLander observation shape
     with torch.no_grad():
         q_values, values, adv, feat = model(test_obs)
         action = q_values.argmax().item()
@@ -92,4 +92,4 @@ def test_dueling_dqn_frozenlake():
 
 
 if __name__ == "__main__":
-    test_dueling_dqn_frozenlake()
+    test_dueling_dqn_lunarlander()

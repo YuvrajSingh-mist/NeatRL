@@ -1,7 +1,6 @@
 import os
 import random
 import time
-
 import ale_py
 import gymnasium as gym
 import imageio
@@ -21,32 +20,32 @@ gym.register_envs(ale_py)
 # ===== CONFIGURATION =====
 class Config:
     # Experiment settings
-    exp_name = "DQN"
+    exp_name = "Dueling-DQN"
     seed = 42
-    env_id = "BreakoutNoFrameskip-v4"
+    env_id = "CliffWalking-v0"
 
     # Training parameters
-    total_timesteps = 20000
-    learning_rate = 2.5e-4
-    buffer_size = 10000
+    total_timesteps = 300000
+    learning_rate = 2e-4
+    buffer_size = 30000
     gamma = 0.99
     tau = 1.0
     target_network_frequency = 50
     batch_size = 128
     start_e = 1.0
     end_e = 0.05
-    exploration_fraction = 0.5
+    exploration_fraction = 0.4
     learning_starts = 1000
-    train_frequency = 10
-    max_grad_norm = 1.0  # Maximum gradient norm for gradient clipping
+    train_frequency = 4
+    max_grad_norm = 4.0  # Maximum gradient norm for gradient clipping
     num_eval_eps = 10
-    grid_env = False
+    grid_env = True
 
-    eval_every = 1000
-    save_every = 1000
+    eval_every = 10000
+    save_every = 100000
     upload_every = 100
     atari_wrapper = False
-    n_envs = 4
+    n_envs = 1
     capture_video = False
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # Custom agent
@@ -58,22 +57,42 @@ class Config:
     wandb_entity = ""
 
 
-class QNet(nn.Module):
+class DuelingQNet(nn.Module):
     def __init__(self, state_space, action_space):
         super().__init__()
-        self.fc1 = nn.Linear(state_space, 256)
-        self.fc2 = nn.Linear(256, 512)
-        self.q_value = nn.Linear(512, action_space)
+        print(f"State space: {state_space}, Action space: {action_space}")
+
+        self.features = nn.Sequential(
+            nn.Linear(state_space, 64),
+            nn.ReLU(),
+            nn.Linear(64, 64),
+            nn.ReLU()
+        )
+
+        self.values = nn.Sequential(
+            nn.Linear(64, 64),
+            nn.ReLU(),
+            nn.Linear(64, 1)
+        )
+        self.adv = nn.Sequential(
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Linear(32, action_space)
+        )
 
     def forward(self, x):
-        return self.q_value(torch.relu(self.fc2(torch.relu(self.fc1(x)))))
+        feat = self.features(x)
+        values = self.values(feat)
+        adv = self.adv(feat)
+        # Dueling architecture: Q = V + A - mean(A)
+        q_values = values + adv - adv.mean(dim=1, keepdim=True)
+        return q_values, values, adv, feat
 
 
 class LinearEpsilonDecay(nn.Module):
     def __init__(self, initial_eps, end_eps, total_timesteps):
         super().__init__()
         self.initial_eps = initial_eps
-        # self.decay_factor = decay_factor
         self.total_timesteps = total_timesteps
         self.end_eps = end_eps
 
@@ -85,7 +104,7 @@ class LinearEpsilonDecay(nn.Module):
 
 
 class OneHotWrapper(gym.ObservationWrapper):
-    def __init__(self, env, obs_shape=16):
+    def __init__(self, env, obs_shape=48):
         super().__init__(env)
         self.obs_shape = obs_shape
         self.observation_space = gym.spaces.Box(0, 1, (obs_shape,), dtype=np.float32)
@@ -101,7 +120,7 @@ def make_env(env_id, seed, idx, atari_wrapper=False, grid_env=False):
         """Create environment with video recording"""
         env = gym.make(env_id, render_mode="rgb_array")
 
-        # Special handling for FrozenLake discrete states
+        # Special handling for discrete states (like CliffWalking)
         if grid_env:
             env = OneHotWrapper(env, obs_shape=env.observation_space.n)
 
@@ -141,20 +160,17 @@ def evaluate(
         obs, _ = eval_env.reset()
         done = False
         episode_reward = 0.0
-        # episode_frames = []
 
         while not done:
             if capture_video:
                 frame = eval_env.render()
                 frames.append(frame)
 
-            action = (
-                model(
+            with torch.no_grad():
+                q_values, values, adv, feat = model(
                     torch.tensor(obs, device=device, dtype=torch.float32).unsqueeze(0)
                 )
-                .argmax()
-                .item()
-            )
+                action = q_values.argmax().item()
             obs, reward, terminated, truncated, _ = eval_env.step(action)
             done = terminated or truncated
             episode_reward += reward
@@ -190,47 +206,46 @@ def calculate_param_norm(model):
     return total_norm**0.5
 
 
-def validate_q_network_dimensions(q_network, obs_dim, action_dim):
+def validate_dueling_q_network_dimensions(dueling_q_network, obs_dim, action_dim):
     """
-    Validate that the Q-network's input and output dimensions match the environment.
+    Validate that the Dueling Q-network's input and output dimensions match the environment.
 
     Args:
-        q_network: The neural network model (nn.Module)
+        dueling_q_network: The neural network model (nn.Module)
         obs_dim: Expected observation dimension
         action_dim: Expected action dimension
     """
     # Find first Linear layer for input dimension
     first_layer = None
-    for module in q_network.modules():
+    for module in dueling_q_network.modules():
         if isinstance(module, nn.Linear):
             first_layer = module
             break
     if first_layer is None:
         raise ValueError(
-            "Q-network must have at least one Linear layer for dimension validation."
+            "Dueling Q-network must have at least one Linear layer for dimension validation."
         )
     if first_layer.in_features != obs_dim:
         raise ValueError(
-            f"Q-network input dimension {first_layer.in_features} does not match observation dimension {obs_dim}."
+            f"Dueling Q-network input dimension {first_layer.in_features} does not match observation dimension {obs_dim}."
         )
 
-    # Find last Linear layer for output dimension
-    last_layer = None
-    for module in reversed(list(q_network.modules())):
+    # Find the advantage stream's last Linear layer for output dimension
+    adv_layer = None
+    for module in dueling_q_network.adv.modules():
         if isinstance(module, nn.Linear):
-            last_layer = module
-            break
-    if last_layer is None:
+            adv_layer = module
+    if adv_layer is None:
         raise ValueError(
-            "Q-network must have at least one Linear layer for dimension validation."
+            "Dueling Q-network must have an advantage stream with Linear layers for dimension validation."
         )
-    if last_layer.out_features != action_dim:
+    if adv_layer.out_features != action_dim:
         raise ValueError(
-            f"Q-network output dimension {last_layer.out_features} does not match action dimension {action_dim}."
+            f"Dueling Q-network output dimension {adv_layer.out_features} does not match action dimension {action_dim}."
         )
 
 
-def train_dqn(
+def train_dueling_dqn(
     env_id=Config.env_id,
     total_timesteps=Config.total_timesteps,
     seed=Config.seed,
@@ -261,7 +276,7 @@ def train_dqn(
     grid_env=Config.grid_env,
 ):
     """
-    Train a DQN agent on a Gymnasium environment.
+    Train a Dueling DQN agent on a Gymnasium environment.
 
     Args:
         env_id: Gymnasium environment ID
@@ -278,7 +293,7 @@ def train_dqn(
         exploration_fraction: Fraction of timesteps for epsilon decay
         learning_starts: When to start learning
         train_frequency: How often to train
-        max_grad_norm: Maximum gradient norm for gradient clipping (0.0 to disable)
+        max_grad_norm: Maximum gradient norm for clipping (0.0 to disable)
         capture_video: Whether to capture training videos
         use_wandb: Whether to use Weights & Biases logging
         wandb_project: W&B project name
@@ -287,14 +302,13 @@ def train_dqn(
         eval_every: Frequency of evaluation during training
         save_every: Frequency of saving the model
         atari_wrapper: Whether to apply Atari preprocessing wrappers
-        agent: Custom neural network class or instance (nn.Module subclass or instance, optional, defaults to QNet)
+        custom_agent: Custom neural network class or instance (nn.Module subclass or instance, optional, defaults to DuelingQNet)
         num_eval_eps: Number of evaluation episodes
-        n_envs : Number of parallel environments for the replay buffer
-        capture_video: Whether to record evaluation videos
+        n_envs: Number of parallel environments for the replay buffer
         device: Device to use for training (e.g., "cpu", "cuda")
         grid_env: Whether the environment uses discrete grid observations
     Returns:
-        Trained Q-network model
+        Trained Dueling Q-network model
     """
     run_name = f"{env_id}__{exp_name}__{seed}__{int(time.time())}"
 
@@ -360,7 +374,7 @@ def train_dqn(
         obs_space = env.observation_space
 
     # Compute observation dimensions
-    if is_discrete_obs:
+    if is_discrete_obs and grid_env:
         obs_shape = obs_space.n
     else:
         obs_shape = obs_space.shape[0]
@@ -368,26 +382,26 @@ def train_dqn(
     # Compute action dimensions
     action_shape = env.single_action_space.n if n_envs > 1 else env.action_space.n
 
-    # Use custom agent if provided, otherwise use default QNet
+    # Use custom agent if provided, otherwise use default DuelingQNet
     if custom_agent is not None:
         if isinstance(custom_agent, nn.Module):
             # Validate custom agent's dimensions first
-            validate_q_network_dimensions(custom_agent, obs_shape, action_shape)
+            validate_dueling_q_network_dimensions(custom_agent, obs_shape, action_shape)
 
             q_network = custom_agent.to(device)
             target_net = custom_agent.to(device)
         else:
             raise ValueError("agent must be an instance of nn.Module")
     else:
-        q_network = QNet(obs_shape, action_shape).to(device)
-        target_net = QNet(obs_shape, action_shape).to(device)
+        q_network = DuelingQNet(obs_shape, action_shape).to(device)
+        target_net = DuelingQNet(obs_shape, action_shape).to(device)
 
     target_net.load_state_dict(q_network.state_dict())
     optimizer = optim.Adam(q_network.parameters(), lr=learning_rate)
     eps_decay = LinearEpsilonDecay(start_e, end_e, total_timesteps)
 
     # Print network architecture
-    print("Q-Network Architecture:")
+    print("Dueling Q-Network Architecture:")
     print(q_network)
 
     q_network.train()
@@ -421,7 +435,7 @@ def train_dqn(
                 action = env.action_space.sample()
         else:
             with torch.no_grad():
-                q_values = q_network(
+                q_values, values, adv, feat = q_network(
                     torch.tensor(obs, device=device, dtype=torch.float32)
                 )
                 action = (
@@ -476,52 +490,42 @@ def train_dqn(
         if step > learning_starts and step % train_frequency == 0:
             data = replay_buffer.sample(batch_size)
 
-            target_max = target_net(data.next_observations).max(1)[0]
-            td_target = data.rewards.flatten() + gamma * target_max * (
-                1 - data.dones.flatten()
-            )
+            with torch.no_grad():
+                target_q_values, target_values, target_adv, target_feat = target_net(data.next_observations)
+                target_max = target_q_values.max(1)[0]
+                td_target = data.rewards.flatten() + gamma * target_max * (
+                    1 - data.dones.flatten()
+                )
 
-            old_val = q_network(data.observations).gather(1, data.actions).squeeze()
+            old_q_values, old_values, old_adv, old_feat = q_network(data.observations)
+            old_val = old_q_values.gather(1, data.actions).squeeze()
 
             optimizer.zero_grad()
             loss = nn.functional.mse_loss(old_val, td_target)
             loss.backward()
 
-              # Log gradient norm per layer
-            if use_wandb:
-                for name, param in policy_network.named_parameters():
-                    if param.grad is not None:
-                        grad_norm = torch.norm(param.grad.detach(), 2).item()
-                        wandb.log(
-                            {
-                                f"gradients/layer_{name}": grad_norm,
-                                "step": step,
-                            }
-                        )
-
-
-            # Calculate gradient norm before clipping
-            total_norm_before = torch.norm(
-                torch.stack(
-                    [
-                        torch.norm(p.grad.detach(), 2)
-                        for p in q_network.parameters()
-                        if p.grad is not None
-                    ]
-                ),
-                2,
-            )
-            # Log gradient norm
-            if use_wandb:
-                wandb.log(
-                    {
-                        "gradients/norm_before_clip": total_norm_before.item(),
-                        "step": step,
-                    }
-                )
             # Calculate gradient norm before clipping
             if max_grad_norm != 0.0:
-               
+                # Calculate gradient norm before clipping
+                total_norm_before = torch.norm(
+                    torch.stack(
+                        [
+                            torch.norm(p.grad.detach(), 2)
+                            for p in q_network.parameters()
+                            if p.grad is not None
+                        ]
+                    ),
+                    2,
+                )
+
+                # Log gradient norm
+                if use_wandb:
+                    wandb.log(
+                        {
+                            "gradients/norm_before_clip": total_norm_before.item(),
+                            "step": step,
+                        }
+                    )
 
                 # Apply gradient clipping
                 torch.nn.utils.clip_grad_norm_(
@@ -646,7 +650,7 @@ def train_dqn(
             )
 
         if step % save_every == 0 and step > 0:
-            model_path = f"runs/{run_name}/models/dqn_model_step_{step}.pth"
+            model_path = f"runs/{run_name}/models/dueling_dqn_model_step_{step}.pth"
             os.makedirs(os.path.dirname(model_path), exist_ok=True)
             torch.save(q_network.state_dict(), model_path)
             print(f"Model saved at step {step} to {model_path}")
@@ -674,4 +678,4 @@ def train_dqn(
 
 
 if __name__ == "__main__":
-    train_dqn()
+    train_dueling_dqn()

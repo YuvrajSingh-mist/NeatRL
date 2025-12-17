@@ -16,6 +16,7 @@ NeatRL provides high-quality implementations of popular RL algorithms with a foc
 ### Current Implementations
 - **DQN** (Deep Q-Network) - Classic value-based RL algorithm
 - **Dueling DQN** - Enhanced DQN with separate value and advantage streams
+- **REINFORCE** - Policy gradient method for discrete and continuous action spaces
 - *More algorithms coming soon...*
 
 ## 📦 Installation
@@ -24,7 +25,7 @@ NeatRL provides high-quality implementations of popular RL algorithms with a foc
 python -m venv neatrl-env
 source neatrl-env/bin/activate  # On Windows use `neatrl-env\Scripts
 
-pip install neatrl"[classic,box2d,dev,atari]"
+pip install neatrl"[classic,box2d,atari]""[classic,box2d,atari]"
 ```
 
 ## 🚀 Quick Start
