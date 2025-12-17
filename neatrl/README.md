@@ -8,15 +8,33 @@ NeatRL provides high-quality implementations of popular RL algorithms with a foc
 
 - 📊 **Experiment Tracking**: Built-in support for Weights & Biases logging
 - 🎮 **Gymnasium Compatible**: Works with Gymnasium environments and adding many more!
+- 🎯 **Atari Support**: Full support for Atari games with automatic CNN architectures
+- ⚡ **Parallel Training**: Vectorized environments for faster data collection
 - 🔧 **Easy to Extend**: Modular design for adding new algorithms
 - 📈 **State-of-the-Art**: Implements modern RL techniques and best practices
+- 🎥 **Video Recording**: Automatic video capture and WandB integration
+- 📉 **Advanced Logging**: Per-layer gradient monitoring and comprehensive metrics
 
 ## 🏗️ Supported Algorithms
 
 ### Current Implementations
 - **DQN** (Deep Q-Network) - Classic value-based RL algorithm
+  - Support for discrete action spaces
+  - Experience replay and target networks
+  - Atari preprocessing and frame stacking
+  
 - **Dueling DQN** - Enhanced DQN with separate value and advantage streams
+  - Improved learning stability
+  - Better performance on complex environments
+  
 - **REINFORCE** - Policy gradient method for discrete and continuous action spaces
+  - ✨ **NEW**: Atari game support with automatic CNN architecture
+  - ✨ **NEW**: Parallel environment training (`n_envs` support)
+  - ✨ **NEW**: Continuous action space support
+  - ✨ **NEW**: Per-layer gradient logging
+  - Episode-based Monte Carlo returns
+  - Variance reduction through baseline subtraction
+  
 - *More algorithms coming soon...*
 
 ## 📦 Installation
@@ -30,7 +48,7 @@ pip install neatrl"[classic,box2d,atari]""[classic,box2d,atari]"
 
 ## 🚀 Quick Start
 
-Train a DQN agent on CartPole in 3 lines:
+### Train DQN on CartPole
 
 ```python
 from neatrl import train_dqn
@@ -38,6 +56,54 @@ from neatrl import train_dqn
 model = train_dqn(
     env_id="CartPole-v1",
     total_timesteps=10000,
+    seed=42
+)
+```
+
+### Train REINFORCE on Atari
+
+```python
+from neatrl import train_reinforce
+
+model = train_reinforce(
+    env_id="BreakoutNoFrameskip-v4",
+    total_steps=2000,
+    atari_wrapper=True,  # Automatic Atari preprocessing
+    n_envs=4,            # Parallel environments
+    use_wandb=True,      # Track with WandB
+    seed=42
+)
+```
+
+### Train REINFORCE with Continuous Actions
+
+```python
+from neatrl import train_reinforce
+import torch.nn as nn
+
+# Custom policy for continuous actions
+class ContinuousPolicyNet(nn.Module):
+    def __init__(self, state_space, action_space):
+        super().__init__()
+        self.fc1 = nn.Linear(state_space, 32)
+        self.fc2 = nn.Linear(32, 16)
+        self.mean = nn.Linear(16, action_space)
+        self.logstd = nn.Linear(16, action_space)
+    
+    def forward(self, x):
+        x = torch.relu(self.fc2(torch.relu(self.fc1(x))))
+        return self.mean(x), torch.exp(self.logstd(x))
+    
+    def get_action(self, x):
+        mean, std = self.forward(x)
+        dist = torch.distributions.Normal(mean, std)
+        action = dist.sample()
+        return action, dist.log_prob(action).sum(dim=-1)
+
+model = train_reinforce(
+    env_id="Pendulum-v1",
+    total_steps=2000,
+    custom_agent=ContinuousPolicyNet(3, 1),
     seed=42
 )
 ```
@@ -65,6 +131,18 @@ pip install -e .[dev]
 ```
 
 ## 📋 Changelog
+
+### [0.2.1] - 2025-12-17
+- **Added**: REINFORCE Atari support with automatic CNN architecture
+- **Added**: Parallel environment training (`n_envs` parameter)
+- **Added**: Continuous action space support for REINFORCE
+- **Added**: Advanced gradient logging (per-layer norms, clip ratios)
+- **Changed**: REINFORCE parameter `episodes` → `total_steps`
+- **Fixed**: Multi-environment action handling for vectorized training
+
+### [0.2.0] - 2025-12-14
+- **Added**: Grid environment support with automatic one-hot encoding
+- **Changed**: Renamed `record` to `capture_video` for consistency
 
 ### [0.1.4] - 2025-12-13
 - **Added**: Custom agent support for DQN training
