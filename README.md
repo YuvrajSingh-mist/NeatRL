@@ -11,7 +11,7 @@ This repository contains various ONE-FILE implementations of deep reinforcement 
 
 ```bash
 # Install NeatRL
-pip install neatrl
+pip install neatrl"[classic,box2d,atari]"
 
 # Train DQN on CartPole in 3 lines
 from neatrl import train_dqn

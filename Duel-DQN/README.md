@@ -113,7 +113,7 @@ You can train a Dueling DQN agent using the NeatRL library with just a few lines
 ### Installation
 
 ```bash
-pip install neatrl
+pip install neatrl"[classic,box2d,atari]"
 ```
 
 ### Quick Start

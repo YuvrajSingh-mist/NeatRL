@@ -11,7 +11,7 @@ This repository contains an implementation of Deep Q-Network (DQN) for solving t
 ### Install NeatRL
 
 ```bash
-pip install neatrl
+pip install neatrl"[classic,box2d,atari]"
 ```
 
 ### Train DQN on CartPole (3 lines!)

@@ -24,7 +24,7 @@ For a more streamlined and production-ready DQN implementation, you can use [Nea
 ### Installation
 
 ```bash
-pip install neatrl
+pip install neatrl"[classic,box2d,atari]"
 ```
 
 ### Training on Taxi
