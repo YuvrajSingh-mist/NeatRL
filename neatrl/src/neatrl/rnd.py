@@ -1,0 +1,684 @@
+import os
+import random
+import time
+import gymnasium as gym
+from tqdm import tqdm
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import wandb
+import torch.nn.functional as F
+import imageio
+import matplotlib.pyplot as plt
+
+# ===== CONFIGURATION =====
+class Config:
+    # Experiment settings
+    exp_name = "PPO-RND-Vectorized-ClipWalking"
+    seed = 42
+    env_id = "CliffWalking-v0"
+    total_timesteps = 5_000_000
+
+    # PPO & Agent settings
+    lr = 3e-4
+    ext_gamma = 0.99
+    int_gamma = 0.99
+    n_envs = 1
+    max_steps = 128
+    num_minibatches = 4
+    PPO_EPOCHS = 4
+    clip_value = 0.2
+    ENTROPY_COEFF = 0.01
+    VALUE_COEFF = 0.5
+    EXT_COEFF = 2.0  # Weight for extrinsic advantage
+    INT_COEFF = 1.0  # Weight for intrinsic advantage
+    
+    # Logging & Saving
+    capture_video = True
+    use_wandb = True
+    wandb_project = "cleanRL"
+    grid_env = True
+    max_grad_norm = 1.0  # Maximum gradient norm for gradient clipping
+    eval_every = 10000  # Frequency of evaluation during training
+    save_every = 10000  # Frequency of saving the model
+    
+    
+
+
+def safe_display(obs):
+    plt.imshow(obs)
+    plt.axis('off')
+    plt.draw()
+    plt.pause(0.001)
+    plt.clf()
+
+
+# --- Networks ---
+def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
+    torch.nn.init.orthogonal_(layer.weight, std)
+    torch.nn.init.constant_(layer.bias, bias_const)
+    return layer
+
+class ActorNet(nn.Module):
+    def __init__(self, state_space, action_space, discrete=True):
+        super(ActorNet, self).__init__()
+        self.discrete = discrete
+        self.fc1 = layer_init(nn.Linear(state_space, 512))
+        self.fc2 = layer_init(nn.Linear(512, 512))
+        self.fc3 = layer_init(nn.Linear(512, 256))
+        if discrete:
+            self.out = layer_init(nn.Linear(256, action_space))
+        else:
+            self.mean = layer_init(nn.Linear(256, action_space))
+            self.log_std = nn.Parameter(torch.zeros(action_space))
+
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+        if self.discrete:
+            logits = self.out(x)
+            probs = torch.nn.functional.softmax(logits, dim=-1)
+            dist = torch.distributions.Categorical(probs)
+        else:
+            mean = self.mean(x)
+            log_std = self.log_std
+            std = torch.exp(log_std)
+            dist = torch.distributions.Normal(mean, std)
+        return dist
+
+    def get_action(self, x, action=None):
+        dist = self.forward(x)
+        if action is None:
+            action = dist.sample()
+        log_prob = dist.log_prob(action)
+        if self.discrete:
+            log_prob = log_prob.sum(dim=-1)
+        else:
+            log_prob = log_prob.sum(dim=-1)
+        entropy = dist.entropy()
+        return action, log_prob, entropy
+
+class CriticNet(nn.Module):
+    def __init__(self, state_space):
+        super(CriticNet, self).__init__()
+        self.fc1 = layer_init(nn.Linear(state_space, 512))
+        self.fc2 = layer_init(nn.Linear(512, 512))
+        self.fc3 = layer_init(nn.Linear(512, 256))
+        self.value_ext = layer_init(nn.Linear(256, 1))
+        self.value_int = layer_init(nn.Linear(256, 1))
+
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+        return self.value_ext(x), self.value_int(x)
+
+class PredictorNet(nn.Module):
+    def __init__(self, state_space):
+        super(PredictorNet, self).__init__()
+        self.fc1 = layer_init(nn.Linear(state_space, 512))
+        self.fc2 = layer_init(nn.Linear(512, 512))
+        self.fc3 = layer_init(nn.Linear(512, 256))
+        self.out = layer_init(nn.Linear(256, 256))
+
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+        return self.out(x)
+
+class TargetNet(nn.Module):
+    def __init__(self, state_space):
+        super(TargetNet, self).__init__()
+        self.fc1 = layer_init(nn.Linear(state_space, 512))
+        self.fc2 = layer_init(nn.Linear(512, 512))
+        self.fc3 = layer_init(nn.Linear(512, 256))
+        self.out = layer_init(nn.Linear(256, 256))
+
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+        return self.out(x)
+
+class OneHotWrapper(gym.ObservationWrapper):
+    def __init__(self, env, obs_shape=16):
+        super().__init__(env)
+        self.obs_shape = obs_shape
+        self.observation_space = gym.spaces.Box(0, 1, (obs_shape,), dtype=np.float32)
+
+    def observation(self, obs):
+        one_hot = torch.zeros(self.obs_shape, dtype=torch.float32)
+        one_hot[obs] = 1.0
+        return one_hot.numpy()
+
+
+def make_env(env_id, seed, idx, render_mode=None, grid_env=False):
+    def thunk():
+        env = gym.make(env_id, render_mode=render_mode)
+        env = gym.wrappers.RecordEpisodeStatistics(env)
+        # env = gym.wrappers.NormalizeObservation(env)
+        if grid_env:
+            env = OneHotWrapper(env, obs_shape=env.observation_space.n)
+        env.action_space.seed(seed + idx)
+        return env
+    return thunk
+
+
+
+def calculate_param_norm(model):
+    """Calculate the L2 norm of all parameters in a model."""
+    total_norm = 0.0
+    for p in model.parameters():
+        param_norm = p.data.norm(2)
+        total_norm += param_norm.item() ** 2
+    return total_norm**0.5
+
+
+def validate_policy_network_dimensions(policy_network, obs_dim, action_dim):
+    """
+    Validate that the Policy-network's input and output dimensions match the environment.
+
+    Args:
+        policy_network: The neural network model (nn.Module)
+        obs_dim: Expected observation dimension (int or tuple)
+        action_dim: Expected action dimension
+    """
+    if isinstance(obs_dim, tuple):
+        # For Atari-like, check if it has conv layers
+        has_conv = any(
+            isinstance(module, nn.Conv2d) for module in policy_network.modules()
+        )
+        if not has_conv:
+            print(
+                "Warning: Observation is multi-dimensional but network has no Conv2d layers."
+            )
+    else:
+        # Find first Linear layer for input dimension
+        first_layer = None
+        for module in policy_network.modules():
+            if isinstance(module, nn.Linear):
+                first_layer = module
+                break
+        if first_layer is None:
+            raise ValueError(
+                "Policy-network must have at least one Linear layer for dimension validation."
+            )
+        if first_layer.in_features != obs_dim:
+            raise ValueError(
+                f"Policy-network input dimension {first_layer.in_features} does not match observation dimension {obs_dim}."
+            )
+
+    # Find last Linear layer for output dimension
+    last_layer = None
+    for module in reversed(list(policy_network.modules())):
+        if isinstance(module, nn.Linear):
+            last_layer = module
+            break
+    if last_layer is None:
+        raise ValueError(
+            "Policy-network must have at least one Linear layer for dimension validation."
+        )
+    if last_layer.out_features != action_dim:
+        raise ValueError(
+            f"Policy-network output dimension {last_layer.out_features} does not match action dimension {action_dim}."
+        )
+
+
+def evaluate(model, device, env_id, seed, run_name, num_eval_eps=10, record=False, render_mode=None, display=False, grid_env=False, use_wandb=False):
+    eval_env = make_env(env_id, seed, idx=0, render_mode=render_mode, grid_env=grid_env)()
+    model.eval()
+    returns = []
+    frames = []
+
+    for _ in tqdm(range(num_eval_eps), desc="Evaluating"):
+        obs, _ = eval_env.reset()
+        done = False
+        rewards = 0.0
+        while not done:
+            if record:
+                frames.append(eval_env.render())
+            if display:
+                safe_display(obs)
+            with torch.no_grad():
+                obs = torch.tensor(obs, device=device, dtype=torch.float32)
+                action, _, _ = model.get_action(obs.unsqueeze(0))
+                action = action.cpu().numpy()
+                if isinstance(eval_env.action_space, gym.spaces.Discrete):
+                    action = action.item()
+                else:
+                    action = action.squeeze()
+            obs, rewards_curr, terminated, truncated, info = eval_env.step(action)
+            done = terminated or truncated
+            rewards += rewards_curr
+        # if "episode" in info:
+            
+        returns.append(rewards)
+    eval_env.close()
+    model.train()
+    
+    if record and len(frames) > 0:
+        video_path = f"videos/eval_{run_name}.mp4"
+        os.makedirs(os.path.dirname(video_path), exist_ok=True)
+        imageio.mimsave(video_path, frames, fps=30, codec='libx264')
+        print(f"Evaluation video saved to {video_path}")
+        if use_wandb:
+            wandb.log({"eval/video": wandb.Video(video_path, fps=30, format="mp4")})
+    
+    return returns, frames
+
+def train_rnd(
+    env_id=Config.env_id,
+    total_timesteps=Config.total_timesteps,
+    seed=Config.seed,
+    lr=Config.lr,
+    ext_gamma=Config.ext_gamma,
+    int_gamma=Config.int_gamma,
+    n_envs=Config.n_envs,
+    max_steps=Config.max_steps,
+    PPO_EPOCHS=Config.PPO_EPOCHS,
+    clip_value=Config.clip_value,
+    ENTROPY_COEFF=Config.ENTROPY_COEFF,
+    VALUE_COEFF=Config.VALUE_COEFF,
+    EXT_COEFF=Config.EXT_COEFF,
+    INT_COEFF=Config.INT_COEFF,
+    capture_video=Config.capture_video,
+    use_wandb=Config.use_wandb,
+    wandb_project=Config.wandb_project,
+    exp_name=Config.exp_name,
+    grid_env=Config.grid_env,
+    max_grad_norm=Config.max_grad_norm,
+    eval_every=Config.eval_every,
+    save_every=Config.save_every,
+    actor_class=ActorNet,
+    critic_class=CriticNet,
+    predictor_class=PredictorNet,
+    target_class=TargetNet,
+    num_minibatches=Config.num_minibatches,
+):
+    """
+    Train a PPO agent with RND intrinsic rewards on a Gymnasium environment.
+
+    Args:
+        env_id: Gymnasium environment ID
+        total_timesteps: Total number of timesteps to train
+        seed: Random seed
+        lr: Learning rate
+        ext_gamma: Discount factor for extrinsic rewards
+        int_gamma: Discount factor for intrinsic rewards
+        n_envs: Number of parallel environments
+        max_steps: Maximum steps per rollout
+        num_minibatches: Number of minibatches
+        PPO_EPOCHS: Number of PPO epochs
+        clip_value: PPO clipping value
+        ENTROPY_COEFF: Entropy coefficient
+        VALUE_COEFF: Value loss coefficient
+        EXT_COEFF: Extrinsic advantage coefficient
+        INT_COEFF: Intrinsic advantage coefficient
+        capture_video: Whether to capture video
+        use_wandb: Whether to use Weights & Biases
+        wandb_project: W&B project name
+        exp_name: Experiment name
+        grid_env: Whether the environment uses discrete grid observations
+        max_grad_norm: Maximum gradient norm for gradient clipping (0.0 to disable)
+        eval_every: Frequency of evaluation during training
+        save_every: Frequency of saving the model
+        actor_class: Custom actor network class
+        critic_class: Custom critic network class
+        predictor_class: Custom predictor network class
+        target_class: Custom target network class
+    Returns:
+        Trained actor network
+    """
+    run_name = f"{env_id}__{exp_name}__{seed}__{int(time.time())}"
+
+    os.makedirs(f"runs/{run_name}/models", exist_ok=True)
+
+    if use_wandb:
+        wandb.init(project=wandb_project, config=vars(Config()), name=run_name, monitor_gym=True)
+    
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+    # env = gym.make(args.env_id, render_mode=None)
+    # print("Obs: ", env.observation_space)
+    envs = gym.vector.SyncVectorEnv(
+        [make_env(env_id, seed, i, grid_env=grid_env) for i in range(n_envs)]
+    )
+    if isinstance(envs.single_observation_space, gym.spaces.Discrete):
+        obs_space_shape = envs.single_observation_space.n
+    else:
+        obs_space_shape = envs.single_observation_space.shape[0]
+        
+    is_discrete_action = isinstance(envs.single_action_space, gym.spaces.Discrete)
+    action_space_n = envs.single_action_space.n if is_discrete_action else envs.single_action_space.shape[0]
+    
+    print(f"Observation Space: {obs_space_shape}, Action Space: {action_space_n}, Discrete: {is_discrete_action}")
+    
+    actor_network = actor_class(obs_space_shape, action_space_n, discrete=is_discrete_action).to(device)
+    critic_network = critic_class(obs_space_shape).to(device)
+    predictor_network = predictor_class(obs_space_shape).to(device)
+    target_network = target_class(obs_space_shape).to(device)
+    
+    print("Actor Network Architecture:")
+    print(actor_network)
+    print("\nCritic Network Architecture:")
+    print(critic_network)
+    print("\nPredictor Network Architecture:")
+    print(predictor_network)
+    print("\nTarget Network Architecture:")
+    print(target_network)
+    
+    # Compute derived values from passed parameters
+    batch_size = n_envs * max_steps
+    minibatch_size = batch_size // num_minibatches
+    num_updates = total_timesteps // batch_size
+    
+    optimizer = optim.Adam(
+        list(actor_network.parameters()) + list(critic_network.parameters()) + list(predictor_network.parameters()), 
+        lr=lr, eps=1e-5
+    )
+
+    for param in target_network.parameters():
+        param.requires_grad = False
+
+    # Tensor Storage
+    action_shape = (action_space_n,) if not is_discrete_action else ()
+    obs_storage = torch.zeros((max_steps, n_envs) + (obs_space_shape,)).to(device)
+    actions_storage = torch.zeros((max_steps, n_envs) + action_shape).to(device)
+    logprobs_storage = torch.zeros((max_steps, n_envs)).to(device)
+    rewards_storage = torch.zeros((max_steps, n_envs)).to(device)
+    intrinsic_rewards_storage = torch.zeros((max_steps, n_envs)).to(device)
+    dones_storage = torch.zeros((max_steps, n_envs)).to(device)
+    ext_values_storage = torch.zeros((max_steps, n_envs)).to(device)
+    int_values_storage = torch.zeros((max_steps, n_envs)).to(device)
+    
+    global_step = 0
+    
+    next_obs, _ = envs.reset(seed=seed)
+    next_obs = torch.Tensor(next_obs).to(device)
+    next_done = torch.zeros(n_envs).to(device)
+
+    start_time = time.time()
+
+    for update in tqdm(range(1, num_updates + 1), desc="Training Updates"):
+        # Rollout Phase
+        for step in range(0, max_steps):
+            global_step = (update - 1) * batch_size + step * n_envs
+            obs_storage[step] = next_obs
+         
+            dones_storage[step] = next_done
+
+            with torch.no_grad():
+                action, logprob, _ = actor_network.get_action(next_obs)
+                ext_value, int_value = critic_network(next_obs)
+            
+            ext_values_storage[step] = ext_value.flatten()
+            int_values_storage[step] = int_value.flatten()
+            actions_storage[step] = action
+            logprobs_storage[step] = logprob
+            
+            # --- RND Intrinsic Reward Calculation ---
+            with torch.no_grad():
+                pred_features = predictor_network(next_obs)
+                target_features = target_network(next_obs)
+                # print(pred_features)
+                # print(target_features)
+                intrinsic_reward = torch.pow(pred_features - target_features, 2).sum(dim=1)
+            # print(intrinsic_reward)
+            intrinsic_rewards_storage[step] = intrinsic_reward
+            
+            # Step the environment
+            new_obs, reward, terminated, truncated, info = envs.step(action.cpu().numpy())
+            done = np.logical_or(terminated, truncated)
+            
+            rewards_storage[step] = torch.tensor(reward).to(device).view(-1)
+            next_obs = torch.Tensor(new_obs).to(device)
+            next_done = torch.Tensor(done).to(device)
+            wandb.log({
+                "train/global_step": global_step,
+                "train/intrinsic_reward": intrinsic_reward.mean().item(),
+                "train/extrinsic_reward": rewards_storage[step].mean().item(),
+                "train/total_reward": intrinsic_reward.mean().item() + rewards_storage[step].mean().item(),
+            })
+            if "final_info" in info:
+                for item in info["final_info"]:
+                    if item and "episode" in item:
+                        wandb.log({"charts/episodic_return": item['episode']['r'], "charts/episodic_length": item['episode']['l']})
+
+        # Calculate returns after the rollout is complete
+        with torch.no_grad():
+            # Get the bootstrapped value from the state after the last step
+            bootstrap_ext_value, bootstrap_int_value = critic_network(next_obs)
+            
+            # Initialize tensors for returns
+            ext_returns = torch.zeros_like(rewards_storage).to(device)
+            int_returns = torch.zeros_like(intrinsic_rewards_storage).to(device)
+            
+            # Set the initial "next state" return. If an env was done, this is 0, otherwise it's the bootstrap value.
+            # (1.0 - next_done) is a trick to multiply by 0 if done, and 1 if not done.
+            ext_gt_next_state = bootstrap_ext_value.squeeze() * (1.0 - next_done)
+            int_gt_next_state = bootstrap_int_value.squeeze() * (1.0 - next_done)
+
+            # Loop backwards from the last step to the first
+            for t in reversed(range(max_steps)):
+                # Calculate return at step t
+                rt_ext = rewards_storage[t] + ext_gamma * ext_gt_next_state
+                rt_int = intrinsic_rewards_storage[t] + int_gamma * int_gt_next_state
+                
+                # Store the calculated returns
+                ext_returns[t] = rt_ext
+                int_returns[t] = rt_int
+                
+                # Update the "next state" for the previous step (t-1).
+                # If an episode was done at step t, the return propagation is cut off (multiplied by 0).
+                ext_gt_next_state = rt_ext * (1.0 - dones_storage[t])
+                int_gt_next_state = rt_int * (1.0 - dones_storage[t])
+            
+        # Calculate advantages as the difference between returns and value function estimates
+        ext_advantages = ext_returns - ext_values_storage
+        int_advantages = int_returns - int_values_storage
+
+        advantages = (INT_COEFF * int_advantages) + (EXT_COEFF * ext_advantages)
+        wandb.log({
+            "advantages/ext_advantages": ext_advantages.mean().item(), "advantages/int_advantages": int_advantages.mean().item()})
+        
+        # Normalize the final combined advantages
+        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+
+       
+
+        # Flatten the batch
+        b_obs = obs_storage.reshape((-1, obs_space_shape))
+        b_logprobs = logprobs_storage.reshape(-1)
+        b_actions = actions_storage.reshape(-1, *action_shape)
+        b_advantages = advantages.reshape(-1)
+        b_ext_returns = ext_returns.reshape(-1)
+        b_int_returns = int_returns.reshape(-1)
+
+        # PPO & RND Update Phase
+        b_inds = np.arange(batch_size)
+        for epoch in range(PPO_EPOCHS):
+            np.random.shuffle(b_inds)
+            for start in range(0, batch_size, minibatch_size):
+                end = start + minibatch_size
+                mb_inds = b_inds[start:end]
+
+                # --- PPO Policy and Value Loss ---
+                _, new_log_probs, entropy = actor_network.get_action(b_obs[mb_inds], b_actions[mb_inds].long() if is_discrete_action else b_actions[mb_inds])
+                ratio = torch.exp(new_log_probs - b_logprobs[mb_inds])
+                
+                pg_loss1 = b_advantages[mb_inds] * ratio
+                pg_loss2 = b_advantages[mb_inds] * torch.clamp(ratio, 1 - clip_value, 1 + clip_value)
+                policy_loss = -torch.min(pg_loss1, pg_loss2).mean()
+
+                ext_current_values, int_current_values = critic_network(b_obs[mb_inds])
+                ext_critic_loss = F.mse_loss(ext_current_values.squeeze(), b_ext_returns[mb_inds])
+                int_critic_loss = F.mse_loss(int_current_values.squeeze(), b_int_returns[mb_inds])
+                critic_loss = ext_critic_loss + int_critic_loss
+                
+                entropy_loss = entropy.mean()
+
+                # --- RND Predictor Loss ---
+                pred_features = predictor_network(b_obs[mb_inds])
+                with torch.no_grad():
+                    target_features = target_network(b_obs[mb_inds])
+                intrinsic_loss = F.mse_loss(pred_features, target_features)
+
+                # Total Loss
+                loss = policy_loss + VALUE_COEFF * critic_loss + intrinsic_loss - ENTROPY_COEFF * entropy_loss
+                
+                optimizer.zero_grad()
+                loss.backward()
+                
+                # Calculate gradient norm before clipping
+                total_norm_before = torch.norm(
+                    torch.stack(
+                        [
+                            torch.norm(p.grad.detach(), 2)
+                            for p in list(actor_network.parameters()) + list(critic_network.parameters()) + list(predictor_network.parameters())
+                            if p.grad is not None
+                        ]
+                    ),
+                    2,
+                )
+
+                # Log gradient norm per layer
+                if use_wandb:
+                    for name, param in actor_network.named_parameters():
+                        if param.grad is not None:
+                            grad_norm = torch.norm(param.grad.detach(), 2).item()
+                            wandb.log(
+                                {
+                                    f"gradients/actor_layer_{name}": grad_norm
+                                    
+                                }
+                            )
+                    for name, param in critic_network.named_parameters():
+                        if param.grad is not None:
+                            grad_norm = torch.norm(param.grad.detach(), 2).item()
+                            wandb.log(
+                                {
+                                    f"gradients/critic_layer_{name}": grad_norm
+                                    
+                                }
+                            )
+                    for name, param in predictor_network.named_parameters():
+                        if param.grad is not None:
+                            grad_norm = torch.norm(param.grad.detach(), 2).item()
+                            wandb.log(
+                                {
+                                    f"gradients/predictor_layer_{name}": grad_norm
+                                    
+                                }
+                            )
+
+                # Log gradient norm
+                if use_wandb:
+                    wandb.log(
+                        {
+                            "gradients/norm_before_clip": total_norm_before.item()
+                        }
+                    )
+                # Apply gradient clipping
+                if max_grad_norm != 0.0:
+                    torch.nn.utils.clip_grad_norm_(
+                        list(actor_network.parameters()) + list(critic_network.parameters()) + list(predictor_network.parameters()), 
+                        max_norm=max_grad_norm
+                    )
+                
+                optimizer.step()
+        
+         # Log episode returns
+        if "episode" in info:
+            if n_envs > 1:
+                for i in range(n_envs):
+                    if done[i]:
+                        ep_ret = info["episode"]["r"][i]
+                        ep_len = info["episode"]["l"][i]
+
+                        print(
+                            f"Step={step}, Env={i}, Return={ep_ret:.2f}, Length={ep_len}"
+                        )
+
+                        if use_wandb:
+                            wandb.log(
+                                {
+                                    "charts/episodic_return": ep_ret,
+                                    "charts/episodic_length": ep_len,
+                                   
+                                }
+                            )
+            else:
+                if done:
+                    ep_ret = info["episode"]["r"]
+                    ep_len = info["episode"]["l"]
+
+                    print(f"Step={step}, Return={ep_ret:.2f}, Length={ep_len}")
+
+                    if use_wandb:
+                        wandb.log(
+                            {
+                                "charts/episodic_return": ep_ret,
+                                "charts/episodic_length": ep_len,
+                                "charts/global_step": step,
+                            }
+                        )
+            # Log losses and metrics                       
+        if use_wandb and update % 10 == 0:
+            
+            wandb.log({
+                "losses/total_loss": loss.item(),
+                "losses/policy_loss": policy_loss.item(),
+                "losses/value_loss": critic_loss.item(),
+                "losses/entropy": entropy_loss.item(),
+                "charts/learning_rate": optimizer.param_groups[0]['lr'],
+                "charts/rewards_mean": np.mean(rewards_storage.cpu().numpy()),
+                "charts/advantages_mean": b_advantages.mean().item(),
+                "charts/advantages_std": b_advantages.std().item(),
+                "charts/ext_returns_mean": b_ext_returns.mean().item(),
+                "charts/int_returns_mean": b_int_returns.mean().item(),
+                "charts/ext_advantages_mean": ext_advantages.mean().item(),
+                "charts/int_advantages_mean": int_advantages.mean().item(),
+                # "global_step": global_step,
+            })
+            print(f"Update {update}, Global Step: {global_step}, Policy Loss: {policy_loss.item():.4f}, Value Loss: {critic_loss.item():.4f}")
+    
+            if use_wandb:
+                wandb.log(
+                    {
+                        "charts/SPS": int(global_step / (time.time() - start_time)),
+                        "charts/step": global_step,
+                    }
+                )
+        if global_step % eval_every == 0:
+            episodic_returns, _ = evaluate(actor_network, device, env_id, seed, run_name, num_eval_eps=10, record=capture_video, render_mode='rgb_array', grid_env=grid_env, use_wandb=use_wandb)
+            avg_return = np.mean(episodic_returns)
+            if use_wandb:
+                wandb.log({"charts/val_avg_return": avg_return, "val_step": global_step})
+            print(f"Evaluation returns: {episodic_returns}, Average: {avg_return:.2f}")
+
+        if global_step % save_every == 0 and global_step > 0:
+            model_path = f"runs/{run_name}/models/rnd_model_step_{global_step}.pth"
+            torch.save({"actor": actor_network.state_dict(), "critic": critic_network.state_dict(), "predictor": predictor_network.state_dict(), "target": target_network.state_dict()}, model_path)
+            print(f"Model saved at step {global_step} to {model_path}")
+    
+        
+         # --- Final Evaluation and Video Saving ---
+    if capture_video:
+        print("Capturing final evaluation video...")
+        episodic_returns, eval_frames = evaluate(actor_network, device, env_id, seed, run_name, record=True, render_mode='rgb_array', grid_env=grid_env, use_wandb=use_wandb)
+                
+    envs.close()
+    if use_wandb:
+        wandb.finish()
+
+    return actor_network
+
+
+# --- Main Execution ---
+if __name__ == "__main__":
+    train_rnd()

@@ -23,13 +23,17 @@ class PolicyNet(nn.Module):
         x = torch.nn.functional.softmax(x, dim=-1)  # Apply softmax to get probabilities
         return x
 
-    def get_action(self, x):
+    def get_action(self, x, eval=False):
         action_probs = self.forward(x)
         dist = torch.distributions.Categorical(
             action_probs
         )  # Create a categorical distribution from the probabilities
+        if eval:
+            action = torch.argmax(action_probs, dim=-1)
+            return action
+        
         action = dist.sample()  # Sample an action from the distribution
-        return action, dist.log_prob(action)
+        return action, dist.log_prob(action), dist
 
 
 def test_reinforce_frozenlake():
@@ -41,7 +45,7 @@ def test_reinforce_frozenlake():
         env_id="FrozenLake-v1",
         total_steps=1000000,
         seed=42,
-        learning_rate=2e-4,
+        learning_rate=2e-3,
         gamma=0.99,
         capture_video=True,
         use_wandb=True,
@@ -51,11 +55,13 @@ def test_reinforce_frozenlake():
         eval_every=10000,
         save_every=10000,
         atari_wrapper=False,
-        n_envs=4,
+        n_envs=1,
         num_eval_eps=10,
         device="cpu",
         grid_env=True,  # Enable one-hot encoding for discrete states
         custom_agent=PolicyNet(16, 4),
+        use_entropy=True,
+        entropy_coeff=0.01
     )
 
     print("REINFORCE training on FrozenLake-v1 completed successfully!")

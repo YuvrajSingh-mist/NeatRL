@@ -26,12 +26,14 @@ class Config:
 
     # Training parameters
     episodes = 2000
-    learning_rate = 2e-3
+    learning_rate = 2.5e-4
     gamma = 0.99
     max_grad_norm = 1.0  # Maximum gradient norm for gradient clipping
     num_eval_eps = 10
     grid_env = False
-
+    use_entropy = False
+    entropy_coeff = 0.01
+    # Evaluation & logging
     eval_every = 100
     save_every = 1000
     upload_every = 100
@@ -78,7 +80,7 @@ class PolicyNet(nn.Module):
             action_probs
         )  # Create a categorical distribution from the probabilities
         action = dist.sample()  # Sample an action from the distribution
-        return action, dist.log_prob(action)
+        return action, dist.log_prob(action).sum(dim=-1), dist
 
 
 class OneHotWrapper(gym.ObservationWrapper):
@@ -145,8 +147,9 @@ def evaluate(
                 frames.append(frame)
 
             with torch.no_grad():
-                action, _ = model.get_action(
-                    torch.tensor(obs, device=device, dtype=torch.float32)
+                action = model.get_action(
+                    torch.tensor(obs, device=device, dtype=torch.float32),
+                    eval=True
                 )
                 # Handle both discrete and continuous action spaces
                 if isinstance(eval_env.action_space, gym.spaces.Discrete):
@@ -258,6 +261,8 @@ def train_reinforce(
     n_envs=Config.n_envs,
     device=Config.device,
     grid_env=Config.grid_env,
+    use_entropy=Config.use_entropy,
+    entropy_coeff=Config.entropy_coeff,
 ):
     """
     Train a REINFORCE agent on a Gymnasium environment.
@@ -282,6 +287,8 @@ def train_reinforce(
         n_envs: Number of parallel environments (currently not used for training, kept for compatibility)
         device: Device to use for training (e.g., "cpu", "cuda")
         grid_env: Whether the environment uses discrete grid observations
+        use_entropy: Whether to include an entropy bonus in the loss
+        entropy_coeff: Coefficient for the entropy bonus (only used if use_entropy=True)
     Returns:
         Trained Policy-network model
     """
@@ -298,6 +305,10 @@ def train_reinforce(
             monitor_gym=True,
             save_code=True,
         )
+
+    # Warn if entropy_coeff is set but use_entropy is False
+    if not use_entropy and entropy_coeff != 0.0:
+        print(f"Warning: entropy_coeff={entropy_coeff} is provided but use_entropy=False. Entropy regularization will not be applied.")
 
     if capture_video:
         os.makedirs(f"videos/{run_name}/train", exist_ok=True)
@@ -385,6 +396,10 @@ def train_reinforce(
     print("Policy-Network Architecture:")
     print(policy_network)
 
+    # Log network architecture to WandB
+    if use_wandb:
+        wandb.config.update({"network_architecture": str(policy_network)})
+
     policy_network.train()
 
     start_time = time.time()
@@ -394,12 +409,24 @@ def train_reinforce(
         obs, _ = env.reset()
         rewards = []
         log_probs = []
+        entropies = []
         done = False
 
         while True:
-            action, log_prob = policy_network.get_action(
+            result = policy_network.get_action(
                 torch.tensor(obs, device=device, dtype=torch.float32)
             )
+            if len(result) == 2:
+                action, log_prob = result
+                dist = None
+            elif len(result) == 3:
+                action, log_prob, dist = result
+            else:
+                raise ValueError("get_action must return 2 or 3 values")
+            
+            if use_entropy and dist is None:
+                raise ValueError("use_entropy is True but get_action did not return dist")
+
             # Handle both discrete and continuous action spaces
             if n_envs > 1:
                 action_space = env.single_action_space
@@ -417,6 +444,24 @@ def train_reinforce(
             new_obs, reward, terminated, truncated, info = env.step(action)
             rewards.append(reward)
             log_probs.append(log_prob)
+            if use_entropy:
+                entropies.append(dist.entropy())
+                
+                
+            
+            if use_wandb:
+                
+                wandb.log({"charts/action_mean": np.mean(action), "charts/action_std": np.std(action), "step": step})
+                
+                if n_envs > 1:
+                    reward = np.array(reward)
+                    wandb.log({"charts/reward_mean": reward.mean(), "charts/reward_std": np.std(reward), "step": step})
+                else:
+                    wandb.log({"charts/reward": reward, "step": step})
+                    
+                if dist is not None:
+                    wandb.log({"charts/dist_mean": dist.mean.mean().item(), "charts/dist_std": dist.stddev.mean().item(), "step": step})
+                    
             done = np.logical_or(terminated, truncated)
             obs = new_obs
             if done.all():
@@ -429,12 +474,15 @@ def train_reinforce(
             G = reward + gamma * G
             returns.insert(0, G)
 
-        returns = torch.tensor(returns, device=device, dtype=torch.float32)
+        returns = torch.tensor(returns, device=device, dtype=torch.float32).detach()
 
+        if use_wandb:
+            wandb.log({"charts/returns_mean": returns.mean().item(), "step": step})
+            
         # Normalize returns
         returns = (returns - returns.mean()) / (returns.std() + 1e-8)
-
-        # Log episode returns
+        
+        
         # Log episode returns
         if "episode" in info:
             if n_envs > 1:
@@ -452,7 +500,7 @@ def train_reinforce(
                                 {
                                     "charts/episodic_return": ep_ret,
                                     "charts/episodic_length": ep_len,
-                                    "charts/global_step": step,
+                                   
                                 }
                             )
             else:
@@ -474,10 +522,22 @@ def train_reinforce(
         # Calculate loss
         policy_loss = []
         for log_prob, R in zip(log_probs, returns):
+            
+           
+            if use_wandb:
+                wandb.log({"charts/log_prob": log_prob.mean().item(), "charts/log_probs_std": log_prob.std().item(), "step": step})
+            
             policy_loss.append(-log_prob * R)  # Negative for gradient ascent
 
         optimizer.zero_grad()
         loss = torch.stack(policy_loss).mean()
+        if use_entropy:
+            entropy_loss = torch.stack(entropies).mean() * entropy_coeff
+            
+            if use_wandb:
+                wandb.log({"charts/entropy_loss": entropy_loss.item(), "step": step})
+            
+            loss = loss - entropy_loss
         loss.backward()
 
         # Calculate gradient norm before clipping
@@ -514,31 +574,13 @@ def train_reinforce(
             )
             # Apply gradient clipping
             if max_grad_norm != 0.0:
+                
                 # Apply gradient clipping
                 torch.nn.utils.clip_grad_norm_(
                     policy_network.parameters(), max_norm=max_grad_norm
                 )
 
-                # Compute gradient norms after clipping
-                total_norm_after = torch.norm(
-                    torch.stack(
-                        [
-                            torch.norm(p.grad.detach(), 2)
-                            for p in policy_network.parameters()
-                            if p.grad is not None
-                        ]
-                    ),
-                    2,
-                )
-
-            if use_wandb:
-                wandb.log(
-                    {
-                        "gradients/norm_after_clip": total_norm_after.item(),
-                        "step": step,
-                    }
-                )
-
+            
         optimizer.step()
 
         # Log loss and metrics every 100 episodes
@@ -569,12 +611,12 @@ def train_reinforce(
                 wandb.log({"charts/val_avg_return": avg_return, "val_step": step})
             print(f"Evaluation returns: {episodic_returns}, Average: {avg_return:.2f}")
 
-        print("EPS: ", int(step / (time.time() - start_time + 1e-8)), end="\r")
+        print("SPS: ", int(step / (time.time() - start_time + 1e-8)), end="\r")
 
         if use_wandb:
             wandb.log(
                 {
-                    "charts/EPS": int(step / (time.time() - start_time + 1e-8)),
+                    "charts/SPS": int(step / (time.time() - start_time + 1e-8)),
                     "charts/episode": step,
                 }
             )

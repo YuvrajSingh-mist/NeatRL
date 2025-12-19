@@ -390,6 +390,10 @@ def train_dqn(
     print("Q-Network Architecture:")
     print(q_network)
 
+    # Log network architecture to WandB
+    if use_wandb:
+        wandb.config.update({"network_architecture": str(q_network)})
+
     q_network.train()
     target_net.train()
 
@@ -424,6 +428,18 @@ def train_dqn(
                 q_values = q_network(
                     torch.tensor(obs, device=device, dtype=torch.float32)
                 )
+                
+                if use_wandb:
+                    # Log Q-value statistics
+                    wandb.log(
+                        {
+                            "q_values/max": q_values.max().item(),
+                            "q_values/min": q_values.min().item(),
+                            "q_values/mean": q_values.mean().item(),
+                            "step": step,
+                        }
+                    )
+                    
                 action = (
                     q_values.argmax(dim=-1).cpu().numpy()
                     if n_envs > 1

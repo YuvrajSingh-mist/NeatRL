@@ -12,29 +12,31 @@ class PolicyNet(nn.Module):
     def __init__(self, state_space, action_space):
         super().__init__()
         print(f"State space: {state_space}, Action space: {action_space}")
-        self.fc1 = nn.Linear(state_space, 32)
-        self.fc2 = nn.Linear(32, 32)
-        self.fc3 = nn.Linear(32, 16)
-        self.mean = nn.Linear(16, action_space)
-        self.logstd = nn.Linear(16, action_space)
-
+        self.fc1 = nn.Linear(state_space, 128)
+        self.fc2 = nn.Linear(128, 128)
+        self.fc3 = nn.Linear(128, 64)
+        self.mean = nn.Linear(64, action_space)
+        self.logstd = nn.Parameter(torch.zeros(action_space), requires_grad=True)
+        self.act_rng = 2.0  # Action range for Pendulum-v0
+        
     def forward(self, x):
         x = self.fc3(torch.relu(self.fc2(torch.relu(self.fc1(x)))))
-
-        mean = self.mean(x)
-        std = torch.exp(self.logstd(x))  # Ensure std is positive
+        mean = self.act_rng * torch.tanh(self.mean(x))
+        std = torch.exp(self.logstd)  # Ensure std is positive
 
         return mean, std
 
-    def get_action(self, x):
+    def get_action(self, x, eval=False):
         mean, std = self.forward(x)
         dist = torch.distributions.Normal(
             mean, std
         )  # Create a normal distribution from the mean and std
-        action = dist.sample()  # Sample an action from the distribution
-        action = action.clamp(-2, 2)
-        # print(action)
-        return action, dist.log_prob(action).sum(dim=-1)
+        if eval:
+            action = mean  # Use mean action during evaluation
+            return action
+        else:
+            action = dist.sample()  # Sample an action from the distribution
+        return action, dist.log_prob(action).sum(dim=-1), dist
 
 
 def test_reinforce_pendulum():
@@ -46,7 +48,7 @@ def test_reinforce_pendulum():
         env_id="Pendulum-v1",
         total_steps=200000,
         seed=42,
-        learning_rate=2e-3,
+        learning_rate=2.5e-4,
         gamma=0.99,
         capture_video=True,
         use_wandb=True,
@@ -56,11 +58,13 @@ def test_reinforce_pendulum():
         eval_every=10000,
         save_every=20000,
         atari_wrapper=False,
-        n_envs=4,
+        n_envs=1,
         num_eval_eps=10,
         device="cpu",
         grid_env=False,
         custom_agent=PolicyNet(3, 1),
+        use_entropy=True,
+        entropy_coeff=0.1,
     )
 
     print("REINFORCE training on Pendulum-v0 completed successfully!")
