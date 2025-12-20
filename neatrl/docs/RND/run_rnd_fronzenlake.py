@@ -10,15 +10,15 @@ def test_rnd_ppo_frozenlake():
     # Train RND-PPO on FrozenLake
     model = train_rnd(
         env_id="FrozenLake-v1",
-        total_timesteps=5000000,
+        total_timesteps=20000000,
         seed=42,
-        lr=2.5e-4,
+        lr=1e-4,
         ext_gamma=0.99,
         int_gamma=0.99,
-        n_envs=4,
-        max_steps=256,
+        n_envs=1,
+        max_steps=128,
         num_minibatches=4,
-        PPO_EPOCHS=10,
+        PPO_EPOCHS=4,
         clip_value=0.2,
         ENTROPY_COEFF=0.01,
         VALUE_COEFF=0.5,
@@ -29,9 +29,11 @@ def test_rnd_ppo_frozenlake():
         wandb_project="cleanRL",
         exp_name="RND-PPO-FrozenLake",
         grid_env=True,
-        eval_every=1000,
+        eval_every=100,
         save_every=1000,
-        max_grad_norm=1.0,
+        num_eval_episodes=5,
+        anneal_lr=True
+        # max_grad_norm=1.0,
         
     )
 

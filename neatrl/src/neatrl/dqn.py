@@ -579,7 +579,8 @@ def train_dqn(
                         }
                     )
 
-                    # Upload video to wandb if video recording is enabled
+            
+                   
 
         # Update target network
         if step % target_network_frequency == 0:
@@ -648,7 +649,13 @@ def train_dqn(
         else:
             obs = new_obs
 
-        print("SPS: ", int(step / (time.time() - start_time)), end="\r")
+        # Print progress every 1000 steps
+        if step % 10 == 0:
+            print(f"Step {step}, TD Loss: {loss.item():.4f}", "SPS: ", int(step / (time.time() - start_time)), end="\r")
+            
+        if use_wandb:
+            wandb.log({"step": step})
+          
 
         if use_wandb:
             wandb.log(

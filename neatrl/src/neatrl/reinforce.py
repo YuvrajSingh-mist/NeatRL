@@ -74,13 +74,17 @@ class PolicyNet(nn.Module):
         x = torch.nn.functional.softmax(x, dim=-1)  # Apply softmax to get probabilities
         return x
 
-    def get_action(self, x):
+    def get_action(self, x, iseval=False):
         action_probs = self.forward(x)
         dist = torch.distributions.Categorical(
             action_probs
         )  # Create a categorical distribution from the probabilities
-        action = dist.sample()  # Sample an action from the distribution
-        return action, dist.log_prob(action).sum(dim=-1), dist
+        if iseval:
+            action = torch.argmax(action_probs, dim=-1)
+            return action
+        else:
+            action = dist.sample()  # Sample an action from the distribution
+        return action, dist.log_prob(action), dist
 
 
 class OneHotWrapper(gym.ObservationWrapper):
@@ -149,7 +153,7 @@ def evaluate(
             with torch.no_grad():
                 action = model.get_action(
                     torch.tensor(obs, device=device, dtype=torch.float32),
-                    eval=True
+                    iseval=True
                 )
                 # Handle both discrete and continuous action spaces
                 if isinstance(eval_env.action_space, gym.spaces.Discrete):
@@ -422,7 +426,7 @@ def train_reinforce(
             elif len(result) == 3:
                 action, log_prob, dist = result
             else:
-                raise ValueError("get_action must return 2 or 3 values")
+                raise ValueError("Error unpacking result from get_action. Expected 3 got {}".format(len(result)))
             
             if use_entropy and dist is None:
                 raise ValueError("use_entropy is True but get_action did not return dist")
@@ -443,6 +447,9 @@ def train_reinforce(
 
             new_obs, reward, terminated, truncated, info = env.step(action)
             rewards.append(reward)
+            
+            log_probs = log_probs.sum(dim=-1) if n_envs > 1 else log_probs
+            
             log_probs.append(log_prob)
             if use_entropy:
                 entropies.append(dist.entropy())
@@ -455,9 +462,9 @@ def train_reinforce(
                 
                 if n_envs > 1:
                     reward = np.array(reward)
-                    wandb.log({"charts/reward_mean": reward.mean(), "charts/reward_std": np.std(reward), "step": step})
+                    wandb.log({"rewards/reward_mean": reward.mean(), "rewards/reward_std": np.std(reward), "step": step})
                 else:
-                    wandb.log({"charts/reward": reward, "step": step})
+                    wandb.log({"rewards/reward": reward, "step": step})
                     
                 if dist is not None:
                     wandb.log({"charts/dist_mean": dist.mean.mean().item(), "charts/dist_std": dist.stddev.mean().item(), "step": step})
@@ -592,6 +599,12 @@ def train_reinforce(
                         "step": step,
                     }
                 )
+
+        # Print progress every 1000 steps
+        if step % 10 == 0:
+            print(f"Step {step}, Policy Loss: {loss.item():.4f}, SPS: {int(step / (time.time() - start_time))}")
+            if use_wandb:
+                wandb.log({"charts/SPS": int(step / (time.time() - start_time)), "step": step})
 
         # Model evaluation & saving
         if step % eval_every == 0:

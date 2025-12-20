@@ -49,15 +49,6 @@ class Config:
     def minibatch_size(self):
         return self.batch_size // self.num_minibatches
 
-import matplotlib.pyplot as plt
-
-def safe_display(obs):
-    plt.imshow(obs)
-    plt.axis('off')
-    plt.draw()
-    plt.pause(0.001)
-    plt.clf()
-
 
 # --- Networks ---
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
