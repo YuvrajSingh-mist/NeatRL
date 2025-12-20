@@ -1,7 +1,9 @@
 """
 script for RND-PPO training on FrozenLake using neatrl library.
 """
+
 from neatrl import train_rnd
+
 
 def test_rnd_ppo_frozenlake():
     """Test RND-PPO training on FrozenLake-v1."""
@@ -32,9 +34,8 @@ def test_rnd_ppo_frozenlake():
         eval_every=100,
         save_every=1000,
         num_eval_episodes=5,
-        anneal_lr=True
+        anneal_lr=True,
         # max_grad_norm=1.0,
-        
     )
 
     print("Training completed!")

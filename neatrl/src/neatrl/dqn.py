@@ -428,7 +428,7 @@ def train_dqn(
                 q_values = q_network(
                     torch.tensor(obs, device=device, dtype=torch.float32)
                 )
-                
+
                 if use_wandb:
                     # Log Q-value statistics
                     wandb.log(
@@ -439,7 +439,7 @@ def train_dqn(
                             "step": step,
                         }
                     )
-                    
+
                 action = (
                     q_values.argmax(dim=-1).cpu().numpy()
                     if n_envs > 1
@@ -579,9 +579,6 @@ def train_dqn(
                         }
                     )
 
-            
-                   
-
         # Update target network
         if step % target_network_frequency == 0:
             # Calculate norm of the target network parameters before update
@@ -651,11 +648,15 @@ def train_dqn(
 
         # Print progress every 1000 steps
         if step % 10 == 0:
-            print(f"Step {step}, TD Loss: {loss.item():.4f}", "SPS: ", int(step / (time.time() - start_time)), end="\r")
-            
+            print(
+                f"Step {step}, TD Loss: {loss.item():.4f}",
+                "SPS: ",
+                int(step / (time.time() - start_time)),
+                end="\r",
+            )
+
         if use_wandb:
             wandb.log({"step": step})
-          
 
         if use_wandb:
             wandb.log(

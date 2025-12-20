@@ -152,8 +152,7 @@ def evaluate(
 
             with torch.no_grad():
                 action = model.get_action(
-                    torch.tensor(obs, device=device, dtype=torch.float32),
-                    iseval=True
+                    torch.tensor(obs, device=device, dtype=torch.float32), iseval=True
                 )
                 # Handle both discrete and continuous action spaces
                 if isinstance(eval_env.action_space, gym.spaces.Discrete):
@@ -312,7 +311,9 @@ def train_reinforce(
 
     # Warn if entropy_coeff is set but use_entropy is False
     if not use_entropy and entropy_coeff != 0.0:
-        print(f"Warning: entropy_coeff={entropy_coeff} is provided but use_entropy=False. Entropy regularization will not be applied.")
+        print(
+            f"Warning: entropy_coeff={entropy_coeff} is provided but use_entropy=False. Entropy regularization will not be applied."
+        )
 
     if capture_video:
         os.makedirs(f"videos/{run_name}/train", exist_ok=True)
@@ -426,10 +427,14 @@ def train_reinforce(
             elif len(result) == 3:
                 action, log_prob, dist = result
             else:
-                raise ValueError("Error unpacking result from get_action. Expected 3 got {}".format(len(result)))
-            
+                raise ValueError(
+                    f"Error unpacking result from get_action. Expected 3 got {len(result)}"
+                )
+
             if use_entropy and dist is None:
-                raise ValueError("use_entropy is True but get_action did not return dist")
+                raise ValueError(
+                    "use_entropy is True but get_action did not return dist"
+                )
 
             # Handle both discrete and continuous action spaces
             if n_envs > 1:
@@ -447,28 +452,43 @@ def train_reinforce(
 
             new_obs, reward, terminated, truncated, info = env.step(action)
             rewards.append(reward)
-            
+
             log_probs = log_probs.sum(dim=-1) if n_envs > 1 else log_probs
-            
+
             log_probs.append(log_prob)
             if use_entropy:
                 entropies.append(dist.entropy())
-                
-                
-            
+
             if use_wandb:
-                
-                wandb.log({"charts/action_mean": np.mean(action), "charts/action_std": np.std(action), "step": step})
-                
+                wandb.log(
+                    {
+                        "charts/action_mean": np.mean(action),
+                        "charts/action_std": np.std(action),
+                        "step": step,
+                    }
+                )
+
                 if n_envs > 1:
                     reward = np.array(reward)
-                    wandb.log({"rewards/reward_mean": reward.mean(), "rewards/reward_std": np.std(reward), "step": step})
+                    wandb.log(
+                        {
+                            "rewards/reward_mean": reward.mean(),
+                            "rewards/reward_std": np.std(reward),
+                            "step": step,
+                        }
+                    )
                 else:
                     wandb.log({"rewards/reward": reward, "step": step})
-                    
+
                 if dist is not None:
-                    wandb.log({"charts/dist_mean": dist.mean.mean().item(), "charts/dist_std": dist.stddev.mean().item(), "step": step})
-                    
+                    wandb.log(
+                        {
+                            "charts/dist_mean": dist.mean.mean().item(),
+                            "charts/dist_std": dist.stddev.mean().item(),
+                            "step": step,
+                        }
+                    )
+
             done = np.logical_or(terminated, truncated)
             obs = new_obs
             if done.all():
@@ -485,11 +505,10 @@ def train_reinforce(
 
         if use_wandb:
             wandb.log({"charts/returns_mean": returns.mean().item(), "step": step})
-            
+
         # Normalize returns
         returns = (returns - returns.mean()) / (returns.std() + 1e-8)
-        
-        
+
         # Log episode returns
         if "episode" in info:
             if n_envs > 1:
@@ -507,7 +526,6 @@ def train_reinforce(
                                 {
                                     "charts/episodic_return": ep_ret,
                                     "charts/episodic_length": ep_len,
-                                   
                                 }
                             )
             else:
@@ -529,21 +547,25 @@ def train_reinforce(
         # Calculate loss
         policy_loss = []
         for log_prob, R in zip(log_probs, returns):
-            
-           
             if use_wandb:
-                wandb.log({"charts/log_prob": log_prob.mean().item(), "charts/log_probs_std": log_prob.std().item(), "step": step})
-            
+                wandb.log(
+                    {
+                        "charts/log_prob": log_prob.mean().item(),
+                        "charts/log_probs_std": log_prob.std().item(),
+                        "step": step,
+                    }
+                )
+
             policy_loss.append(-log_prob * R)  # Negative for gradient ascent
 
         optimizer.zero_grad()
         loss = torch.stack(policy_loss).mean()
         if use_entropy:
             entropy_loss = torch.stack(entropies).mean() * entropy_coeff
-            
+
             if use_wandb:
                 wandb.log({"charts/entropy_loss": entropy_loss.item(), "step": step})
-            
+
             loss = loss - entropy_loss
         loss.backward()
 
@@ -581,13 +603,11 @@ def train_reinforce(
             )
             # Apply gradient clipping
             if max_grad_norm != 0.0:
-                
                 # Apply gradient clipping
                 torch.nn.utils.clip_grad_norm_(
                     policy_network.parameters(), max_norm=max_grad_norm
                 )
 
-            
         optimizer.step()
 
         # Log loss and metrics every 100 episodes
@@ -602,9 +622,13 @@ def train_reinforce(
 
         # Print progress every 1000 steps
         if step % 10 == 0:
-            print(f"Step {step}, Policy Loss: {loss.item():.4f}, SPS: {int(step / (time.time() - start_time))}")
+            print(
+                f"Step {step}, Policy Loss: {loss.item():.4f}, SPS: {int(step / (time.time() - start_time))}"
+            )
             if use_wandb:
-                wandb.log({"charts/SPS": int(step / (time.time() - start_time)), "step": step})
+                wandb.log(
+                    {"charts/SPS": int(step / (time.time() - start_time)), "step": step}
+                )
 
         # Model evaluation & saving
         if step % eval_every == 0:

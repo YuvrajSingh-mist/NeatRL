@@ -31,7 +31,7 @@ class PolicyNet(nn.Module):
         if eval:
             action = torch.argmax(action_probs, dim=-1)
             return action
-        
+
         action = dist.sample()  # Sample an action from the distribution
         return action, dist.log_prob(action), dist
 
@@ -61,7 +61,7 @@ def test_reinforce_frozenlake():
         grid_env=True,  # Enable one-hot encoding for discrete states
         custom_agent=PolicyNet(16, 4),
         use_entropy=True,
-        entropy_coeff=0.01
+        entropy_coeff=0.01,
     )
 
     print("REINFORCE training on FrozenLake-v1 completed successfully!")

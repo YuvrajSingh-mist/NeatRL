@@ -18,7 +18,7 @@ class PolicyNet(nn.Module):
         self.mean = nn.Linear(64, action_space)
         self.logstd = nn.Parameter(torch.zeros(action_space), requires_grad=True)
         self.act_rng = 2.0  # Action range for Pendulum-v0
-        
+
     def forward(self, x):
         x = self.fc3(torch.relu(self.fc2(torch.relu(self.fc1(x)))))
         mean = self.act_rng * torch.tanh(self.mean(x))

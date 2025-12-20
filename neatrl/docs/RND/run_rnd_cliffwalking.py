@@ -1,7 +1,10 @@
 """
 script for RND-PPO training on CliffWalking using neatrl library.
 """
+
 from neatrl import train_rnd
+
+
 def test_rnd_ppo_cliffwalking():
     """Test RND-PPO training on CliffWalking-v0."""
     print("Testing RND-PPO training on CliffWalking-v0 with neatrl...")
@@ -30,9 +33,9 @@ def test_rnd_ppo_cliffwalking():
         grid_env=True,
         eval_every=10000,
         save_every=1000,
-        num_eval_episodes = 5,
+        num_eval_episodes=5,
         anneal_lr=True,
-        log_gradients=True
+        log_gradients=True,
     )
 
     print("Training completed!")
