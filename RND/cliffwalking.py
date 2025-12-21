@@ -162,8 +162,7 @@ def evaluate(model, device, run_name, num_eval_eps=10, record=False, render_mode
         while not done:
             if record:
                 frames.append(eval_env.render())
-            if display:
-                safe_display(obs)
+        
             with torch.no_grad():
                 obs = ohe(obs)
                 action, _, _ = model.get_action(torch.tensor(obs,dtype=torch.float32).unsqueeze(0))
