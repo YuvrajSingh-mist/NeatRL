@@ -417,24 +417,21 @@ def train_reinforce(
         torch.mps.manual_seed(Config.seed)
 
     if Config.env is not None:
-        env = make_env(
-            "", Config.seed, idx=0, render_mode="rgb_array", atari_wrapper=Config.atari_wrapper, grid_env=Config.grid_env, env=Config.env
-        )()
-        Config.n_envs = 1  # Override since single env provided
+        env = Config.env
+    
+    if Config.n_envs > 1:
+        env = gym.vector.SyncVectorEnv(
+            [
+                make_env(
+                    Config.env_id if Config.env_id is not None else Config.env, Config.seed, idx=i, render_mode="rgb_array", atari_wrapper=Config.atari_wrapper, grid_env=Config.grid_env
+                )
+                for i in range(Config.n_envs)
+            ]
+        )
     else:
-        if Config.n_envs > 1:
-            env = gym.vector.SyncVectorEnv(
-                [
-                    make_env(
-                        Config.env_id, Config.seed, idx=i, render_mode="rgb_array", atari_wrapper=Config.atari_wrapper, grid_env=Config.grid_env
-                    )
-                    for i in range(Config.n_envs)
-                ]
-            )
-        else:
-            env = make_env(
-                Config.env_id, Config.seed, idx=0, render_mode="rgb_array", atari_wrapper=Config.atari_wrapper, grid_env=Config.grid_env
-            )()
+        env = make_env(
+            Config.env_id if Config.env_id is not None else Config.env, Config.seed, idx=0, render_mode="rgb_array", atari_wrapper=Config.atari_wrapper, grid_env=Config.grid_env
+        )()
 
     # Determine if we're dealing with discrete observation spaces
     if Config.n_envs > 1:
@@ -490,8 +487,10 @@ def train_reinforce(
 
     start_time = time.time()
 
-    for step in tqdm(range(Config.episodes)):
-        step = step * Config.n_envs
+    updates = Config.episodes // Config.n_envs
+    
+    for step in tqdm(range(updates)):
+        global_step = step * Config.n_envs
         obs, _ = env.reset()
         rewards = []
         log_probs = []
@@ -549,7 +548,7 @@ def train_reinforce(
                     {
                         "charts/action_mean": np.mean(action),
                         "charts/action_std": np.std(action),
-                        "step": step,
+                        "step": global_step,
                     }
                 )
 
@@ -559,18 +558,18 @@ def train_reinforce(
                         {
                             "rewards/reward_mean": reward.mean(),
                             "rewards/reward_std": np.std(reward),
-                            "step": step,
+                            "step": global_step,
                         }
                     )
                 else:
-                    wandb.log({"rewards/reward": reward, "step": step})
+                    wandb.log({"rewards/reward": reward, "step": global_step})
 
                 if dist is not None:
                     wandb.log(
                         {
                             "charts/dist_mean": dist.mean.mean().item(),
                             "charts/dist_std": dist.stddev.mean().item(),
-                            "step": step,
+                            "step": global_step,
                         }
                     )
 
@@ -589,7 +588,7 @@ def train_reinforce(
         returns = torch.tensor(returns, device=Config.device, dtype=torch.float32).detach()
 
         if Config.use_wandb:
-            wandb.log({"charts/returns_mean": returns.mean().item(), "step": step})
+            wandb.log({"charts/returns_mean": returns.mean().item(), "step": global_step})
 
         # Normalize returns
         returns = (returns - returns.mean()) / (returns.std() + 1e-8)
@@ -622,7 +621,7 @@ def train_reinforce(
                             {
                                 "charts/episodic_return": ep_ret,
                                 "charts/episodic_length": ep_len,
-                                "charts/global_step": step,
+                                "step": global_step,
                             }
                         )
 
@@ -634,7 +633,7 @@ def train_reinforce(
                     {
                         "charts/log_prob": log_prob.mean().item(),
                         "charts/log_probs_std": log_prob.std().item(),
-                        "step": step,
+                        "step": global_step,
                     }
                 )
 
@@ -646,7 +645,7 @@ def train_reinforce(
             entropy_loss = torch.stack(entropies).mean() * Config.entropy_coeff
 
             if Config.use_wandb:
-                wandb.log({"charts/entropy_loss": entropy_loss.item(), "step": step})
+                wandb.log({"charts/entropy_loss": entropy_loss.item(), "step": global_step})
 
             loss = loss - entropy_loss
         loss.backward()
@@ -671,7 +670,7 @@ def train_reinforce(
                     wandb.log(
                         {
                             f"gradients/layer_{name}": grad_norm,
-                            "step": step,
+                            "step": global_step,
                         }
                     )
 
@@ -680,7 +679,7 @@ def train_reinforce(
             wandb.log(
                 {
                     "gradients/norm_before_clip": total_norm_before.item(),
-                    "step": step,
+                    "step": global_step,
                 }
             )
             # Apply gradient clipping
@@ -698,7 +697,7 @@ def train_reinforce(
                 wandb.log(
                     {
                         "losses/policy_loss": loss.item(),
-                        "step": step,
+                        "step": global_step,
                     }
                 )
 
@@ -709,7 +708,7 @@ def train_reinforce(
             )
             if Config.use_wandb:
                 wandb.log(
-                    {"charts/SPS": int(step / (time.time() - start_time)), "step": step}
+                    {"charts/SPS": int(step / (time.time() - start_time)), "step": global_step}
                 )
 
         # Model evaluation & saving
@@ -727,7 +726,7 @@ def train_reinforce(
             avg_return = np.mean(episodic_returns)
 
             if Config.use_wandb:
-                wandb.log({"charts/val_avg_return": avg_return, "val_step": step})
+                wandb.log({"charts/val_avg_return": avg_return, "step": global_step})
             print(f"Evaluation returns: {episodic_returns}, Average: {avg_return:.2f}")
 
    
@@ -735,7 +734,7 @@ def train_reinforce(
             wandb.log(
                 {
                     "charts/SPS": int(step / (time.time() - start_time + 1e-8)),
-                    "charts/episode": step,
+                    "step": global_step,
                 }
             )
 

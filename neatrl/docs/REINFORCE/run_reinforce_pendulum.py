@@ -43,7 +43,7 @@ def test_reinforce_pendulum():
     # Train REINFORCE on Pendulum
     model = train_reinforce(
         env_id="Pendulum-v1",
-        total_steps=200000,
+        total_steps=100000,
         seed=42,
         learning_rate=3e-4,
         gamma=0.99,
@@ -63,6 +63,7 @@ def test_reinforce_pendulum():
         use_entropy=True,
         entropy_coeff=0.01,
         normalize_obs=True,
+        normalize_reward=True
     )
 
     print("REINFORCE training on Pendulum-v0 completed successfully!")
