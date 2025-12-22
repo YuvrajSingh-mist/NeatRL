@@ -18,16 +18,20 @@ import wandb
 # ===== CONFIGURATION =====
 class Config:
     """Configuration class for PPO-RND training."""
-    
+
     # Experiment settings
-    exp_name: str = "PPO-RND-Vectorized-ClipWalking"  # Experiment name for logging and saving
+    exp_name: str = (
+        "PPO-RND-Vectorized-ClipWalking"  # Experiment name for logging and saving
+    )
     seed: int = 42  # Random seed for reproducibility
     env_id: str = "CliffWalking-v0"  # Gymnasium environment ID
     total_timesteps: int = 5_000_000  # Total number of timesteps to train
 
     # PPO & Agent settings
     lr: float = 3e-4  # Learning rate for optimizer
-    ext_gamma: float = 0.99  # Discount factor for extrinsic rewards (environment rewards)
+    ext_gamma: float = (
+        0.99  # Discount factor for extrinsic rewards (environment rewards)
+    )
     int_gamma: float = 0.95  # Discount factor for intrinsic rewards (RND novelty)
     n_envs: int = 1  # Number of parallel environments for data collection
     max_steps: int = 128  # Maximum steps per rollout before updating
@@ -40,7 +44,9 @@ class Config:
     INT_COEFF: float = 1.0  # Intrinsic advantage coefficient for combined advantages
     num_eval_episodes: int = 5  # Number of evaluation episodes
     anneal_lr: bool = True  # Whether to anneal learning rate over time
-    max_grad_norm: float = 0.0  # Maximum gradient norm for gradient clipping (0.0 to disable)
+    max_grad_norm: float = (
+        0.0  # Maximum gradient norm for gradient clipping (0.0 to disable)
+    )
 
     # Logging & Saving
     capture_video: bool = True  # Whether to capture evaluation videos
@@ -49,8 +55,13 @@ class Config:
     grid_env: bool = True  # Whether the environment uses discrete grid observations (applies OneHot wrapper)
     eval_every: int = 10000  # Frequency of evaluation during training (in updates)
     save_every: int = 10000  # Frequency of saving the model (in updates)
-    atari_wrapper: bool = False  # Whether to apply Atari preprocessing and frame stacking
-    log_gradients: bool = False  # Whether to log gradient norms to W&B
+    atari_wrapper: bool = (
+        False  # Whether to apply Atari preprocessing and frame stacking
+    )
+    normalize_obs: bool = True  # Whether to normalize observations
+    normalize_reward: bool = False  # Whether to normalize rewards
+    log_gradients: bool = True  # Whether to log gradient norms to W&B
+    device: str = "cpu"  # Device for training: "auto", "cpu", "cuda", or "cuda:0" etc.
 
 
 # ===== RunningMeanStd for Normalization =====
@@ -101,10 +112,9 @@ class ActorNet(nn.Module):
         self,
         state_space: Union[int, tuple[int, ...]],
         action_space: int,
-        
     ) -> None:
         super().__init__()
-         
+
         self.fc1 = layer_init(nn.Linear(state_space, 32))
         self.fc2 = layer_init(nn.Linear(32, 32))
         self.fc3 = layer_init(nn.Linear(32, 16))
@@ -124,14 +134,10 @@ class ActorNet(nn.Module):
         self,
         x: torch.Tensor,
         action: Optional[torch.Tensor] = None,
-        iseval: bool = False,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.distributions.Distribution]:
         dist = self.forward(x)
         if action is None:
             action = dist.sample()
-
-        # if iseval:
-        #     action = torch.argmax(dist.probs, dim=-1)
 
         log_prob = dist.log_prob(action)
 
@@ -210,15 +216,20 @@ def make_env(
         if env is not None:
             # Use provided environment
             env_to_use = env
-           
+
         else:
             # Create new environment
             env_to_use = gym.make(env_id, render_mode=render_mode)
-        
+
         env_to_use = gym.wrappers.RecordEpisodeStatistics(env_to_use)
-        env_to_use = gym.wrappers.NormalizeReward(env_to_use, gamma=Config.ext_gamma)
+        if Config.normalize_reward:
+            env_to_use = gym.wrappers.NormalizeReward(env_to_use)
         if grid_env:
-            env_to_use = OneHotWrapper(env_to_use, obs_shape=env_to_use.observation_space.n)
+            env_to_use = OneHotWrapper(
+                env_to_use, obs_shape=env_to_use.observation_space.n
+            )
+        if Config.normalize_obs:
+            env_to_use = gym.wrappers.NormalizeObservation(env_to_use)
         if atari_wrapper:
             env_to_use = gym.wrappers.AtariPreprocessing(
                 env_to_use, grayscale_obs=True, scale_obs=True
@@ -309,7 +320,7 @@ def evaluate(
 ) -> tuple[list[float], list[np.ndarray]]:
     # Create evaluation environment
     eval_env = make_env(
-        env_id if env is None else '',
+        env_id if env is None else "",
         seed,
         idx=0,
         render_mode=render_mode,
@@ -317,7 +328,6 @@ def evaluate(
         atari_wrapper=atari_wrapper,
         env_wrapper=env_wrapper,
         env=env,
-        
     )()
     model.eval()
     returns = []
@@ -334,12 +344,11 @@ def evaluate(
                 frames.append(frame)
             with torch.no_grad():
                 obs = torch.tensor(obs, device=device, dtype=torch.float32)
-                action, _, _ = model.get_action(obs.unsqueeze(0))
+                action, _, _ = model.get_action(obs)
                 action = action.cpu().numpy()
                 if isinstance(eval_env.action_space, gym.spaces.Discrete):
                     action = action.item()
-                else:
-                    action = action.squeeze()
+
             obs, rewards_curr, terminated, truncated, info = eval_env.step(action)
             done = terminated or truncated
             rewards += rewards_curr
@@ -349,19 +358,18 @@ def evaluate(
     # Save video
     if frames and use_wandb:
         video = np.stack(frames)
-       
+
         video = np.transpose(video, (0, 3, 1, 2))
-       
-            
+
         wandb.log(
-                {
-                    "videos/eval_policy": wandb.Video(
-                        video,
-                        fps=30,
-                        format="mp4",
-                    )
-                }
-            )
+            {
+                "videos/eval_policy": wandb.Video(
+                    video,
+                    fps=30,
+                    format="mp4",
+                )
+            }
+        )
         frames = []
     eval_env.close()
     model.train()
@@ -369,7 +377,7 @@ def evaluate(
     return returns, frames
 
 
-def train_rnd(
+def train_ppo_rnd_cnn(
     env_id: str = Config.env_id,
     env: Optional[gym.Env] = None,
     total_timesteps: int = Config.total_timesteps,
@@ -403,6 +411,9 @@ def train_rnd(
     log_gradients: bool = Config.log_gradients,
     num_eval_episodes: int = Config.num_eval_episodes,
     anneal_lr: bool = Config.anneal_lr,
+    normalize_obs: bool = Config.normalize_obs,
+    normalize_reward: bool = Config.normalize_reward,
+    device: str = Config.device,
 ) -> nn.Module:
     # Update Config with passed arguments
     Config.env_id = env_id
@@ -432,13 +443,20 @@ def train_rnd(
     Config.log_gradients = log_gradients
     Config.num_eval_episodes = num_eval_episodes
     Config.anneal_lr = anneal_lr
-    
+    Config.normalize_obs = normalize_obs
+    Config.normalize_reward = normalize_reward
+    Config.device = device
+
     if env is not None and Config.env_id != env_id:
-        raise ValueError("Cannot provide both env_id and env. Use env_id for default environments or env for custom environments.")
-    
+        raise ValueError(
+            "Cannot provide both env_id and env. Use env_id for default environments or env for custom environments."
+        )
+
     if Config.capture_video and not Config.use_wandb:
-        raise ValueError("Cannot capture video without WandB enabled. Set use_wandb=True to upload videos.")
-    
+        raise ValueError(
+            "Cannot capture video without WandB enabled. Set use_wandb=True to upload videos."
+        )
+
     run_name = f"{Config.env_id}__{Config.exp_name}__{Config.seed}__{int(time.time())}"
 
     os.makedirs(f"runs/{run_name}/models", exist_ok=True)
@@ -454,23 +472,26 @@ def train_rnd(
     random.seed(Config.seed)
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
+    if Config.device == "auto":
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    else:
+        device = torch.device(Config.device)
+
     # Create environments - check for pre-created env first, then default
     if env is not None:
-       env_thunks = [
-           make_env(
-               '',
-               Config.seed,
-               i,
-               grid_env=Config.grid_env,
-               atari_wrapper=Config.atari_wrapper,
-               env_wrapper=env_wrapper,
-               env=env,
-               render_mode='rgb_array'
-           )
-           for i in range(Config.n_envs)
-       ]
+        env_thunks = [
+            make_env(
+                "",
+                Config.seed,
+                i,
+                grid_env=Config.grid_env,
+                atari_wrapper=Config.atari_wrapper,
+                env_wrapper=env_wrapper,
+                env=env,
+                render_mode="rgb_array",
+            )
+            for i in range(Config.n_envs)
+        ]
     else:
         # Use default environment creation
         env_thunks = [
@@ -481,21 +502,21 @@ def train_rnd(
                 grid_env=Config.grid_env,
                 atari_wrapper=Config.atari_wrapper,
                 env_wrapper=env_wrapper,
-                render_mode='rgb_array'
+                render_mode="rgb_array",
             )
             for i in range(Config.n_envs)
         ]
 
     envs = gym.vector.SyncVectorEnv(env_thunks)
     if isinstance(envs.single_observation_space, gym.spaces.Discrete):
-        obs_space_shape = envs.single_observation_space.n
+        obs_space_shape = (envs.single_observation_space.n,)
     else:
-        obs_space_shape = envs.single_observation_space.shape[0]
+        obs_space_shape = envs.single_observation_space.shape
 
     action_space_n = (
         envs.single_action_space.n
         if isinstance(envs.single_action_space, gym.spaces.Discrete)
-        else envs.single_action_space.shape[0]
+        else envs.single_action_space.shape
     )
 
     action_shape = (
@@ -540,12 +561,18 @@ def train_rnd(
     intrinsic_reward_rms = RunningMeanStd(shape=())
 
     # Tensor Storage
-    
-    obs_storage = torch.zeros((Config.max_steps, Config.n_envs) + (obs_space_shape,)).to(device)
-    actions_storage = torch.zeros((Config.max_steps, Config.n_envs) + action_shape).to(device)
+
+    obs_storage = torch.zeros(
+        (Config.max_steps, Config.n_envs) + obs_space_shape
+    ).to(device)
+    actions_storage = torch.zeros((Config.max_steps, Config.n_envs) + action_shape).to(
+        device
+    )
     logprobs_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(device)
     rewards_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(device)
-    intrinsic_rewards_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(device)
+    intrinsic_rewards_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(
+        device
+    )
     dones_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(device)
     ext_values_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(device)
     int_values_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(device)
@@ -568,6 +595,8 @@ def train_rnd(
         # Rollout Phase
         for step in range(0, Config.max_steps):
             global_step = (update - 1) * batch_size + step * Config.n_envs
+            # print(obs_space_shape, next_obs.shape)
+            # print(obs_storage[step].shape)
             obs_storage[step] = next_obs
 
             dones_storage[step] = next_done
@@ -575,29 +604,34 @@ def train_rnd(
             with torch.no_grad():
                 action, logprob, dist = actor_network.get_action(next_obs)
                 ext_value, int_value = critic_network(next_obs)
-                
+
                 # Log distribution statistics
                 if Config.use_wandb:
-                    if hasattr(dist, 'probs'):
+                    if hasattr(dist, "probs"):
                         # Discrete
                         probs = dist.probs
-                        wandb.log({
-                            "policy/dist_mean": probs.mean().item(),
-                            "policy/dist_std": probs.std().item(),
-                            "policy/entropy": dist.entropy().mean().item(),
-                            "global_step": global_step,
-                        })
+                        wandb.log(
+                            {
+                                "policy/dist_mean": probs.mean().item(),
+                                "policy/dist_std": probs.std().item(),
+                                "policy/entropy": dist.entropy().mean().item(),
+                                "global_step": global_step,
+                            }
+                        )
                     else:
                         # Continuous
-                        wandb.log({
-                            "policy/dist_mean": dist.mean.mean().item(),
-                            "policy/dist_std": dist.stddev.mean().item(),
-                            "policy/entropy": dist.entropy().mean().item(),
-                            "global_step": global_step,
-                        })
+                        wandb.log(
+                            {
+                                "policy/dist_mean": dist.mean.mean().item(),
+                                "policy/dist_std": dist.stddev.mean().item(),
+                                "policy/entropy": dist.entropy().mean().item(),
+                                "global_step": global_step,
+                            }
+                        )
 
             ext_values_storage[step] = ext_value.flatten()
             int_values_storage[step] = int_value.flatten()
+            # print(action_space_n, action.shape, actions_storage[step].shape, action_shape)
             actions_storage[step] = action
             logprobs_storage[step] = (
                 logprob.sum(dim=-1) if len(logprob.shape) > 1 else logprob
@@ -607,9 +641,7 @@ def train_rnd(
             with torch.no_grad():
                 pred_features = predictor_network(next_obs)
                 target_features = target_network(next_obs)
-                intrinsic_reward = torch.nn.functional.mse_loss(
-                    pred_features, target_features, reduction="none"
-                ).mean(dim=1)
+                intrinsic_reward = torch.pow(pred_features - target_features, 2).sum(-1)
 
             # Update running statistics and normalize intrinsic rewards
             intrinsic_reward_np = intrinsic_reward.cpu().numpy()
@@ -617,7 +649,7 @@ def train_rnd(
             normalized_intrinsic_reward = intrinsic_reward / np.sqrt(
                 intrinsic_reward_rms.var + 1e-8
             )
-            # print("intrinsic_reward, normalized_intrinsic_reward", intrinsic_reward, normalized_intrinsic_reward)
+
             intrinsic_rewards_storage[step] = normalized_intrinsic_reward
 
             # Step the environment
@@ -625,42 +657,25 @@ def train_rnd(
                 action.cpu().numpy()
             )
             done = np.logical_or(terminated, truncated)
-            
-            # # Update running statistics and normalize intrinsic rewards
-            # extrinsic_reward_np = reward
-            # extrinsic_rewards_rms.update(extrinsic_reward_np)
-            # normalized_extrinsic_reward = reward / np.sqrt(
-            #     extrinsic_rewards_rms.var + 1e-8
-            # )
-            extrinsic_reward = torch.tensor(reward).to(device).view(-1)
+
+            extrinsic_reward = torch.tensor(reward).to(device)
             rewards_storage[step] = extrinsic_reward
-            
-            
-            
             next_obs = torch.Tensor(new_obs).to(device)
             next_done = torch.Tensor(done).to(device)
             if Config.use_wandb:
                 wandb.log(
                     {
-                        
                         "rewards/intrinsic_reward_raw": intrinsic_reward.mean().item(),
                         "rewards/intrinsic_reward_normalized": normalized_intrinsic_reward.mean().item(),
-                        "rewards/intrinsic_reward_std": np.sqrt(intrinsic_reward_rms.var),
+                        "rewards/intrinsic_reward_std": np.sqrt(
+                            intrinsic_reward_rms.var
+                        ),
                         "rewards/extrinsic_reward": rewards_storage[step].mean().item(),
                         "rewards/total_reward_ext_int": normalized_intrinsic_reward.mean().item()
                         + rewards_storage[step].mean().item(),
                         "global_step": global_step,
                     }
                 )
-            # if "final_info" in info:
-            #     for item in info["final_info"]:
-            #         if item and "episode" in item:
-            #             wandb.log(
-            #                 {
-            #                     "charts/episodic_return": item["episode"]["r"],
-            #                     "charts/episodic_length": item["episode"]["l"],
-            #                 }
-            #             )
 
         # Calculate returns after the rollout is complete
         with torch.no_grad():
@@ -680,7 +695,10 @@ def train_rnd(
             for t in reversed(range(Config.max_steps)):
                 # Calculate return at step t
                 rt_ext = rewards_storage[t] + Config.ext_gamma * ext_gt_next_state
-                rt_int = intrinsic_rewards_storage[t] + Config.int_gamma * int_gt_next_state
+
+                rt_int = (
+                    intrinsic_rewards_storage[t] + Config.int_gamma * int_gt_next_state
+                )
 
                 # Store the calculated returns
                 ext_returns[t] = rt_ext
@@ -695,7 +713,9 @@ def train_rnd(
         ext_advantages = ext_returns - ext_values_storage
         int_advantages = int_returns - int_values_storage
 
-        advantages = (Config.INT_COEFF * int_advantages) + (Config.EXT_COEFF * ext_advantages)
+        advantages = (Config.INT_COEFF * int_advantages) + (
+            Config.EXT_COEFF * ext_advantages
+        )
         if Config.use_wandb:
             wandb.log(
                 {
@@ -709,7 +729,7 @@ def train_rnd(
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
         # Flatten the batch
-        b_obs = obs_storage.reshape((-1, obs_space_shape))
+        b_obs = obs_storage.reshape((-1,) + obs_space_shape)
         b_logprobs = logprobs_storage.reshape(-1)
         b_actions = actions_storage.reshape((-1,) + action_shape)
         b_advantages = advantages.reshape(-1)
@@ -745,20 +765,20 @@ def train_rnd(
                 int_critic_loss = F.mse_loss(
                     int_current_values.squeeze(), b_int_returns[mb_inds]
                 )
-                critic_loss = 0.5 * ext_critic_loss + 0.5 * int_critic_loss
+                critic_loss = ext_critic_loss + int_critic_loss
                 entropy_loss = dist.entropy().mean()
 
                 # --- RND Predictor Loss ---
                 pred_features = predictor_network(b_obs[mb_inds])
                 with torch.no_grad():
                     target_features = target_network(b_obs[mb_inds])
-                intrinsic_loss = F.mse_loss(pred_features, target_features)
+                rnd_loss = F.mse_loss(pred_features, target_features)
 
                 # Total Loss
                 loss = (
                     policy_loss
                     + Config.VALUE_COEFF * critic_loss
-                    + intrinsic_loss
+                    + rnd_loss
                     - Config.ENTROPY_COEFF * entropy_loss
                 )
 
@@ -784,16 +804,36 @@ def train_rnd(
                     for name, param in actor_network.named_parameters():
                         if param.grad is not None:
                             grad_norm = torch.norm(param.grad.detach(), 2).item()
-                            wandb.log({f"gradients/actor_layer_{name}": grad_norm, "global_step": global_step})
+                            wandb.log(
+                                {
+                                    f"gradients/actor_layer_{name}": grad_norm,
+                                    "global_step": global_step,
+                                }
+                            )
                     for name, param in critic_network.named_parameters():
                         if param.grad is not None:
                             grad_norm = torch.norm(param.grad.detach(), 2).item()
-                            wandb.log({f"gradients/critic_layer_{name}": grad_norm, "global_step": global_step})
+                            wandb.log(
+                                {
+                                    f"gradients/critic_layer_{name}": grad_norm,
+                                    "global_step": global_step,
+                                }
+                            )
                     for name, param in predictor_network.named_parameters():
                         if param.grad is not None:
                             grad_norm = torch.norm(param.grad.detach(), 2).item()
-                            wandb.log({f"gradients/predictor_layer_{name}": grad_norm, "global_step": global_step})
-                    wandb.log({"gradients/norm_before_clip": total_norm_before.item(), "global_step": global_step})
+                            wandb.log(
+                                {
+                                    f"gradients/predictor_layer_{name}": grad_norm,
+                                    "global_step": global_step,
+                                }
+                            )
+                    wandb.log(
+                        {
+                            "gradients/norm_before_clip": total_norm_before.item(),
+                            "global_step": global_step,
+                        }
+                    )
 
                 # Apply gradient clipping
                 if Config.max_grad_norm != 0.0:
@@ -842,8 +882,9 @@ def train_rnd(
                     "losses/total_loss": loss.item(),
                     "losses/policy_loss": policy_loss.item(),
                     "losses/value_loss": critic_loss.item(),
-                    "losses/entropy": entropy_loss.item(),
-                    "losses/intrinsic_loss": intrinsic_loss.item(),
+                    "losses/RND_loss": rnd_loss.item(),
+                    "losses/intrinsic_critic_loss": int_critic_loss.item(),
+                    "losses/extrinsic_critic_loss": ext_critic_loss.item(),
                     "charts/learning_rate": optimizer.param_groups[0]["lr"],
                     "charts/rewards_mean": np.mean(rewards_storage.cpu().numpy()),
                     "advantages/advantages_mean": b_advantages.mean().item(),
@@ -918,7 +959,7 @@ def train_rnd(
             use_wandb=Config.use_wandb,
             render_mode="rgb_array" if Config.capture_video else None,
         )
-        
+
         # Save final video to file if frames were captured
         if eval_frames:
             train_video_path = "videos/final.mp4"
@@ -932,6 +973,610 @@ def train_rnd(
     return actor_network
 
 
+
+
+def train_ppo_rnd(
+    env_id: str = Config.env_id,
+    env: Optional[gym.Env] = None,
+    total_timesteps: int = Config.total_timesteps,
+    seed: int = Config.seed,
+    lr: float = Config.lr,
+    ext_gamma: float = Config.ext_gamma,
+    int_gamma: float = Config.int_gamma,
+    n_envs: int = Config.n_envs,
+    max_steps: int = Config.max_steps,
+    PPO_EPOCHS: int = Config.PPO_EPOCHS,
+    clip_value: float = Config.clip_value,
+    ENTROPY_COEFF: float = Config.ENTROPY_COEFF,
+    VALUE_COEFF: float = Config.VALUE_COEFF,
+    EXT_COEFF: float = Config.EXT_COEFF,
+    INT_COEFF: float = Config.INT_COEFF,
+    capture_video: bool = Config.capture_video,
+    use_wandb: bool = Config.use_wandb,
+    wandb_project: str = Config.wandb_project,
+    exp_name: str = Config.exp_name,
+    grid_env: bool = Config.grid_env,
+    max_grad_norm: float = Config.max_grad_norm,
+    eval_every: int = Config.eval_every,
+    save_every: int = Config.save_every,
+    atari_wrapper: bool = Config.atari_wrapper,
+    env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = None,
+    actor_class: Any = ActorNet,
+    critic_class: Any = CriticNet,
+    predictor_class: Any = PredictorNet,
+    target_class: Any = TargetNet,
+    num_minibatches: int = Config.num_minibatches,
+    log_gradients: bool = Config.log_gradients,
+    num_eval_episodes: int = Config.num_eval_episodes,
+    anneal_lr: bool = Config.anneal_lr,
+    normalize_obs: bool = Config.normalize_obs,
+    normalize_reward: bool = Config.normalize_reward,
+    device: str = Config.device,
+) -> nn.Module:
+    # Update Config with passed arguments
+    Config.env_id = env_id
+    Config.total_timesteps = total_timesteps
+    Config.seed = seed
+    Config.lr = lr
+    Config.ext_gamma = ext_gamma
+    Config.int_gamma = int_gamma
+    Config.n_envs = n_envs
+    Config.max_steps = max_steps
+    Config.PPO_EPOCHS = PPO_EPOCHS
+    Config.clip_value = clip_value
+    Config.ENTROPY_COEFF = ENTROPY_COEFF
+    Config.VALUE_COEFF = VALUE_COEFF
+    Config.EXT_COEFF = EXT_COEFF
+    Config.INT_COEFF = INT_COEFF
+    Config.capture_video = capture_video
+    Config.use_wandb = use_wandb
+    Config.wandb_project = wandb_project
+    Config.exp_name = exp_name
+    Config.grid_env = grid_env
+    Config.max_grad_norm = max_grad_norm
+    Config.eval_every = eval_every
+    Config.save_every = save_every
+    Config.atari_wrapper = atari_wrapper
+    Config.num_minibatches = num_minibatches
+    Config.log_gradients = log_gradients
+    Config.num_eval_episodes = num_eval_episodes
+    Config.anneal_lr = anneal_lr
+    Config.normalize_obs = normalize_obs
+    Config.normalize_reward = normalize_reward
+    Config.device = device
+
+    if env is not None and Config.env_id != env_id:
+        raise ValueError(
+            "Cannot provide both env_id and env. Use env_id for default environments or env for custom environments."
+        )
+
+    if Config.capture_video and not Config.use_wandb:
+        raise ValueError(
+            "Cannot capture video without WandB enabled. Set use_wandb=True to upload videos."
+        )
+
+    run_name = f"{Config.env_id}__{Config.exp_name}__{Config.seed}__{int(time.time())}"
+
+    os.makedirs(f"runs/{run_name}/models", exist_ok=True)
+
+    if Config.use_wandb:
+        wandb.init(
+            project=Config.wandb_project,
+            config=vars(Config()),
+            name=run_name,
+            monitor_gym=True,
+        )
+
+    random.seed(Config.seed)
+    np.random.seed(Config.seed)
+    torch.manual_seed(Config.seed)
+ 
+    device = torch.device(Config.device)
+
+    if Config.device == "cuda":
+        
+        torch.backends.cudnn.deterministic = True
+        torch.cuda.manual_seed(Config.seed)
+        torch.cuda.manual_seed_all(Config.seed)
+        torch.backends.cudnn.benchmark = False
+        
+    # Create environments - check for pre-created env first, then default
+    if env is not None:
+        env_thunks = [
+            make_env(
+                "",
+                Config.seed,
+                i,
+                grid_env=Config.grid_env,
+                atari_wrapper=Config.atari_wrapper,
+                env_wrapper=env_wrapper,
+                env=env,
+                render_mode="rgb_array",
+            )
+            for i in range(Config.n_envs)
+        ]
+    else:
+        # Use default environment creation
+        env_thunks = [
+            make_env(
+                Config.env_id,
+                Config.seed,
+                i,
+                grid_env=Config.grid_env,
+                atari_wrapper=Config.atari_wrapper,
+                env_wrapper=env_wrapper,
+                render_mode="rgb_array",
+            )
+            for i in range(Config.n_envs)
+        ]
+
+    envs = gym.vector.SyncVectorEnv(env_thunks)
+    if isinstance(envs.single_observation_space, gym.spaces.Discrete):
+        obs_space_shape = (envs.single_observation_space.n,)
+    else:
+        obs_space_shape = envs.single_observation_space.shape[0]
+
+    action_space_n = (
+        envs.single_action_space.n
+        if isinstance(envs.single_action_space, gym.spaces.Discrete)
+        else envs.single_action_space.shape[0]
+    )
+
+    action_shape = (
+        ()
+        if isinstance(envs.single_action_space, gym.spaces.Discrete)
+        else (action_space_n,)
+    )
+
+    print(f"Observation Space: {obs_space_shape}, Action Space: {action_space_n}")
+
+    actor_network = actor_class(obs_space_shape, action_space_n).to(device)
+    critic_network = critic_class(obs_space_shape).to(device)
+    predictor_network = predictor_class(obs_space_shape).to(device)
+    target_network = target_class(obs_space_shape).to(device)
+
+    print("Actor Network Architecture:")
+    print(actor_network)
+    print("\nCritic Network Architecture:")
+    print(critic_network)
+    print("\nPredictor Network Architecture:")
+    print(predictor_network)
+    print("\nTarget Network Architecture:")
+    print(target_network)
+
+    # Compute derived values from passed parameters
+    batch_size = Config.n_envs * Config.max_steps
+    minibatch_size = batch_size // Config.num_minibatches
+    num_updates = Config.total_timesteps // batch_size
+
+    optimizer = optim.Adam(
+        list(actor_network.parameters())
+        + list(critic_network.parameters())
+        + list(predictor_network.parameters()),
+        lr=Config.lr,
+        eps=1e-5,
+    )
+
+    for param in target_network.parameters():
+        param.requires_grad = False
+
+    # Initialize running mean/std for intrinsic reward normalization
+    intrinsic_reward_rms = RunningMeanStd(shape=())
+
+    # Tensor Storage
+
+    obs_storage = torch.zeros(
+        (Config.max_steps, Config.n_envs) + (obs_space_shape,)
+    ).to(device)
+    actions_storage = torch.zeros((Config.max_steps, Config.n_envs) + action_shape).to(
+        device
+    )
+    logprobs_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(device)
+    rewards_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(device)
+    intrinsic_rewards_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(
+        device
+    )
+    dones_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(device)
+    ext_values_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(device)
+    int_values_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(device)
+
+    global_step = 0
+
+    next_obs, _ = envs.reset(seed=Config.seed)
+    next_obs = torch.Tensor(next_obs).to(device)
+    next_done = torch.zeros(Config.n_envs).to(device)
+
+    start_time = time.time()
+
+    for update in tqdm(range(1, num_updates + 1), desc="Training Updates"):
+        # Annealing the rate if instructed to do so.
+        if Config.anneal_lr:
+            frac = 1.0 - (update - 1.0) / num_updates
+            lrnow = frac * Config.lr
+            optimizer.param_groups[0]["lr"] = lrnow
+
+        # Rollout Phase
+        for step in range(0, Config.max_steps):
+            global_step = (update - 1) * batch_size + step * Config.n_envs
+            # print(obs_space_shape, next_obs.shape)
+            # print(obs_storage[step].shape)
+            obs_storage[step] = next_obs
+
+            dones_storage[step] = next_done
+
+            with torch.no_grad():
+                action, logprob, dist = actor_network.get_action(next_obs)
+                ext_value, int_value = critic_network(next_obs)
+
+                # Log distribution statistics
+                if Config.use_wandb:
+                    if hasattr(dist, "probs"):
+                        # Discrete
+                        probs = dist.probs
+                        wandb.log(
+                            {
+                                "policy/dist_mean": probs.mean().item(),
+                                "policy/dist_std": probs.std().item(),
+                                "policy/entropy": dist.entropy().mean().item(),
+                                "global_step": global_step,
+                            }
+                        )
+                    else:
+                        # Continuous
+                        wandb.log(
+                            {
+                                "policy/dist_mean": dist.mean.mean().item(),
+                                "policy/dist_std": dist.stddev.mean().item(),
+                                "policy/entropy": dist.entropy().mean().item(),
+                                "global_step": global_step,
+                            }
+                        )
+
+            ext_values_storage[step] = ext_value.flatten()
+            int_values_storage[step] = int_value.flatten()
+            # print(action_space_n, action.shape, actions_storage[step].shape, action_shape)
+            actions_storage[step] = action
+            logprobs_storage[step] = (
+                logprob.sum(dim=-1) if len(logprob.shape) > 1 else logprob
+            )
+
+            # --- RND Intrinsic Reward Calculation ---
+            with torch.no_grad():
+                pred_features = predictor_network(next_obs)
+                target_features = target_network(next_obs)
+                intrinsic_reward = torch.pow(pred_features - target_features, 2).sum(-1)
+
+            # Update running statistics and normalize intrinsic rewards
+            intrinsic_reward_np = intrinsic_reward.cpu().numpy()
+            intrinsic_reward_rms.update(intrinsic_reward_np)
+            normalized_intrinsic_reward = intrinsic_reward / np.sqrt(
+                intrinsic_reward_rms.var + 1e-8
+            )
+
+            intrinsic_rewards_storage[step] = normalized_intrinsic_reward
+
+            # Step the environment
+            new_obs, reward, terminated, truncated, info = envs.step(
+                action.cpu().numpy()
+            )
+            done = np.logical_or(terminated, truncated)
+
+            extrinsic_reward = torch.tensor(reward).to(device)
+            rewards_storage[step] = extrinsic_reward
+            next_obs = torch.Tensor(new_obs).to(device)
+            next_done = torch.Tensor(done).to(device)
+            if Config.use_wandb:
+                wandb.log(
+                    {
+                        "rewards/intrinsic_reward_raw": intrinsic_reward.mean().item(),
+                        "rewards/intrinsic_reward_normalized": normalized_intrinsic_reward.mean().item(),
+                        "rewards/intrinsic_reward_std": np.sqrt(
+                            intrinsic_reward_rms.var
+                        ),
+                        "rewards/extrinsic_reward": rewards_storage[step].mean().item(),
+                        "rewards/total_reward_ext_int": normalized_intrinsic_reward.mean().item()
+                        + rewards_storage[step].mean().item(),
+                        "global_step": global_step,
+                    }
+                )
+
+        # Calculate returns after the rollout is complete
+        with torch.no_grad():
+            # Get the bootstrapped value from the state after the last step
+            bootstrap_ext_value, bootstrap_int_value = critic_network(next_obs)
+
+            # Initialize tensors for returns
+            ext_returns = torch.zeros_like(rewards_storage).to(device)
+            int_returns = torch.zeros_like(intrinsic_rewards_storage).to(device)
+
+            # Set the initial "next state" return. If an env was done, this is 0, otherwise it's the bootstrap value.
+            # (1.0 - next_done) is a trick to multiply by 0 if done, and 1 if not done.
+            ext_gt_next_state = bootstrap_ext_value.squeeze() * (1.0 - next_done)
+            int_gt_next_state = bootstrap_int_value.squeeze() * (1.0 - next_done)
+
+            # Loop backwards from the last step to the first
+            for t in reversed(range(Config.max_steps)):
+                # Calculate return at step t
+                rt_ext = rewards_storage[t] + Config.ext_gamma * ext_gt_next_state
+
+                rt_int = (
+                    intrinsic_rewards_storage[t] + Config.int_gamma * int_gt_next_state
+                )
+
+                # Store the calculated returns
+                ext_returns[t] = rt_ext
+                int_returns[t] = rt_int
+
+                # Update the "next state" for the previous step (t-1).
+                # If an episode was done at step t, the return propagation is cut off (multiplied by 0).
+                ext_gt_next_state = rt_ext * (1.0 - dones_storage[t])
+                int_gt_next_state = rt_int * (1.0 - dones_storage[t])
+
+        # Calculate advantages as the difference between returns and value function estimates
+        ext_advantages = ext_returns - ext_values_storage
+        int_advantages = int_returns - int_values_storage
+
+        advantages = (Config.INT_COEFF * int_advantages) + (
+            Config.EXT_COEFF * ext_advantages
+        )
+        if Config.use_wandb:
+            wandb.log(
+                {
+                    "advantages/ext_advantages": ext_advantages.mean().item(),
+                    "advantages/int_advantages": int_advantages.mean().item(),
+                    "global_step": global_step,
+                }
+            )
+
+        # Normalize the final combined advantages
+        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+
+        # Flatten the batch
+        b_obs = obs_storage.reshape((-1,) + (obs_space_shape,))
+        b_logprobs = logprobs_storage.reshape(-1)
+        b_actions = actions_storage.reshape((-1,) + action_shape)
+        b_advantages = advantages.reshape(-1)
+        b_ext_returns = ext_returns.reshape(-1)
+        b_int_returns = int_returns.reshape(-1)
+
+        # PPO & RND Update Phase
+        b_inds = np.arange(batch_size)
+        for _epoch in range(Config.PPO_EPOCHS):
+            np.random.shuffle(b_inds)
+            for start in range(0, batch_size, minibatch_size):
+                end = start + minibatch_size
+                mb_inds = b_inds[start:end]
+
+                # --- PPO Policy and Value Loss ---
+
+                _, new_log_probs, dist = actor_network.get_action(
+                    b_obs[mb_inds], b_actions[mb_inds]
+                )
+                ratio = torch.exp(new_log_probs - b_logprobs[mb_inds])
+
+                pg_loss1 = b_advantages[mb_inds] * ratio
+                pg_loss2 = b_advantages[mb_inds] * torch.clamp(
+                    ratio, 1 - Config.clip_value, 1 + Config.clip_value
+                )
+                policy_loss = -torch.min(pg_loss1, pg_loss2).mean()
+
+                ext_current_values, int_current_values = critic_network(b_obs[mb_inds])
+                # print("ext returns, int b returns ", b_ext_returns[mb_inds], b_int_returns[mb_inds])
+                ext_critic_loss = F.mse_loss(
+                    ext_current_values.squeeze(), b_ext_returns[mb_inds]
+                )
+                int_critic_loss = F.mse_loss(
+                    int_current_values.squeeze(), b_int_returns[mb_inds]
+                )
+                critic_loss = ext_critic_loss + int_critic_loss
+                entropy_loss = dist.entropy().mean()
+
+                # --- RND Predictor Loss ---
+                pred_features = predictor_network(b_obs[mb_inds])
+                with torch.no_grad():
+                    target_features = target_network(b_obs[mb_inds])
+                rnd_loss = F.mse_loss(pred_features, target_features)
+
+                # Total Loss
+                loss = (
+                    policy_loss
+                    + Config.VALUE_COEFF * critic_loss
+                    + rnd_loss
+                    - Config.ENTROPY_COEFF * entropy_loss
+                )
+
+                optimizer.zero_grad()
+                loss.backward()
+
+                # Log gradient norm per layer
+                if Config.use_wandb and Config.log_gradients:
+                    # Calculate gradient norm before clipping
+                    total_norm_before = torch.norm(
+                        torch.stack(
+                            [
+                                torch.norm(p.grad.detach(), 2)
+                                for p in list(actor_network.parameters())
+                                + list(critic_network.parameters())
+                                + list(predictor_network.parameters())
+                                if p.grad is not None
+                            ]
+                        ),
+                        2,
+                    )
+
+                    for name, param in actor_network.named_parameters():
+                        if param.grad is not None:
+                            grad_norm = torch.norm(param.grad.detach(), 2).item()
+                            wandb.log(
+                                {
+                                    f"gradients/actor_layer_{name}": grad_norm,
+                                    "global_step": global_step,
+                                }
+                            )
+                    for name, param in critic_network.named_parameters():
+                        if param.grad is not None:
+                            grad_norm = torch.norm(param.grad.detach(), 2).item()
+                            wandb.log(
+                                {
+                                    f"gradients/critic_layer_{name}": grad_norm,
+                                    "global_step": global_step,
+                                }
+                            )
+                    for name, param in predictor_network.named_parameters():
+                        if param.grad is not None:
+                            grad_norm = torch.norm(param.grad.detach(), 2).item()
+                            wandb.log(
+                                {
+                                    f"gradients/predictor_layer_{name}": grad_norm,
+                                    "global_step": global_step,
+                                }
+                            )
+                    wandb.log(
+                        {
+                            "gradients/norm_before_clip": total_norm_before.item(),
+                            "global_step": global_step,
+                        }
+                    )
+
+                # Apply gradient clipping
+                if Config.max_grad_norm != 0.0:
+                    torch.nn.utils.clip_grad_norm_(
+                        list(actor_network.parameters())
+                        + list(critic_network.parameters())
+                        + list(predictor_network.parameters()),
+                        max_norm=Config.max_grad_norm,
+                    )
+
+                optimizer.step()
+
+        # Log episode returns
+        if "episode" in info:
+            if Config.n_envs > 1:
+                for i in range(Config.n_envs):
+                    if done[i]:
+                        ep_ret = info["episode"]["r"][i]
+                        ep_len = info["episode"]["l"][i]
+
+                        if Config.use_wandb:
+                            wandb.log(
+                                {
+                                    "charts/episodic_return": ep_ret,
+                                    "charts/episodic_length": ep_len,
+                                    "global_step": global_step,
+                                }
+                            )
+            else:
+                if done:
+                    ep_ret = info["episode"]["r"]
+                    ep_len = info["episode"]["l"]
+                    if Config.use_wandb:
+                        wandb.log(
+                            {
+                                "charts/episodic_return": ep_ret,
+                                "charts/episodic_length": ep_len,
+                                "global_step": global_step,
+                            }
+                        )
+
+        # Log losses and metrics
+        if Config.use_wandb and update % 10 == 0:
+            wandb.log(
+                {
+                    "losses/total_loss": loss.item(),
+                    "losses/policy_loss": policy_loss.item(),
+                    "losses/value_loss": critic_loss.item(),
+                    "losses/RND_loss": rnd_loss.item(),
+                    "losses/intrinsic_critic_loss": int_critic_loss.item(),
+                    "losses/extrinsic_critic_loss": ext_critic_loss.item(),
+                    "charts/learning_rate": optimizer.param_groups[0]["lr"],
+                    "charts/rewards_mean": np.mean(rewards_storage.cpu().numpy()),
+                    "advantages/advantages_mean": b_advantages.mean().item(),
+                    "advantages/advantages_std": b_advantages.std().item(),
+                    "charts/ext_returns_mean": b_ext_returns.mean().item(),
+                    "charts/int_returns_mean": b_int_returns.mean().item(),
+                    "advantages/ext_advantages_mean": ext_advantages.mean().item(),
+                    "advantages/int_advantages_mean": int_advantages.mean().item(),
+                    "global_step": global_step,
+                }
+            )
+            print(
+                f"Update {update}, Global Step: {global_step}, Policy Loss: {policy_loss.item():.4f}, Value Loss: {critic_loss.item():.4f}, SPS: {int(global_step / (time.time() - start_time))}"
+            )
+
+            if Config.use_wandb:
+                wandb.log(
+                    {
+                        "charts/SPS": int(global_step / (time.time() - start_time)),
+                        "charts/global_step": global_step,
+                    }
+                )
+        if update % Config.eval_every == 0:
+            episodic_returns, _ = evaluate(
+                actor_network,
+                device,
+                Config.env_id,
+                env=env,
+                seed=Config.seed,
+                num_eval_eps=Config.num_eval_episodes,
+                record=Config.capture_video,
+                render_mode="rgb_array" if Config.capture_video else None,
+                grid_env=Config.grid_env,
+                atari_wrapper=Config.atari_wrapper,
+                env_wrapper=env_wrapper,
+                use_wandb=Config.use_wandb,
+            )
+            avg_return = np.mean(episodic_returns)
+            if Config.use_wandb:
+                wandb.log(
+                    {"charts/val_avg_return": avg_return, "global_step": global_step}
+                )
+            print(f"Evaluation returns: {episodic_returns}, Average: {avg_return:.2f}")
+
+        if update % Config.save_every == 0 and update > 0:
+            model_path = f"runs/{run_name}/models/rnd_model_step_{global_step}.pth"
+            torch.save(
+                {
+                    "actor": actor_network.state_dict(),
+                    "critic": critic_network.state_dict(),
+                    "predictor": predictor_network.state_dict(),
+                    "target": target_network.state_dict(),
+                },
+                model_path,
+            )
+            print(f"Model saved at update {update} step {global_step} to {model_path}")
+
+    # --- Final Evaluation and Video Saving ---
+    if Config.use_wandb:
+        print("Capturing final evaluation video...")
+        episodic_returns, eval_frames = evaluate(
+            actor_network,
+            device,
+            Config.env_id,
+            env=env,
+            seed=Config.seed,
+            num_eval_eps=Config.num_eval_episodes,
+            record=Config.capture_video,
+            grid_env=Config.grid_env,
+            atari_wrapper=Config.atari_wrapper,
+            env_wrapper=env_wrapper,
+            use_wandb=Config.use_wandb,
+            render_mode="rgb_array" if Config.capture_video else None,
+        )
+
+        # Save final video to file if frames were captured
+        if eval_frames:
+            train_video_path = "videos/final.mp4"
+            imageio.mimsave(train_video_path, eval_frames, fps=30)
+            print(f"Final training video saved to {train_video_path}")
+
+    envs.close()
+    if Config.use_wandb:
+        wandb.finish()
+
+    return actor_network
+
+
+
 # --- Main Execution ---
 if __name__ == "__main__":
-    train_rnd()
+    train_ppo_rnd()

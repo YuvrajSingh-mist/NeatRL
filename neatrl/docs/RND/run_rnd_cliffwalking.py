@@ -2,15 +2,15 @@
 script for RND-PPO training on CliffWalking using neatrl library.
 """
 
-from neatrl import train_rnd
+from neatrl import train_ppo_rnd
 
 
 def test_rnd_ppo_cliffwalking():
     """Test RND-PPO training on CliffWalking-v0."""
-    print("Testing RND-PPO training on CliffWalking-v0 with neatrl...")
+    print("Testing RND-PPO training on CliffWalking-v1 with neatrl...")
 
     # Train RND-PPO on CliffWalking
-    model = train_rnd(
+    model = train_ppo_rnd(
         env_id="CliffWalking-v1",
         total_timesteps=5000000,
         seed=42,

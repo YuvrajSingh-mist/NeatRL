@@ -23,15 +23,12 @@ class PolicyNet(nn.Module):
         x = torch.nn.functional.softmax(x, dim=-1)  # Apply softmax to get probabilities
         return x
 
-    def get_action(self, x, eval=False):
+    def get_action(self, x):
         action_probs = self.forward(x)
         dist = torch.distributions.Categorical(
             action_probs
         )  # Create a categorical distribution from the probabilities
-        if eval:
-            action = torch.argmax(action_probs, dim=-1)
-            return action
-
+        
         action = dist.sample()  # Sample an action from the distribution
         return action, dist.log_prob(action), dist
 

@@ -3,7 +3,8 @@ script for RND-PPO training on FrozenLake using neatrl library.
 """
 
 import gymnasium as gym
-from neatrl import train_rnd
+
+from neatrl import train_ppo_rnd_cnn
 
 
 def test_rnd_ppo_frozenlake():
@@ -14,7 +15,7 @@ def test_rnd_ppo_frozenlake():
     env = gym.make("FrozenLake-v1", is_slippery=False, render_mode="rgb_array")
 
     # Train RND-PPO on FrozenLake with direct env object
-    model = train_rnd(
+    model = train_ppo_rnd_cnn(
         # env_id="FrozenLake-v1",  # This will be ignored when env is provided
         total_timesteps=20000000,
         seed=42,

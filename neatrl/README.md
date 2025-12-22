@@ -34,6 +34,16 @@ NeatRL provides high-quality implementations of popular RL algorithms with a foc
   - ✨ **NEW**: Per-layer gradient logging
   - Episode-based Monte Carlo returns
   - Variance reduction through baseline subtraction
+
+- **PPO-RND** (Proximal Policy Optimization with Random Network Distillation) - State-of-the-art exploration method
+  - ✨ **NEW**: Intrinsic motivation through novelty detection
+  - ✨ **NEW**: Combined extrinsic and intrinsic rewards for better exploration
+  - ✨ **NEW**: Support for both discrete and continuous action spaces
+  - ✨ **NEW**: Automatic render mode handling for video recording
+  - ✨ **NEW**: Comprehensive WandB logging with global step tracking
+  - PPO with clipped surrogate objective
+  - Vectorized environments for parallel training
+  - Intrinsic reward normalization and advantage calculation
   
 - *More algorithms coming soon...*
 

@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.3.0] - 2025-12-22
+
+### Added - PPO-RND Algorithm Implementation
+- **PPO-RND Algorithm**: Full implementation of Proximal Policy Optimization with Random Network Distillation
+  - Intrinsic motivation through novelty detection using predictor and target networks
+  - Combined extrinsic and intrinsic rewards for enhanced exploration
+  - Support for both discrete and continuous action spaces
+  - Automatic render mode handling for video recording (fixes render warnings)
+  - Comprehensive WandB logging with global step as x-axis for all charts
+- **Enhanced Action Space Support**: Improved handling for continuous actions with proper tensor shapes
+- **Video Recording Fixes**: Automatic render mode detection and video transpose handling for grayscale/RGB frames
+- **Global Step Logging**: All WandB logs now use global_step for consistent x-axis across charts
+- **Distribution Logging**: Adaptive logging for both Categorical (discrete) and Normal (continuous) distributions
+
+### Changed
+- **Action Storage**: Fixed tensor shape issues for continuous action spaces in PPO training
+- **WandB Integration**: Replaced "step" with "global_step" in all logging keys for better tracking
+
+### Fixed
+- **Render Mode Warnings**: Automatic specification of render_mode to prevent Gymnasium warnings
+- **Video Transpose Errors**: Proper handling of frame dimensions for video logging
+- **Continuous Action Logging**: Fixed AttributeError for Normal distributions in WandB logs
+
 ## [0.2.1] - 2025-12-17
 
 ### Added - REINFORCE Algorithm Enhancements

@@ -26,17 +26,14 @@ class PolicyNet(nn.Module):
 
         return mean, std
 
-    def get_action(self, x, eval=False):
+    def get_action(self, x):
         mean, std = self.forward(x)
         dist = torch.distributions.Normal(
             mean, std
         )  # Create a normal distribution from the mean and std
-        if eval:
-            action = mean  # Use mean action during evaluation
-            return action
-        else:
-            action = dist.sample()  # Sample an action from the distribution
-        return action, dist.log_prob(action).sum(dim=-1), dist
+        
+        action = dist.sample()  # Sample an action from the distribution
+        return action, dist.log_prob(action), dist
 
 
 def test_reinforce_pendulum():
@@ -48,23 +45,24 @@ def test_reinforce_pendulum():
         env_id="Pendulum-v1",
         total_steps=200000,
         seed=42,
-        learning_rate=2.5e-4,
+        learning_rate=3e-4,
         gamma=0.99,
         capture_video=True,
         use_wandb=True,
         wandb_project="cleanRL",
         wandb_entity="",
         exp_name="REINFORCE-Pendulum",
-        eval_every=10000,
+        eval_every=1000,
         save_every=20000,
         atari_wrapper=False,
-        n_envs=1,
-        num_eval_eps=10,
+        n_envs=8,
+        num_eval_eps=1,
         device="cpu",
         grid_env=False,
         custom_agent=PolicyNet(3, 1),
         use_entropy=True,
-        entropy_coeff=0.1,
+        entropy_coeff=0.01,
+        normalize_obs=True,
     )
 
     print("REINFORCE training on Pendulum-v0 completed successfully!")

@@ -1,77 +1,58 @@
 """
-script for RND-PPO training on MountainCarContinuous using neatrl library.
+script for RND-PPO training on MountainCar using neatrl library.
 """
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Optional, Union
-import numpy as np
 
 from neatrl import train_rnd
 
- 
+
 # --- Networks ---
-def layer_init(
-    layer: nn.Module, std: float = np.sqrt(2), bias_const: float = 0.0
-) -> nn.Module:
+def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
 
 
+# --- Networks ---
 class ActorNet(nn.Module):
-    def __init__(
-        self,
-        state_space: Union[int, tuple[int, ...]],
-        action_space: int,
-        
-    ) -> None:
+    def __init__(self, state_space, action_space):
         super().__init__()
-         
-        self.fc1 = layer_init(nn.Linear(state_space, 32))
-        self.fc2 = layer_init(nn.Linear(32, 32))
-        self.fc3 = layer_init(nn.Linear(32, 16))
-        self.mean = layer_init(nn.Linear(16, action_space))
-        self.log_std = nn.Parameter(torch.zeros(action_space))
+        self.fc1 = layer_init(nn.Linear(state_space, 512))
+        self.fc2 = layer_init(nn.Linear(512, 512))
+        self.fc3 = layer_init(nn.Linear(512, 256))
+        self.out = layer_init(nn.Linear(256, action_space), std=0.01)
 
-    def forward(self, x: torch.Tensor) -> torch.distributions.Distribution:
+    def forward(self, x):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
+        return self.out(x)
 
-        mean = self.mean(x)
-        std = torch.exp(self.log_std)
-        dist = torch.distributions.Normal(mean, std)
-        return dist
-
-    def get_action(
-        self,
-        x: torch.Tensor,
-        action: Optional[torch.Tensor] = None,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.distributions.Distribution]:
-        dist = self.forward(x)
+    def get_action(self, x, action=None):
+        logits = self.forward(x)
+        probs = torch.nn.functional.softmax(logits, dim=-1)
+        dist = torch.distributions.Categorical(probs)
         if action is None:
-            action = dist.rsample()  # reparameterized sample
-            action = torch.tanh(action)  # squash to [-1,1]
-
-        log_prob = dist.log_prob(action).sum(dim=-1)
-        # adjust for tanh
-        log_prob -= torch.log(1 - action.pow(2) + 1e-6).sum(dim=-1)
+            action = dist.sample()
+        log_prob = dist.log_prob(action)
 
         return action, log_prob, dist
 
 
 class CriticNet(nn.Module):
-    def __init__(self, state_space: Union[int, tuple[int, ...]]) -> None:
+    def __init__(self, state_space):
         super().__init__()
-        self.fc1 = layer_init(nn.Linear(state_space, 32))
-        self.fc2 = layer_init(nn.Linear(32, 32))
-        self.fc3 = layer_init(nn.Linear(32, 16))
-        self.value_ext = layer_init(nn.Linear(16, 1))
-        self.value_int = layer_init(nn.Linear(16, 1))
+        self.fc1 = layer_init(nn.Linear(state_space, 512))
+        self.fc2 = layer_init(nn.Linear(512, 512))
+        self.fc3 = layer_init(nn.Linear(512, 256))
+        self.value_ext = layer_init(nn.Linear(256, 1), std=1.0)
+        self.value_int = layer_init(nn.Linear(256, 1), std=1.0)
 
-    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, x):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
@@ -79,39 +60,48 @@ class CriticNet(nn.Module):
 
 
 class PredictorNet(nn.Module):
-    def __init__(self, state_space: Union[int, tuple[int, ...]]) -> None:
+    def __init__(self, state_space):
         super().__init__()
-        self.fc1 = layer_init(nn.Linear(state_space, 64))
-        self.fc2 = layer_init(nn.Linear(64, 64))
-        self.fc3 = layer_init(nn.Linear(64, 32))
-        self.out = layer_init(nn.Linear(32, 32))
+        self.fc1 = layer_init(nn.Linear(state_space, 512))
+        self.fc2 = layer_init(nn.Linear(512, 512))
+        self.fc3 = layer_init(nn.Linear(512, 256))
+        self.out = layer_init(nn.Linear(256, 256))
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
         return self.out(x)
 
 
-class ContinuousActorNet(ActorNet):
-    def __init__(self, state_space, action_space):
-        super().__init__(state_space, action_space, continuous=True)
+class TargetNet(nn.Module):
+    def __init__(self, state_space):
+        super().__init__()
+        self.fc1 = layer_init(nn.Linear(state_space, 512))
+        self.fc2 = layer_init(nn.Linear(512, 512))
+        self.fc3 = layer_init(nn.Linear(512, 256))
+        self.out = layer_init(nn.Linear(256, 256))
 
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+        return self.out(x)
 
 
 def test_rnd_ppo_mountain_car():
-    """Test RND-PPO training on MountainCarContinuous-v0."""
-    print("Testing RND-PPO training on MountainCarContinuous-v0 with neatrl...")
+    """Test RND-PPO training on MountainCar-v0."""
+    print("Testing RND-PPO training on MountainCar-v0 with neatrl...")
 
-    # Train RND-PPO on MountainCarContinuous
+    # Train RND-PPO on MountainCar
     model = train_rnd(
-        env_id="MountainCarContinuous-v0",
-        total_timesteps=5000000,
+        env_id="MountainCar-v0",
+        total_timesteps=1000000,
         seed=42,
         lr=3e-4,
-        ext_gamma=0.99,
-        int_gamma=0.95,
-        n_envs=4,
+        ext_gamma=0.999,
+        int_gamma=0.99,
+        n_envs=8,
         max_steps=128,
         num_minibatches=4,
         PPO_EPOCHS=4,
@@ -123,14 +113,17 @@ def test_rnd_ppo_mountain_car():
         capture_video=True,
         use_wandb=True,
         wandb_project="cleanRL",
-        exp_name="RND-PPO-MountainCarContinuous",
+        exp_name="RND-PPO-MountainCar",
         grid_env=False,
-        eval_every=1000,
+        eval_every=100,
         save_every=1000,
         num_eval_episodes=1,
         anneal_lr=True,
         log_gradients=True,
         actor_class=ActorNet,
+        critic_class=CriticNet,
+        predictor_class=PredictorNet,
+        target_class=TargetNet,
     )
 
     print("Training completed!")

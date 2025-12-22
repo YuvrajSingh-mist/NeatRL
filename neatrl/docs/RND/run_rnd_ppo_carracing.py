@@ -8,7 +8,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from neatrl.rnd import train_rnd
+from neatrl.rnd import train_ppo_rnd
 
 
 class PreprocessAndFrameStack(gym.ObservationWrapper):
@@ -78,7 +78,7 @@ class FeatureExtractor(nn.Module):
     def __init__(self, input_shape):
         super().__init__()
         self.network = nn.Sequential(
-            layer_init(nn.Conv2d(input_shape, 32, kernel_size=8, stride=4)),
+            layer_init(nn.Conv2d(input_shape[0], 32, kernel_size=8, stride=4)),
             nn.ReLU(),
             layer_init(nn.Conv2d(32, 64, kernel_size=4, stride=2)),
             nn.ReLU(),
@@ -99,24 +99,22 @@ class ActorNet(nn.Module):
 
         self.network = FeatureExtractor(state_space)
 
-        self.mean = layer_init(nn.Linear(512, action_space))
-        self.log_std = nn.Parameter(torch.zeros(action_space))
+        self.out = layer_init(nn.Linear(512, action_space))
 
     def forward(self, x):
         x = self.network(x / 255.0)
-
-        return self.mean(x), self.log_std
+        out = torch.nn.functional.softmax(self.out(x), dim=-1)
+        return out   
 
     def get_action(self, x, action=None):
-        mean, log_std = self.forward(x)
-        std = torch.exp(log_std)
-        dist = torch.distributions.Normal(mean, std)
+        
+        probs = self.forward(x)
+        dist = torch.distributions.Categorical(probs)
         if action is None:
             action = dist.sample()
         log_prob = dist.log_prob(action)
-        log_prob = log_prob.sum(dim=-1)
-        entropy = dist.entropy()
-        return action, log_prob, entropy
+        
+        return action, log_prob, dist
 
 
 class CriticNet(nn.Module):
@@ -156,20 +154,20 @@ class TargetNet(nn.Module):
         x = self.network(x / 255.0)
         return self.out(x)
 
-
 def test_rnd_ppo_carracing():
     """Test RND-PPO training on CarRacing-v3."""
     print("Testing RND-PPO training on CarRacing-v3 with neatrl...")
 
     # Train RND-PPO on CarRacing
-    model = train_rnd(
-        env_id="CarRacing-v3",
+    model = train_ppo_rnd(
+        
+        env=gym.make("CarRacing-v3", render_mode="rgb_array", continuous=False),
         total_timesteps=500000,
         seed=42,
         lr=3e-4,
         ext_gamma=0.99,
         int_gamma=0.99,
-        n_envs=1,
+        n_envs=4,
         max_steps=128,
         num_minibatches=4,
         PPO_EPOCHS=4,
