@@ -76,21 +76,27 @@ The `train_ppo_rnd` and `train_ppo_rnd_cnn` functions accept the following argum
 | `VALUE_COEFF` | float | `0.5` | Value loss coefficient in total loss |
 | `EXT_COEFF` | float | `2.0` | Extrinsic advantage coefficient for combined advantages |
 | `INT_COEFF` | float | `1.0` | Intrinsic advantage coefficient for combined advantages |
-| `capture_video` | bool | `False` | Whether to record training videos |
-| `use_wandb` | bool | `False` | Whether to log to Weights & Biases |
+| `capture_video` | bool | `True` | Whether to record training videos |
+| `use_wandb` | bool | `True` | Whether to log to Weights & Biases |
 | `wandb_project` | str | `"cleanRL"` | W&B project name |
-| `exp_name` | str | `"PPO-RND"` | Experiment name for logging |
+| `exp_name` | str | `"PPO-RND-Vectorized-ClipWalking"` | Experiment name for logging |
 | `grid_env` | bool | `True` | Whether the environment uses discrete grid observations |
 | `max_grad_norm` | float | `0.0` | Maximum gradient norm for clipping (0.0 to disable) |
 | `eval_every` | int | `10000` | Frequency of evaluation during training (in steps) |
-| `save_every` | int | `100000` | Frequency of saving model checkpoints (in steps) |
+| `save_every` | int | `10000` | Frequency of saving model checkpoints (in steps) |
 | `atari_wrapper` | bool | `False` | Whether to apply Atari preprocessing wrappers |
 | `num_minibatches` | int | `4` | Number of minibatches for PPO updates |
 | `num_eval_episodes` | int | `5` | Number of episodes for evaluation |
 | `anneal_lr` | bool | `True` | Whether to anneal learning rate over time |
 | `normalize_obs` | bool | `True` | Whether to normalize observations |
-| `normalize_reward` | bool | `True` | Whether to normalize rewards |
+| `normalize_reward` | bool | `False` | Whether to normalize rewards |
 | `device` | str | `"cpu"` | Device for training ("cpu", "cuda", "mps") |
+| `log_gradients` | bool | `True` | Whether to log gradient norms to W&B |
+| `env_wrapper` | Callable | `None` | Optional environment wrapper function |
+| `actor_class` | Any | `ActorNet` | Custom actor network class |
+| `critic_class` | Any | `CriticNet` | Custom critic network class |
+| `predictor_class` | Any | `PredictorNet` | Custom predictor network class |
+| `target_class` | Any | `TargetNet` | Custom target network class |
 
 ## 🎮 Supported Environments
 
@@ -114,7 +120,7 @@ model = train_ppo_rnd(
     env_id="CliffWalking-v0",
     total_timesteps=50000,
     seed=42,
-    grid_env=True,  # Enable one-hot encoding for discrete states
+    grid_env=False,  # Enable one-hot encoding for discrete states
     use_wandb=True,
     wandb_project="grid-experiments",
     exp_name="rnd-ppo-cliffwalking"
@@ -131,14 +137,14 @@ model = train_ppo_rnd(
     env_id="FrozenLake-v1",
     total_timesteps=50000,
     seed=42,
-    grid_env=True,  # Enable one-hot encoding for discrete states
+    grid_env=False,  # Enable one-hot encoding for discrete states
     use_wandb=True,
     wandb_project="grid-experiments",
     exp_name="rnd-ppo-frozenlake"
 )
 ```
 
-The `grid_env=True` parameter automatically applies one-hot encoding to discrete state observations, making them suitable for neural network input.
+The `grid_env=False` parameter automatically applies one-hot encoding to discrete state observations, making them suitable for neural network input.
 
 ### Box2D
 - `LunarLander-v2` - Land a spacecraft safely
@@ -241,7 +247,7 @@ Videos are:
 Check out these example scripts:
 
 - [`run_rnd_cliffwalking.py`](./run_rnd_cliffwalking.py) - RND-PPO training on CliffWalking
-- [`run_rnd_frozenlake.py`](./run_rnd_frozenlake.py) - RND-PPO training on FrozenLake
+- [`run_rnd_fronzenlake.py`](./run_rnd_fronzenlake.py) - RND-PPO training on FrozenLake
 - [`run_rnd_ppo_carracing.py`](./run_rnd_ppo_carracing.py) - RND-PPO with CNN on CarRacing
 - [`run_rnd_mountain_car.py`](./run_rnd_mountain_car.py) - RND-PPO training on MountainCar
 

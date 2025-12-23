@@ -141,7 +141,7 @@ model = train_dqn(
     env_id="FrozenLake-v1",
     total_timesteps=50000,
     seed=42,
-    grid_env=True,  # Enable one-hot encoding for discrete states
+    grid_env=False,  # Enable one-hot encoding for discrete states
     use_wandb=True,
     wandb_project="grid-experiments",
     exp_name="dqn-frozenlake"
@@ -158,14 +158,14 @@ model = train_dqn(
     env_id="Taxi-v3",
     total_timesteps=50000,
     seed=42,
-    grid_env=True,  # Enable one-hot encoding for discrete states
+    grid_env=False,  # Enable one-hot encoding for discrete states
     use_wandb=True,
     wandb_project="grid-experiments",
     exp_name="dqn-taxi"
 )
 ```
 
-The `grid_env=True` parameter automatically applies one-hot encoding to discrete state observations, making them suitable for neural network input.
+The `grid_env=False` parameter automatically applies one-hot encoding to discrete state observations, making them suitable for neural network input.
 
 ### Box2D
 - `LunarLander-v2` - Land a spacecraft safely

@@ -55,7 +55,7 @@ def test_dqn_frozenlake():
         atari_wrapper=False,
         n_envs=1,
         eval_every=5000,
-        grid_env=True,
+        grid_env=False,
     )
 
     print(f"Training completed! Model type: {type(model)}")

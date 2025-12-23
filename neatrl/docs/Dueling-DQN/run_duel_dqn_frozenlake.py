@@ -61,7 +61,7 @@ def test_dueling_dqn_frozenlake():
         n_envs=4,
         eval_every=5000,
         max_grad_norm=4.0,
-        grid_env=True,
+        grid_env=False,
     )
 
     print(f"Training completed! Model type: {type(model)}")

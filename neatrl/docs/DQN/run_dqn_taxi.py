@@ -48,7 +48,7 @@ def test_dqn_taxi():
         atari_wrapper=False,
         n_envs=4,
         eval_every=50000,
-        grid_env=True,  # Enable one-hot encoding for discrete states
+        grid_env=False,  # Enable one-hot encoding for discrete states
     )
 
     print(f"Training completed! Model type: {type(model)}")

@@ -35,7 +35,7 @@ def test_rnd_ppo_frozenlake():
         use_wandb=True,
         wandb_project="cleanRL",
         exp_name="RND-PPO-FrozenLake-Deterministic",
-        grid_env=True,
+        grid_env=False,
         eval_every=100,
         save_every=1000,
         num_eval_episodes=5,

@@ -30,7 +30,7 @@ def test_rnd_ppo_cliffwalking():
         use_wandb=True,
         wandb_project="cleanRL",
         exp_name="RND-PPO-Cliffwalking",
-        grid_env=True,
+        grid_env=False,
         eval_every=1000,
         save_every=1000,
         num_eval_episodes=1,

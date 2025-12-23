@@ -14,7 +14,7 @@ from neatrl import train_reinforce
 # Train REINFORCE on CartPole
 model = train_reinforce(
     env_id="CartPole-v1",
-    episodes=2000,
+    total_steps=2000,
     seed=42
 )
 
@@ -30,7 +30,7 @@ from neatrl import train_reinforce
 
 model = train_reinforce(
     env_id="CartPole-v1",
-    episodes=2000,
+    total_steps=2000,
     seed=42,
     capture_video=True,        # Record training videos
     use_wandb=True,           # Enable W&B logging
@@ -67,7 +67,7 @@ from neatrl import train_reinforce
 # Train REINFORCE on Atari Breakout
 model = train_reinforce(
     env_id="BreakoutNoFrameskip-v4",
-    episodes=2000,
+    total_steps=2000,
     seed=42,
     atari_wrapper=True,       # Enable Atari preprocessing
     n_envs=4,                 # Use 4 parallel environments
@@ -106,7 +106,7 @@ class CustomPolicyNet(nn.Module):
 # Train with custom policy
 model = train_reinforce(
     env_id="CartPole-v1",
-    episodes=2000,
+    total_steps=2000,
     seed=42,
     custom_agent=CustomPolicyNet(4, 2),  # 4 state dims, 2 actions
     use_wandb=True,
@@ -122,9 +122,9 @@ The `train_reinforce` function accepts the following arguments for customizing y
 | Argument | Type | Default | Description |
 |----------|------|---------|-------------|
 | `env_id` | str | `"CartPole-v1"` | Gymnasium environment ID to train on |
-| `episodes` | int | `2000` | Number of episodes to train for |
+| `total_steps` | int | `2000` | Number of episodes to train for |
 | `seed` | int | `42` | Random seed for reproducibility |
-| `learning_rate` | float | `2e-3` | Learning rate for the Adam optimizer |
+| `learning_rate` | float | `2.5e-4` | Learning rate for the Adam optimizer |
 | `gamma` | float | `0.99` | Discount factor for future rewards |
 | `max_grad_norm` | float | `1.0` | Maximum gradient norm for clipping (0.0 to disable) |
 | `capture_video` | bool | `False` | Whether to record training videos |
@@ -138,8 +138,15 @@ The `train_reinforce` function accepts the following arguments for customizing y
 | `n_envs` | int | `4` | Number of parallel environments for training |
 | `custom_agent` | nn.Module | `None` | Custom policy network class/instance (overrides default) |
 | `num_eval_eps` | int | `10` | Number of episodes for evaluation |
-| `device` | str | `"cpu"` | Device for training ("cpu", "cuda", "mps") |
+| `device` | str | `"auto"` | Device for training ("auto", "cpu", "cuda", "mps") |
 | `grid_env` | bool | `False` | Whether the environment uses discrete grid observations |
+| `use_entropy` | bool | `False` | Whether to use entropy regularization |
+| `entropy_coeff` | float | `0.01` | Entropy regularization coefficient |
+| `normalize_obs` | bool | `False` | Whether to normalize observations |
+| `normalize_reward` | bool | `False` | Whether to normalize rewards |
+| `log_gradients` | bool | `False` | Whether to log gradient norms |
+| `anneal_lr` | bool | `True` | Whether to anneal learning rate over time |
+| `env_wrapper` | callable | `None` | Custom environment wrapper function |
 
 ## 🎮 Supported Environments
 
@@ -161,7 +168,7 @@ from neatrl import train_reinforce
 
 model = train_reinforce(
     env_id="BreakoutNoFrameskip-v4",
-    episodes=2000,
+    total_steps=2000,
     atari_wrapper=True,  # Enables Atari preprocessing
     n_envs=4,            # Parallel environments
     seed=42
@@ -189,9 +196,9 @@ from neatrl import train_reinforce
 # Train REINFORCE on FrozenLake with automatic one-hot encoding
 model = train_reinforce(
     env_id="FrozenLake-v1",
-    episodes=2000,
+    total_steps=2000,
     seed=42,
-    grid_env=True,  # Enable one-hot encoding for discrete states
+    grid_env=False,  # Enable one-hot encoding for discrete states
     use_wandb=True,
     wandb_project="grid-experiments",
     exp_name="reinforce-frozenlake"
@@ -206,16 +213,16 @@ from neatrl import train_reinforce
 # Train REINFORCE on Taxi with automatic one-hot encoding
 model = train_reinforce(
     env_id="Taxi-v3",
-    episodes=2000,
+    total_steps=2000,
     seed=42,
-    grid_env=True,  # Enable one-hot encoding for discrete states
+    grid_env=False,  # Enable one-hot encoding for discrete states
     use_wandb=True,
     wandb_project="grid-experiments",
     exp_name="reinforce-taxi"
 )
 ```
 
-The `grid_env=True` parameter automatically applies one-hot encoding to discrete state observations, making them suitable for neural network input.
+The `grid_env=False` parameter automatically applies one-hot encoding to discrete state observations, making them suitable for neural network input.
 
 ## 📊 Experiment Tracking with Weights & Biases
 
@@ -235,7 +242,7 @@ wandb login
 ```python
 model = train_reinforce(
     env_id="CartPole-v1",
-    episodes=2000,
+    total_steps=2000,
     use_wandb=True,
     wandb_project="my-rl-project",
     wandb_entity="your-username",  # Optional: your W&B username
@@ -257,7 +264,7 @@ NeatRL can automatically record and upload training videos:
 ```python
 model = train_reinforce(
     env_id="CartPole-v1",
-    episodes=2000,
+    total_steps=2000,
     capture_video=True,     # Enable video recording
     use_wandb=True,         # Upload to W&B
 )

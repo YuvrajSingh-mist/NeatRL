@@ -888,6 +888,12 @@ def train_ppo_rnd_cnn(
                 )
                 ratio = torch.exp(new_log_probs - b_logprobs[mb_inds])
 
+                with torch.no_grad():
+                    logratio = new_log_probs - b_logprobs[mb_inds]
+                    approx_kl = ((ratio - 1) - logratio).mean()
+                    if Config.use_wandb:
+                        wandb.log({"charts/approx_kl": approx_kl.item()})
+
                 pg_loss1 = b_advantages[mb_inds] * ratio
                 pg_loss2 = b_advantages[mb_inds] * torch.clamp(
                     ratio, 1 - Config.clip_value, 1 + Config.clip_value
@@ -1523,6 +1529,12 @@ def train_ppo_rnd(
                     b_obs[mb_inds], b_actions[mb_inds]
                 )
                 ratio = torch.exp(new_log_probs - b_logprobs[mb_inds])
+
+                with torch.no_grad():
+                    logratio = new_log_probs - b_logprobs[mb_inds]
+                    approx_kl = ((ratio - 1) - logratio).mean()
+                    if Config.use_wandb:
+                        wandb.log({"charts/approx_kl": approx_kl.item()})
 
                 pg_loss1 = b_advantages[mb_inds] * ratio
                 pg_loss2 = b_advantages[mb_inds] * torch.clamp(
