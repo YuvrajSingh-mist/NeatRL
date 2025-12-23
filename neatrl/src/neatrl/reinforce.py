@@ -1,7 +1,7 @@
 import os
 import random
 import time
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
 import ale_py
 import gymnasium as gym
@@ -40,6 +40,8 @@ class Config:
     use_entropy: bool = False
     entropy_coeff: float = 0.01
     anneal_lr: bool = True  # Whether to anneal learning rate over time
+    env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = None
+    
     # Evaluation & logging
     eval_every: int = 100
     save_every: int = 1000
@@ -49,7 +51,7 @@ class Config:
     capture_video: bool = False
     device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # Custom agent
-    custom_agent: Optional[nn.Module] = None  # Custom neural network class or instance
+    custom_agent: Optional[Union[nn.Module, type]] = None  # Custom neural network class or instance
 
     # Normalization
     normalize_obs: bool = False
@@ -112,7 +114,7 @@ class OneHotWrapper(gym.ObservationWrapper):
 
 
 def make_env(
-    env_id: str,
+    env_id: Optional[str],
     seed: int,
     idx: int,
     render_mode: Optional[str] = None,
@@ -125,9 +127,11 @@ def make_env(
         if env is not None:
             # Use provided environment
             env_to_use = env
-        else:
+        elif env_id is not None:
             # Create new environment
             env_to_use = gym.make(env_id, render_mode=render_mode)
+        else:
+            raise ValueError("Either env or env_id must be provided")
 
         env_to_use = gym.wrappers.RecordEpisodeStatistics(env_to_use)
         if Config.normalize_reward:
@@ -143,8 +147,10 @@ def make_env(
                 env_to_use, grayscale_obs=True, scale_obs=True
             )
             env_to_use = FrameStackObservation(env_to_use, stack_size=4)
+            
         if env_wrapper:
             env_to_use = env_wrapper(env_to_use)
+            
         env_to_use.action_space.seed(seed + idx)
         return env_to_use
 
@@ -152,17 +158,19 @@ def make_env(
 
 
 def evaluate(
-    env_id,
-    model,
-    device,
-    seed,
+    env_id=None,
+    env=None,
+    model=None,
+    device=None,
+    seed=None,
     num_eval_eps=10,
+    env_wrapper=None,
     capture_video=False,
     atari_wrapper=False,
     grid_env=False,
 ):
     eval_env = make_env(
-        env_id, seed, idx=0, render_mode="rgb_array", atari_wrapper=atari_wrapper, grid_env=grid_env
+        env_id=env_id, env=env, seed=seed, idx=0, render_mode="rgb_array", atari_wrapper=atari_wrapper, grid_env=grid_env, env_wrapper=env_wrapper
     )()
     eval_env.action_space.seed(seed)
 
@@ -308,6 +316,7 @@ def train_reinforce(
     normalize_reward=Config.normalize_reward,
     log_gradients=Config.log_gradients,
     anneal_lr=Config.anneal_lr,
+    env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = None,
 ):
     """
     Train a REINFORCE agent on a Gymnasium environment.
@@ -339,6 +348,7 @@ def train_reinforce(
         normalize_reward: Whether to normalize rewards
         log_gradients: Whether to log gradient norms to WandB
         anneal_lr: Whether to anneal learning rate over time
+        env_wrapper: Optional environment wrapper function
     Returns:
         Trained Policy-network model
     """
@@ -375,6 +385,7 @@ def train_reinforce(
     Config.normalize_reward = normalize_reward
     Config.log_gradients = log_gradients
     Config.anneal_lr = anneal_lr
+    Config.env_wrapper = env_wrapper
 
     # Initialize WandB
     if Config.use_wandb:
@@ -427,14 +438,14 @@ def train_reinforce(
         env = gym.vector.SyncVectorEnv(
             [
                 make_env(
-                    Config.env_id if Config.env_id is not None else Config.env, Config.seed, idx=i, render_mode="rgb_array", atari_wrapper=Config.atari_wrapper, grid_env=Config.grid_env
+                    env_id=Config.env_id, env=Config.env, seed=Config.seed, idx=i, render_mode="rgb_array", atari_wrapper=Config.atari_wrapper, grid_env=Config.grid_env, env_wrapper=Config.env_wrapper
                 )
                 for i in range(Config.n_envs)
             ]
         )
     else:
         env = make_env(
-            Config.env_id if Config.env_id is not None else Config.env, Config.seed, idx=0, render_mode="rgb_array", atari_wrapper=Config.atari_wrapper, grid_env=Config.grid_env
+            env_id=Config.env_id, env=Config.env, seed=Config.seed, idx=0, render_mode="rgb_array", atari_wrapper=Config.atari_wrapper, grid_env=Config.grid_env, env_wrapper=Config.env_wrapper
         )()
 
     # Determine if we're dealing with discrete observation spaces
@@ -468,12 +479,14 @@ def train_reinforce(
     # Use custom agent if provided, otherwise use default PolicyNet
     if Config.custom_agent is not None:
         if isinstance(Config.custom_agent, nn.Module):
-            # Validate custom agent's dimensions first
+            # Custom agent is an instance
             validate_policy_network_dimensions(Config.custom_agent, obs_shape, action_shape)
-
             policy_network = Config.custom_agent.to(Config.device)
+        elif isinstance(Config.custom_agent, type) and issubclass(Config.custom_agent, nn.Module):
+            # Custom agent is a class
+            policy_network = Config.custom_agent(obs_shape, action_shape).to(Config.device)
         else:
-            raise ValueError("agent must be an instance of nn.Module")
+            raise ValueError("custom_agent must be an instance of nn.Module or a subclass of nn.Module")
     else:
         policy_network = PolicyNet(obs_shape, action_shape).to(Config.device)
 
@@ -725,10 +738,12 @@ def train_reinforce(
         # Model evaluation & saving
         if step % Config.eval_every == 0:
             episodic_returns, _ = evaluate(
-                Config.env_id,
-                policy_network,
-                Config.device,
-                Config.seed,
+                env_id=Config.env_id,
+                env=Config.env,
+                model=policy_network,
+                device=Config.device,
+                seed=Config.seed,
+                env_wrapper=Config.env_wrapper,
                 num_eval_eps=Config.num_eval_eps,
                 capture_video=Config.capture_video,
                 atari_wrapper=Config.atari_wrapper,
@@ -760,10 +775,12 @@ def train_reinforce(
     if Config.use_wandb:
         train_video_path = "videos/final.mp4"
         _, frames = evaluate(
-            Config.env_id,
-            policy_network,
-            Config.device,
-            Config.seed,
+            env_id=Config.env_id,
+            env=Config.env,
+            model=policy_network,
+            device=Config.device,
+            seed=Config.seed,
+            env_wrapper=Config.env_wrapper,
             num_eval_eps=Config.num_eval_eps,
             capture_video=Config.capture_video,
             atari_wrapper=Config.atari_wrapper,
@@ -808,6 +825,7 @@ def train_reinforce_cnn(
     normalize_reward=Config.normalize_reward,
     log_gradients=Config.log_gradients,
     anneal_lr=Config.anneal_lr,
+    env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = None,
 ):
     """
     Train a REINFORCE agent on a Gymnasium environment.
@@ -837,6 +855,7 @@ def train_reinforce_cnn(
         entropy_coeff: Coefficient for the entropy bonus (only used if use_entropy=True)
         normalize_obs: Whether to normalize observations
         normalize_reward: Whether to normalize rewards
+        env_wrapper: Optional environment wrapper function
         log_gradients: Whether to log gradient norms to WandB
         anneal_lr: Whether to anneal learning rate over time
     Returns:
@@ -875,6 +894,13 @@ def train_reinforce_cnn(
     Config.normalize_reward = normalize_reward
     Config.log_gradients = log_gradients
     Config.anneal_lr = anneal_lr
+    Config.env_wrapper = None
+
+    
+    if env is not None and Config.env_id != env_id:
+        raise ValueError(
+            "Cannot provide both env_id and env. Use env_id for default environments or env for custom environments."
+        )
 
     # Initialize WandB
     if Config.use_wandb:
@@ -927,14 +953,14 @@ def train_reinforce_cnn(
         env = gym.vector.SyncVectorEnv(
             [
                 make_env(
-                    Config.env_id if Config.env_id is not None else Config.env, Config.seed, idx=i, render_mode="rgb_array", atari_wrapper=Config.atari_wrapper, grid_env=Config.grid_env
+                    env_id=Config.env_id, env=Config.env, seed=Config.seed, idx=i, render_mode="rgb_array", atari_wrapper=Config.atari_wrapper, grid_env=Config.grid_env, env_wrapper=Config.env_wrapper
                 )
                 for i in range(Config.n_envs)
             ]
         )
     else:
         env = make_env(
-            Config.env_id if Config.env_id is not None else Config.env, Config.seed, idx=0, render_mode="rgb_array", atari_wrapper=Config.atari_wrapper, grid_env=Config.grid_env
+            env_id=Config.env_id, env=Config.env, seed=Config.seed, idx=0, render_mode="rgb_array", atari_wrapper=Config.atari_wrapper, grid_env=Config.grid_env, env_wrapper=Config.env_wrapper
         )()
 
     # Determine if we're dealing with discrete observation spaces
@@ -968,18 +994,21 @@ def train_reinforce_cnn(
     # Use custom agent if provided, otherwise use default PolicyNet
     if Config.custom_agent is not None:
         if isinstance(Config.custom_agent, nn.Module):
-            # Validate custom agent's dimensions first
+            # Custom agent is an instance
             validate_policy_network_dimensions(Config.custom_agent, obs_shape, action_shape)
-
             policy_network = Config.custom_agent.to(Config.device)
+        elif isinstance(Config.custom_agent, type) and issubclass(Config.custom_agent, nn.Module):
+            # Custom agent is a class
+            policy_network = Config.custom_agent(action_shape).to(Config.device)
         else:
-            raise ValueError("agent must be an instance of nn.Module")
+            raise ValueError("custom_agent must be an instance of nn.Module or a subclass of nn.Module")
     else:
         policy_network = PolicyNet(obs_shape, action_shape).to(Config.device)
 
     optimizer = optim.Adam(policy_network.parameters(), lr=Config.learning_rate)
 
     # Print network architecture
+    
     print("Policy-Network Architecture:")
     print(policy_network)
 
@@ -1008,6 +1037,7 @@ def train_reinforce_cnn(
             optimizer.param_groups[0]["lr"] = lrnow
             
         while True:
+          
             result = policy_network.get_action(
                 torch.tensor(obs, device=Config.device, dtype=torch.float32)
             )
@@ -1225,10 +1255,12 @@ def train_reinforce_cnn(
         # Model evaluation & saving
         if step % Config.eval_every == 0:
             episodic_returns, _ = evaluate(
-                Config.env_id,
-                policy_network,
-                Config.device,
-                Config.seed,
+                env_id=Config.env_id,
+                env=Config.env,
+                model=policy_network,
+                device=Config.device,
+                seed=Config.seed,
+                env_wrapper=Config.env_wrapper,
                 num_eval_eps=Config.num_eval_eps,
                 capture_video=Config.capture_video,
                 atari_wrapper=Config.atari_wrapper,
@@ -1260,10 +1292,12 @@ def train_reinforce_cnn(
     if Config.use_wandb:
         train_video_path = "videos/final.mp4"
         _, frames = evaluate(
-            Config.env_id,
-            policy_network,
-            Config.device,
-            Config.seed,
+            env_id=Config.env_id,
+            env=Config.env,
+            model=policy_network,
+            device=Config.device,
+            seed=Config.seed,
+            env_wrapper=Config.env_wrapper,
             num_eval_eps=Config.num_eval_eps,
             capture_video=Config.capture_video,
             atari_wrapper=Config.atari_wrapper,

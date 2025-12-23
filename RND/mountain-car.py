@@ -181,7 +181,7 @@ if __name__ == "__main__":
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    device = "cuda" 
+    device = "cpu" 
 
     envs = gym.vector.SyncVectorEnv(
         [make_env(args.env_id, args.seed, i) for i in range(args.num_envs)]
@@ -244,7 +244,7 @@ if __name__ == "__main__":
                 intrinsic_reward = torch.pow(pred_features - target_features, 2).sum(1)
 
             intrinsic_rewards_storage[step] = intrinsic_reward
-            print(f"Step {step}",  {intrinsic_reward.mean().item()})
+
 
             # Step the environment
             new_obs, reward, terminated, truncated, info = envs.step(action.cpu().numpy())

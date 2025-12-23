@@ -37,7 +37,7 @@ class PreprocessAndFrameStack(gym.ObservationWrapper):
     def observation(self, obs):
         # `obs` here is a LazyFrames object from FrameStack of shape (num_stack, H, W, C)
         # 1. Convert LazyFrames to a single numpy array
-        # print(obs)
+
         stack = np.array(obs, dtype=np.uint8)
 
         # 2. Extract 'screen' if obs is a dict (for VizDoom)
@@ -75,33 +75,45 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
 
 
 class FeatureExtractor(nn.Module):
-    def __init__(self, input_shape):
+    def __init__(self):
         super().__init__()
-        self.network = nn.Sequential(
-            layer_init(nn.Conv2d(input_shape[0], 32, kernel_size=8, stride=4)),
-            nn.ReLU(),
-            layer_init(nn.Conv2d(32, 64, kernel_size=4, stride=2)),
-            nn.ReLU(),
-            layer_init(nn.Conv2d(64, 64, kernel_size=3, stride=1)),
-            nn.ReLU(),
-            nn.Flatten(),
-            layer_init(nn.Linear(64 * 7 * 7, 512)),  # For 84x84 input after convs
-            nn.ReLU(),
-        )
+    
+        self.conv1 = layer_init(nn.Conv2d(3, 32, kernel_size=8, stride=4))
+        self.relu1 = nn.ReLU()
+        self.conv2 = layer_init(nn.Conv2d(32, 64, kernel_size=4, stride=2))
+        self.relu2 = nn.ReLU()
+        self.conv3 = layer_init(nn.Conv2d(64, 64, kernel_size=3, stride=1))
+        self.relu3 = nn.ReLU()
+        self.flatten = nn.Flatten()
+        self.fc = layer_init(nn.Linear(64 * 8 * 8, 512))  # Adjusted for 96x96 input
+        self.relu_fc = nn.ReLU()
+    
 
     def forward(self, x):
-        return self.network(x)  # Normalize image
+        
+        x = self.relu1(self.conv1(x))
+        
+        x = self.relu2(self.conv2(x))
+     
+        x = self.relu3(self.conv3(x))
+  
+        x = self.flatten(x)
+      
+        x = self.relu_fc(self.fc(x))
+        return x
 
 
 class ActorNet(nn.Module):
-    def __init__(self, state_space, action_space):
+    def __init__(self, action_space):
         super().__init__()
 
-        self.network = FeatureExtractor(state_space)
+        self.network = FeatureExtractor()
 
         self.out = layer_init(nn.Linear(512, action_space))
 
     def forward(self, x):
+        x = x.unsqueeze(0)  
+        x = x.permute(0, 3, 1, 2)  # [B, H, W, C] -> [B, C, H, W]
         x = self.network(x / 255.0)
         out = torch.nn.functional.softmax(self.out(x), dim=-1)
         return out   
@@ -125,7 +137,7 @@ def test_reinforce_carracing():
     model = train_reinforce_cnn(
         
         env=gym.make("CarRacing-v3", render_mode="rgb_array", continuous=False),
-       total_steps=2000,
+        total_steps=2000,
         seed=42,
         learning_rate=2e-3,
         gamma=0.99,
@@ -133,7 +145,7 @@ def test_reinforce_carracing():
         use_wandb=True,
         wandb_project="cleanRL",
         wandb_entity="",
-        exp_name="REINFORCE-CartPole",
+        exp_name="REINFORCE-CarRacing",
         eval_every=100,
         save_every=1000,
         atari_wrapper=False,
@@ -141,7 +153,8 @@ def test_reinforce_carracing():
         num_eval_eps=10,
         device="cpu",
         grid_env=False,
-        custom_agent=ActorNet((4, 84, 84), 5),
+        custom_agent=ActorNet,
+        env_wrapper=car_racing_wrapper
     )
 
     print("Training completed!")

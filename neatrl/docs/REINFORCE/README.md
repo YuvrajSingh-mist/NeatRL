@@ -275,9 +275,8 @@ Check out these example scripts:
 - [`run_reinforce_cartpole.py`](./run_reinforce_cartpole.py) - Basic REINFORCE training on CartPole with parallel environments
 - [`run_reinforce_frozenlake.py`](./run_reinforce_frozenlake.py) - REINFORCE training on FrozenLake (with one-hot encoding)
 - [`run_reinforce_pendulum.py`](./run_reinforce_pendulum.py) - REINFORCE training on Pendulum (continuous actions - experimental)
-- [`run_reinforce_breakout.py`](./run_reinforce_breakout.py) - REINFORCE training on Atari Breakout (CNN architecture)
+- [`run_reinforce_car_racing.py`](./run_reinforce_car_racing.py) - REINFORCE training on CarRacing (CNN architecture)
 
 ---
 
 Happy training! 🚀</content>
-<parameter name="filePath">/Users/yuvrajsingh9886/Desktop/NeatRL/NeatRL/neatrl/docs/REINFORCE/README.md

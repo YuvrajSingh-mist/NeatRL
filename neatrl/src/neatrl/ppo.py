@@ -162,36 +162,6 @@ class CriticNet(nn.Module):
         return self.value_ext(x), self.value_int(x)
 
 
-class PredictorNet(nn.Module):
-    def __init__(self, state_space: Union[int, tuple[int, ...]]) -> None:
-        super().__init__()
-        self.fc1 = layer_init(nn.Linear(state_space, 64))
-        self.fc2 = layer_init(nn.Linear(64, 64))
-        self.fc3 = layer_init(nn.Linear(64, 32))
-        self.out = layer_init(nn.Linear(32, 32))
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
-        return self.out(x)
-
-
-class TargetNet(nn.Module):
-    def __init__(self, state_space: Union[int, tuple[int, ...]]) -> None:
-        super().__init__()
-        self.fc1 = layer_init(nn.Linear(state_space, 64))
-        self.fc2 = layer_init(nn.Linear(64, 64))
-        self.fc3 = layer_init(nn.Linear(64, 32))
-        self.out = layer_init(nn.Linear(32, 32))
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
-        return self.out(x)
-
-
 class OneHotWrapper(gym.ObservationWrapper):
     def __init__(self, env: gym.Env, obs_shape: int = 16) -> None:
         super().__init__(env)
@@ -733,7 +703,8 @@ def train_ppo_rnd_cnn(
         # Rollout Phase
         for step in range(0, Config.max_steps):
             global_step = (update - 1) * batch_size + step * Config.n_envs
-          
+            # print(obs_space_shape, next_obs.shape)
+            # print(obs_storage[step].shape)
             obs_storage[step] = next_obs
 
             dones_storage[step] = next_done
@@ -768,7 +739,7 @@ def train_ppo_rnd_cnn(
 
             ext_values_storage[step] = ext_value.flatten()
             int_values_storage[step] = int_value.flatten()
-           
+            # print(action_space_n, action.shape, actions_storage[step].shape, action_shape)
             actions_storage[step] = action
             logprobs_storage[step] = (
                 logprob.sum(dim=-1) if len(logprob.shape) > 1 else logprob
@@ -895,7 +866,7 @@ def train_ppo_rnd_cnn(
                 policy_loss = -torch.min(pg_loss1, pg_loss2).mean()
 
                 ext_current_values, int_current_values = critic_network(b_obs[mb_inds])
-
+                # print("ext returns, int b returns ", b_ext_returns[mb_inds], b_int_returns[mb_inds])
                 ext_critic_loss = F.mse_loss(
                     ext_current_values.squeeze(), b_ext_returns[mb_inds]
                 )
