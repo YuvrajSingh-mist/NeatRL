@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from neatrl import train_rnd
+from neatrl import train_ppo_rnd
 
 
 # --- Networks ---
@@ -94,7 +94,7 @@ def test_rnd_ppo_mountain_car():
     print("Testing RND-PPO training on MountainCar-v0 with neatrl...")
 
     # Train RND-PPO on MountainCar
-    model = train_rnd(
+    model = train_ppo_rnd(
         env_id="MountainCar-v0",
         total_timesteps=1000000,
         seed=42,

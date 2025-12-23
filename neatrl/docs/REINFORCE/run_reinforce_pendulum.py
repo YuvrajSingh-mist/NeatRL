@@ -55,15 +55,16 @@ def test_reinforce_pendulum():
         eval_every=1000,
         save_every=20000,
         atari_wrapper=False,
-        n_envs=8,
+        n_envs=4,
         num_eval_eps=1,
         device="cpu",
         grid_env=False,
         custom_agent=PolicyNet(3, 1),
+        anneal_lr=True,
         use_entropy=True,
         entropy_coeff=0.01,
         normalize_obs=True,
-        normalize_reward=True
+        normalize_reward=False
     )
 
     print("REINFORCE training on Pendulum-v0 completed successfully!")

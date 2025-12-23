@@ -24,7 +24,7 @@ class Config:
         "PPO-RND-Vectorized-ClipWalking"  # Experiment name for logging and saving
     )
     seed: int = 42  # Random seed for reproducibility
-    env_id: str = "CliffWalking-v0"  # Gymnasium environment ID
+    env_id: Optional[str] = "CliffWalking-v0"  # Gymnasium environment ID
     total_timesteps: int = 5_000_000  # Total number of timesteps to train
 
     # PPO & Agent settings
@@ -62,6 +62,8 @@ class Config:
     normalize_reward: bool = False  # Whether to normalize rewards
     log_gradients: bool = True  # Whether to log gradient norms to W&B
     device: str = "cpu"  # Device for training: "auto", "cpu", "cuda", or "cuda:0" etc.
+    custom_agent: Optional[nn.Module] = None  # Custom neural network class or instance
+    env: Optional[gym.Env] = None  # Optional pre-created environment
 
 
 # ===== RunningMeanStd for Normalization =====
@@ -304,6 +306,109 @@ def validate_policy_network_dimensions(
         )
 
 
+def validate_critic_network_dimensions(
+    critic_network: nn.Module, obs_dim: Union[int, tuple[int, ...]]
+) -> None:
+    """
+    Validate that the Critic-network's input dimension matches the environment.
+
+    Args:
+        critic_network: The critic neural network model (nn.Module)
+        obs_dim: Expected observation dimension (int or tuple)
+    """
+    if isinstance(obs_dim, tuple):
+        # For Atari-like, check if it has conv layers
+        has_conv = any(
+            isinstance(module, nn.Conv2d) for module in critic_network.modules()
+        )
+        if not has_conv:
+            print(
+                "Warning: Observation is multi-dimensional but network has no Conv2d layers."
+            )
+    else:
+        # Find first Linear layer for input dimension
+        first_layer = None
+        for module in critic_network.modules():
+            if isinstance(module, nn.Linear):
+                first_layer = module
+                break
+        if first_layer is None:
+            raise ValueError(
+                "Critic-network must have at least one Linear layer for dimension validation."
+            )
+        if first_layer.in_features != obs_dim:
+            raise ValueError(
+                f"Critic-network input dimension {first_layer.in_features} does not match observation dimension {obs_dim}."
+            )
+
+    # Find last Linear layer for output dimension (should be 1 for value)
+    last_layer = None
+    for module in reversed(list(critic_network.modules())):
+        if isinstance(module, nn.Linear):
+            last_layer = module
+            break
+    if last_layer is None:
+        raise ValueError(
+            "Critic-network must have at least one Linear layer for dimension validation."
+        )
+    if last_layer.out_features != 1:
+        raise ValueError(
+            f"Critic-network output dimension {last_layer.out_features} should be 1 for value estimation."
+        )
+
+
+def validate_feature_network_dimensions(
+    feature_network: nn.Module, obs_dim: Union[int, tuple[int, ...]], feature_dim: int
+) -> None:
+    """
+    Validate that the Feature-network's input and output dimensions match expectations.
+
+    Args:
+        feature_network: The feature neural network model (nn.Module)
+        obs_dim: Expected observation dimension (int or tuple)
+        feature_dim: Expected feature dimension
+    """
+    if isinstance(obs_dim, tuple):
+        # For Atari-like, check if it has conv layers
+        has_conv = any(
+            isinstance(module, nn.Conv2d) for module in feature_network.modules()
+        )
+        if not has_conv:
+            print(
+                "Warning: Observation is multi-dimensional but network has no Conv2d layers."
+            )
+    else:
+        # Find first Linear layer for input dimension
+        first_layer = None
+        for module in feature_network.modules():
+            if isinstance(module, nn.Linear):
+                first_layer = module
+                break
+        if first_layer is None:
+            raise ValueError(
+                "Feature-network must have at least one Linear layer for dimension validation."
+            )
+        if first_layer.in_features != obs_dim:
+            raise ValueError(
+                f"Feature-network input dimension {first_layer.in_features} does not match observation dimension {obs_dim}."
+            )
+
+    # Find last Linear layer for output dimension
+    last_layer = None
+    for module in reversed(list(feature_network.modules())):
+        if isinstance(module, nn.Linear):
+            last_layer = module
+            break
+    if last_layer is None:
+        raise ValueError(
+            "Feature-network must have at least one Linear layer for dimension validation."
+        )
+    if last_layer.out_features != feature_dim:
+        raise ValueError(
+            f"Feature-network output dimension {last_layer.out_features} does not match expected feature dimension {feature_dim}."
+        )
+
+
 def evaluate(
     model: nn.Module,
     device: torch.device,
@@ -527,10 +632,43 @@ def train_ppo_rnd_cnn(
 
     print(f"Observation Space: {obs_space_shape}, Action Space: {action_space_n}")
 
-    actor_network = actor_class(obs_space_shape, action_space_n).to(device)
-    critic_network = critic_class(obs_space_shape).to(device)
-    predictor_network = predictor_class(obs_space_shape).to(device)
-    target_network = target_class(obs_space_shape).to(device)
+    # Create actor network
+    if isinstance(actor_class, nn.Module):
+        # Use custom actor instance
+        validate_policy_network_dimensions(actor_class, obs_space_shape[0] if len(obs_space_shape) == 1 else obs_space_shape, action_space_n)
+        actor_network = actor_class.to(device)
+    else:
+        # Use actor class
+        actor_network = actor_class(obs_space_shape, action_space_n).to(device)
+
+    # Create critic network  
+    if isinstance(critic_class, nn.Module):
+        # Use custom critic instance
+        validate_critic_network_dimensions(critic_class, obs_space_shape[0] if len(obs_space_shape) == 1 else obs_space_shape)
+        critic_network = critic_class.to(device)
+    else:
+        # Use critic class
+        critic_network = critic_class(obs_space_shape).to(device)
+
+    # Create predictor network
+    if isinstance(predictor_class, nn.Module):
+        # Use custom predictor instance - assume same feature dim as default
+        feature_dim = 256  # Default feature dimension
+        validate_feature_network_dimensions(predictor_class, obs_space_shape[0] if len(obs_space_shape) == 1 else obs_space_shape, feature_dim)
+        predictor_network = predictor_class.to(device)
+    else:
+        # Use predictor class
+        predictor_network = predictor_class(obs_space_shape).to(device)
+
+    # Create target network
+    if isinstance(target_class, nn.Module):
+        # Use custom target instance - assume same feature dim as predictor
+        feature_dim = 256  # Default feature dimension
+        validate_feature_network_dimensions(target_class, obs_space_shape[0] if len(obs_space_shape) == 1 else obs_space_shape, feature_dim)
+        target_network = target_class.to(device)
+    else:
+        # Use target class
+        target_network = target_class(obs_space_shape).to(device)
 
     print("Actor Network Architecture:")
     print(actor_network)
@@ -976,8 +1114,8 @@ def train_ppo_rnd_cnn(
 
 
 def train_ppo_rnd(
-    env_id: str = Config.env_id,
-    env: Optional[gym.Env] = None,
+    env_id: Optional[str] = None,
+    env: Optional[gym.Env] = Config.env,
     total_timesteps: int = Config.total_timesteps,
     seed: int = Config.seed,
     lr: float = Config.lr,
@@ -1130,10 +1268,43 @@ def train_ppo_rnd(
 
     print(f"Observation Space: {obs_space_shape}, Action Space: {action_space_n}")
 
-    actor_network = actor_class(obs_space_shape, action_space_n).to(device)
-    critic_network = critic_class(obs_space_shape).to(device)
-    predictor_network = predictor_class(obs_space_shape).to(device)
-    target_network = target_class(obs_space_shape).to(device)
+    # Create actor network
+    if isinstance(actor_class, nn.Module):
+        # Use custom actor instance
+        validate_policy_network_dimensions(actor_class, obs_space_shape, action_space_n)
+        actor_network = actor_class.to(device)
+    else:
+        # Use actor class
+        actor_network = actor_class(obs_space_shape, action_space_n).to(device)
+
+    # Create critic network  
+    if isinstance(critic_class, nn.Module):
+        # Use custom critic instance
+        validate_critic_network_dimensions(critic_class, obs_space_shape)
+        critic_network = critic_class.to(device)
+    else:
+        # Use critic class
+        critic_network = critic_class(obs_space_shape).to(device)
+
+    # Create predictor network
+    if isinstance(predictor_class, nn.Module):
+        # Use custom predictor instance - assume same feature dim as default
+        feature_dim = 256  # Default feature dimension
+        validate_feature_network_dimensions(predictor_class, obs_space_shape, feature_dim)
+        predictor_network = predictor_class.to(device)
+    else:
+        # Use predictor class
+        predictor_network = predictor_class(obs_space_shape).to(device)
+
+    # Create target network
+    if isinstance(target_class, nn.Module):
+        # Use custom target instance - assume same feature dim as predictor
+        feature_dim = 256  # Default feature dimension
+        validate_feature_network_dimensions(target_class, obs_space_shape, feature_dim)
+        target_network = target_class.to(device)
+    else:
+        # Use target class
+        target_network = target_class(obs_space_shape).to(device)
 
     print("Actor Network Architecture:")
     print(actor_network)
