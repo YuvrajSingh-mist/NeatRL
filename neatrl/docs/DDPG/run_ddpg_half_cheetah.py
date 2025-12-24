@@ -7,12 +7,6 @@ and Half Cheetah is a classic continuous control benchmark with 17-dimensional s
 and 6-dimensional continuous action space.
 """
 
-import sys
-import os
-
-# Add the src directory to the path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
-
 from neatrl.ddpg import train_ddpg
 
 def main():

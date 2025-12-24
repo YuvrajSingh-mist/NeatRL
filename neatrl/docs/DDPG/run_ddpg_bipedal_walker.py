@@ -4,17 +4,14 @@ DDPG Example for BipedalWalker Environment
 This example demonstrates how to use DDPG for the BipedalWalker environment.
 BipedalWalker has continuous action spaces and vector observations, making it perfect for standard DDPG.
 """
-import gymnasium as gym
-from neatrl.ddpg import train_ddpg
 
-env = gym.make("BipedalWalker-v3")
+from neatrl.ddpg import train_ddpg
 
 def main():
     """Train DDPG on BipedalWalker environment."""
 
     train_ddpg(
-        # env_id="BipedalWalker-v3",  # BipedalWalker environment
-        env=env, 
+        env_id="BipedalWalker-v3",  # BipedalWalker environment 
         total_timesteps=1000000,  # BipedalWalker needs many timesteps
         seed=42,
         learning_rate=3e-4,
@@ -27,7 +24,7 @@ def main():
         tau=0.005,
         exploration_fraction=0.1,
         use_wandb=True,  # Set to True to enable logging
-        capture_video=False,
+        capture_video=True,
         eval_every=10000,
         save_every=100000,
         num_eval_episodes=2,

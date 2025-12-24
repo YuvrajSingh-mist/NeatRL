@@ -13,8 +13,6 @@ import torch.nn as nn
 from typing import Union, Optional
 from neatrl.ddpg import train_ddpg_cnn
 
-env = gym.make("CarRacing-v3", continuous=False)
-
 class PreprocessAndFrameStack(gym.ObservationWrapper):
     """
     A wrapper that extracts the 'screen' observation, resizes, grayscales,
@@ -79,20 +77,21 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
 
 
 class FeatureExtractor(nn.Module):
-    def __init__(self):
-        super().__init__(obs_shape)
+    def __init__(self, obs_shape):
+        super().__init__()
 
-        self.conv1 = layer_init(nn.Conv2d(obs_shape, 32, kernel_size=8, stride=4))
+        self.conv1 = layer_init(nn.Conv2d(obs_shape[0], 32, kernel_size=8, stride=4))
         self.relu1 = nn.ReLU()
         self.conv2 = layer_init(nn.Conv2d(32, 64, kernel_size=4, stride=2))
         self.relu2 = nn.ReLU()
         self.conv3 = layer_init(nn.Conv2d(64, 64, kernel_size=3, stride=1))
         self.relu3 = nn.ReLU()
         self.flatten = nn.Flatten()
-        self.fc = layer_init(nn.Linear(64 * 8 * 8, 512))  # Adjusted for 96x96 input
-        self.relu_fc = nn.Tanh()
+        self.fc = layer_init(nn.Linear(64 * 7 * 7, 512))  # Adjusted for 96x96 input
+        self.relu_fc = nn.ReLU()
 
     def forward(self, x):
+    
         x = self.relu1(self.conv1(x))
 
         x = self.relu2(self.conv2(x))
@@ -106,49 +105,45 @@ class FeatureExtractor(nn.Module):
 
 
 class ActorNet(nn.Module):
-    def __init__(self, action_space):
+    def __init__(self, obs_shape, action_space):
         super().__init__()
+        print(obs_shape, action_space)
+        self.network = FeatureExtractor(obs_shape)
 
-        self.network = FeatureExtractor()
-
-        self.out = layer_init(nn.Linear(512, action_space))
+        self.out1 = layer_init(nn.Linear(512, 1))
+        self.out2 = layer_init(nn.Linear(512, 1))
+        self.out3 = layer_init(nn.Linear(512, 1))
 
     def forward(self, x):
-        print(x.shape)
-        x = x.unsqueeze(0)
-        x = x.permute(0, 3, 1, 2)  # [B, H, W, C] -> [B, C, H, W]
+        
+
         x = self.network(x / 255.0)
-        out = torch.nn.functional.softmax(self.out(x), dim=-1)
-        return out
-
-    def get_action(self, x, action=None):
-        probs = self.forward(x)
-        dist = torch.distributions.Categorical(probs)
-        if action is None:
-            action = dist.sample()
-        log_prob = dist.log_prob(action)
-
-        return action, log_prob, dist
+        out1 = torch.nn.functional.tanh(self.out1(x))
+        out2 = torch.nn.functional.tanh(self.out2(x))
+        out3 = torch.nn.functional.tanh(self.out3(x))
+        action1 = out1
+        action2 = (out2 + 1 ) / 2
+        action3 = (out3 + 1) / 2
+       
+        return torch.cat([action1, action2, action3], dim=-1)
 
 
 class QNet(nn.Module):
-    def __init__(self, state_space: Union[int, tuple[int, ...]], action_space: int):
+    def __init__(self, obs_shape: Union[int, tuple[int, ...]], action_space: int):
         super().__init__()
         # Handle state_space as tuple or int
-        state_dim = state_space[0] if isinstance(state_space, tuple) else state_space
-        self.netowkr = FeatureExtractor()
+        state_dim = obs_shape[0] if isinstance(obs_shape, tuple) else obs_shape
+        self.network= FeatureExtractor(obs_shape)
         self.fc1 = nn.Linear(state_dim, 256)
         self.fc2 = nn.Linear(action_space, 256)
-        self.fc3 = nn.Linear(512, 512)
-        self.reduce = nn.Linear(512, 256)  # Output a single Q-value
-        self.out = nn.Linear(256, 1)
+        self.fc3 = nn.Linear(768, 512)
+        self.out = nn.Linear(512, 1) # Output a single Q-value
     
     def forward(self, state, act):
-        st = self.network(state)
+        st = self.network(state / 255.0)
         action = torch.nn.functional.mish(self.fc2(act))
-        temp = torch.cat((st, action), dim=1)  # Concatenate state and action
-        x = torch.nn.functional.mish(self.fc3(temp))
-        x = torch.nn.functional.mish(self.reduce(x))
+        combined = torch.cat((st, action), dim=-1)  # Concatenate state and action
+        x = torch.nn.functional.mish(self.fc3(combined))
         x = self.out(x)
         return x
 
@@ -171,11 +166,14 @@ def main():
         tau=0.005,
         exploration_fraction=0.1,
         use_wandb=True,  # Set to True to enable logging
-        capture_video=False,
+        capture_video=True,
         eval_every=10000,
         save_every=50000,
         num_eval_episodes=5,
-        device="cpu"  # Use "cuda" if you have GPU
+        device="cpu",  # Use "cuda" if you have GPU
+        actor_class=ActorNet,
+        q_network_class=QNet,
+        env_wrapper=car_racing_wrapper
     )
 
 if __name__ == "__main__":

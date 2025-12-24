@@ -669,7 +669,8 @@ def train_ddpg(
     for step in tqdm(range(Config.total_timesteps)):
         # Get action from actor network with exploration noise
         with torch.no_grad():
-            action = actor_net(torch.tensor(obs, device=device, dtype=torch.float32))
+            
+            action = actor_net(torch.tensor(obs, device=device, dtype=torch.float32).unsqueeze(0))
             action = action + torch.clip(
                 torch.randn_like(action) * Config.exploration_fraction, 
                 -Config.noise_clip, 
@@ -1032,7 +1033,7 @@ def train_ddpg_cnn(
     action_shape = (
         env.action_space.n
         if isinstance(env.action_space, gym.spaces.Discrete)
-        else env.action_space.shape
+        else env.action_space.shape[0]
     )
 
    # Create actor network
@@ -1095,14 +1096,13 @@ def train_ddpg_cnn(
     for step in tqdm(range(Config.total_timesteps)):
         # Get action from actor network with exploration noise
         with torch.no_grad():
-            action = actor_net(torch.tensor(obs, device=device, dtype=torch.float32))
+            action = actor_net(torch.tensor(obs, device=device, dtype=torch.float32).unsqueeze(0))
             action = action + torch.clip(
                 torch.randn_like(action) * Config.exploration_fraction, 
                 -Config.noise_clip, 
                 Config.noise_clip
             )
             action = torch.clip(action, Config.low, Config.high)
-        
         action_np = action.cpu().numpy().flatten()
         
         new_obs, reward, terminated, truncated, info = env.step(action_np)
@@ -1261,17 +1261,17 @@ def train_ddpg_cnn(
                     })
                 print(f"Evaluation returns: {[float(r) for r in episodic_returns]}, Average: {avg_return:.2f}")
             
-            # Save video if frames were captured
-            if eval_frames and Config.use_wandb:
-                video = np.stack(eval_frames)
-                video = np.transpose(video, (0, 3, 1, 2))
-                wandb.log({
-                    "videos/eval_policy": wandb.Video(
-                        video,
-                        fps=30,
-                        format="mp4",
-                    )
-                })
+                # Save video if frames were captured
+                if eval_frames and Config.use_wandb:
+                    video = np.stack(eval_frames)
+                    video = np.transpose(video, (0, 3, 1, 2))
+                    wandb.log({
+                        "videos/eval_policy": wandb.Video(
+                            video,
+                            fps=30,
+                            format="mp4",
+                        )
+                    })
 
         # Save model
         if Config.save_every > 0 and step % Config.save_every == 0 and step > 0:
