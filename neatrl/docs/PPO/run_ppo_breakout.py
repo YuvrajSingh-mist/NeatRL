@@ -17,20 +17,26 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
 class FeatureExtractor(nn.Module):
     def __init__(self, input_shape):
         super().__init__()
-        self.network = nn.Sequential(
-            layer_init(nn.Conv2d(input_shape[0], 32, kernel_size=8, stride=4)),
-            nn.ReLU(),
-            layer_init(nn.Conv2d(32, 64, kernel_size=4, stride=2)),
-            nn.ReLU(),
-            layer_init(nn.Conv2d(64, 64, kernel_size=3, stride=1)),
-            nn.ReLU(),
-            nn.Flatten(),
-            layer_init(nn.Linear(64 * 7 * 7, 512)),  # For 84x84 input after convs
-            nn.ReLU(),
-        )
+        
+        self.conv1 = layer_init(nn.Conv2d(input_shape[0], 32, kernel_size=8, stride=4))
+        self.relu1 = nn.ReLU()
+        self.conv2 = layer_init(nn.Conv2d(32, 64, kernel_size=4, stride=2))
+        self.relu2 = nn.ReLU()
+        self.conv3 = layer_init(nn.Conv2d(64, 64, kernel_size=3, stride=1))
+        self.relu3 = nn.ReLU()
+        self.flatten = nn.Flatten()
+        self.linear = layer_init(nn.Linear(64 * 7 * 7, 512))  # For 84x84 input after convs
+        self.relu4 = nn.ReLU()
+        
 
     def forward(self, x):
-        return self.network(x)  # Normalize image
+        
+        x = self.relu1(self.conv1(x))
+        x = self.relu2(self.conv2(x))
+        x = self.relu3(self.conv3(x))
+        x = self.flatten(x)
+        x = self.relu4(self.linear(x))
+        return x  # Normalize images outside
 
 
 class ActorNet(nn.Module):
@@ -46,14 +52,12 @@ class ActorNet(nn.Module):
         out = torch.nn.functional.softmax(self.out(x), dim=-1)
         return out   
 
-    def get_action(self, x, action=None, deterministic=False):
+    def get_action(self, x, action=None):
         features = self.network(x)
         logits = self.out(features)
         probs = torch.softmax(logits, dim=-1)
         dist = torch.distributions.Categorical(probs=probs)
-        if deterministic:
-            probs = torch.softmax(logits, dim=-1)
-            action = torch.argmax(probs, dim=-1)
+       
         if action is None:
             action = dist.sample()
         log_prob = dist.log_prob(action)
@@ -70,48 +74,6 @@ class CriticNet(nn.Module):
     def forward(self, x):
         x = self.network(x / 255.0)
         return self.value(x)
-
-
-class Agent(nn.Module):
-    def __init__(self, action_space):
-        super(Agent, self).__init__()
-        # Shared CNN feature extractor
-        self.network = nn.Sequential(
-            layer_init(nn.Conv2d(4, 32, kernel_size=8, stride=4)),
-            nn.ReLU(),
-            layer_init(nn.Conv2d(32, 64, kernel_size=4, stride=2)),
-            nn.ReLU(),
-            layer_init(nn.Conv2d(64, 64, kernel_size=3, stride=1)),
-            nn.ReLU(),
-            nn.Flatten(),
-            layer_init(nn.Linear(64 * 7 * 7, 512)), # Adjusted for 64x64 input
-            nn.ReLU(),
-        )
-        # Actor head
-        self.actor = layer_init(nn.Linear(512, action_space), std=0.01)
-        # Critic head
-        self.critic = layer_init(nn.Linear(512, 1), std=1.0)
-
-    def get_features(self, x):
-        return self.network(x)
-
-    def get_value(self, x):
-        return self.critic(self.get_features(x))
-
-    def get_action(self, x, action=None, deterministic=False):
-        features = self.get_features(x)
-        logits = self.actor(features)
-        probs = torch.softmax(logits, dim=-1)
-        dist = torch.distributions.Categorical(probs=probs)
-        if deterministic:
-            probs = torch.softmax(logits, dim=-1)
-            action = torch.argmax(probs, dim=-1)
-        if action is None:
-            action = dist.sample()
-        log_prob = dist.log_prob(action)
-   
-        return action, log_prob, dist
-
 
 
 def test_ppo_breakout():
@@ -140,7 +102,7 @@ def test_ppo_breakout():
         wandb_project="cleanRL",
         exp_name="PPO-Breakout",
         atari_wrapper=True,
-        eval_every=100,
+        eval_every=1,
         save_every=10000,
         num_eval_episodes=2,
         actor_class=ActorNet,

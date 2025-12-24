@@ -104,16 +104,15 @@ class ActorNet(nn.Module):
     def forward(self, x):
         x = self.network(x / 255.0)
         out = torch.nn.functional.softmax(self.out(x), dim=-1)
-        return out   
+        return out
 
     def get_action(self, x, action=None):
-        
         probs = self.forward(x)
         dist = torch.distributions.Categorical(probs)
         if action is None:
             action = dist.sample()
         log_prob = dist.log_prob(action)
-        
+
         return action, log_prob, dist
 
 
@@ -154,13 +153,13 @@ class TargetNet(nn.Module):
         x = self.network(x / 255.0)
         return self.out(x)
 
+
 def test_rnd_ppo_carracing():
     """Test RND-PPO training on CarRacing-v3."""
     print("Testing RND-PPO training on CarRacing-v3 with neatrl...")
 
     # Train RND-PPO on CarRacing
     model = train_ppo_rnd_cnn(
-        
         env=gym.make("CarRacing-v3", render_mode="rgb_array", continuous=False),
         total_timesteps=500000,
         seed=42,

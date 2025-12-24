@@ -61,7 +61,7 @@ model = train_dqn(
     env_id="FrozenLake-v1",
     total_timesteps=50000,
     seed=42,
-    grid_env=True,  # Enable one-hot encoding for discrete states
+    grid_env=False,  # Enable one-hot encoding for discrete states
     use_wandb=True,
     wandb_project="frozen-lake-experiments",
     exp_name="dqn-frozenlake"
@@ -72,7 +72,7 @@ print("Training completed! 🎉")
 
 For a complete example script, see [run_dqn_frozenlake.py](https://github.com/YuvrajSingh-mist/NeatRL/blob/master/neatrl/docs/DQN/run_dqn_frozenlake.py).
 
-The `grid_env=True` parameter automatically applies one-hot encoding to the discrete state observations, making them suitable for neural network input without manual preprocessing.
+The `grid_env=False` parameter automatically applies one-hot encoding to the discrete state observations, making them suitable for neural network input without manual preprocessing.
 
 ---
 

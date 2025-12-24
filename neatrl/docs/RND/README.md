@@ -254,3 +254,7 @@ Check out these example scripts:
 ---
 
 Happy training with RND-PPO! 🚀
+
+## PyPI
+
+For installation and more information, visit [NeatRL on PyPI](https://pypi.org/project/neatrl/)

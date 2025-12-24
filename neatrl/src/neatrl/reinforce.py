@@ -41,7 +41,7 @@ class Config:
     entropy_coeff: float = 0.01
     anneal_lr: bool = True  # Whether to anneal learning rate over time
     env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = None
-    
+
     # Evaluation & logging
     eval_every: int = 100
     save_every: int = 1000
@@ -51,7 +51,9 @@ class Config:
     capture_video: bool = False
     device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # Custom agent
-    custom_agent: Optional[Union[nn.Module, type]] = None  # Custom neural network class or instance
+    custom_agent: Optional[Union[nn.Module, type]] = (
+        None  # Custom neural network class or instance
+    )
 
     # Normalization
     normalize_obs: bool = False
@@ -96,7 +98,7 @@ class PolicyNet(nn.Module):
         dist = torch.distributions.Categorical(
             action_probs
         )  # Create a categorical distribution from the probabilities
-        
+
         action = dist.sample()  # Sample an action from the distribution
         return action, dist.log_prob(action), dist
 
@@ -147,10 +149,10 @@ def make_env(
                 env_to_use, grayscale_obs=True, scale_obs=True
             )
             env_to_use = FrameStackObservation(env_to_use, stack_size=4)
-            
+
         if env_wrapper:
             env_to_use = env_wrapper(env_to_use)
-            
+
         env_to_use.action_space.seed(seed + idx)
         return env_to_use
 
@@ -170,7 +172,14 @@ def evaluate(
     grid_env=False,
 ):
     eval_env = make_env(
-        env_id=env_id, env=env, seed=seed, idx=0, render_mode="rgb_array", atari_wrapper=atari_wrapper, grid_env=grid_env, env_wrapper=env_wrapper
+        env_id=env_id,
+        env=env,
+        seed=seed,
+        idx=0,
+        render_mode="rgb_array",
+        atari_wrapper=atari_wrapper,
+        grid_env=grid_env,
+        env_wrapper=env_wrapper,
     )()
     eval_env.action_space.seed(seed)
 
@@ -197,12 +206,11 @@ def evaluate(
                     action, _ = action
                 elif len(action) == 3:
                     action, _, _ = action
-                    
+
                 # Handle both discrete and continuous action spaces
                 if isinstance(eval_env.action_space, gym.spaces.Discrete):
                     action = action.item()
                 else:
-                
                     action = action.detach().cpu().numpy()
             obs, reward, terminated, truncated, _ = eval_env.step(action)
             done = terminated or truncated
@@ -356,8 +364,10 @@ def train_reinforce(
 
     # Set Config attributes from function arguments
     if env is not None and env_id is not None:
-        raise ValueError("Cannot provide both 'env' and 'env_id'. Provide either 'env' (pre-created environment) or 'env_id' (environment ID), not both.")
-    
+        raise ValueError(
+            "Cannot provide both 'env' and 'env_id'. Provide either 'env' (pre-created environment) or 'env_id' (environment ID), not both."
+        )
+
     Config.env = env
     Config.env_id = env_id if env_id is not None else Config.env_id
 
@@ -433,19 +443,33 @@ def train_reinforce(
 
     if Config.env is not None:
         env = Config.env
-    
+
     if Config.n_envs > 1:
         env = gym.vector.SyncVectorEnv(
             [
                 make_env(
-                    env_id=Config.env_id, env=Config.env, seed=Config.seed, idx=i, render_mode="rgb_array", atari_wrapper=Config.atari_wrapper, grid_env=Config.grid_env, env_wrapper=Config.env_wrapper
+                    env_id=Config.env_id,
+                    env=Config.env,
+                    seed=Config.seed,
+                    idx=i,
+                    render_mode="rgb_array",
+                    atari_wrapper=Config.atari_wrapper,
+                    grid_env=Config.grid_env,
+                    env_wrapper=Config.env_wrapper,
                 )
                 for i in range(Config.n_envs)
             ]
         )
     else:
         env = make_env(
-            env_id=Config.env_id, env=Config.env, seed=Config.seed, idx=0, render_mode="rgb_array", atari_wrapper=Config.atari_wrapper, grid_env=Config.grid_env, env_wrapper=Config.env_wrapper
+            env_id=Config.env_id,
+            env=Config.env,
+            seed=Config.seed,
+            idx=0,
+            render_mode="rgb_array",
+            atari_wrapper=Config.atari_wrapper,
+            grid_env=Config.grid_env,
+            env_wrapper=Config.env_wrapper,
         )()
 
     # Determine if we're dealing with discrete observation spaces
@@ -480,13 +504,21 @@ def train_reinforce(
     if Config.custom_agent is not None:
         if isinstance(Config.custom_agent, nn.Module):
             # Custom agent is an instance
-            validate_policy_network_dimensions(Config.custom_agent, obs_shape, action_shape)
+            validate_policy_network_dimensions(
+                Config.custom_agent, obs_shape, action_shape
+            )
             policy_network = Config.custom_agent.to(Config.device)
-        elif isinstance(Config.custom_agent, type) and issubclass(Config.custom_agent, nn.Module):
+        elif isinstance(Config.custom_agent, type) and issubclass(
+            Config.custom_agent, nn.Module
+        ):
             # Custom agent is a class
-            policy_network = Config.custom_agent(obs_shape, action_shape).to(Config.device)
+            policy_network = Config.custom_agent(obs_shape, action_shape).to(
+                Config.device
+            )
         else:
-            raise ValueError("custom_agent must be an instance of nn.Module or a subclass of nn.Module")
+            raise ValueError(
+                "custom_agent must be an instance of nn.Module or a subclass of nn.Module"
+            )
     else:
         policy_network = PolicyNet(obs_shape, action_shape).to(Config.device)
 
@@ -505,7 +537,7 @@ def train_reinforce(
     start_time = time.time()
 
     updates = Config.episodes // Config.n_envs
-    
+
     for step in tqdm(range(updates)):
         global_step = step * Config.n_envs
         obs, _ = env.reset()
@@ -514,12 +546,12 @@ def train_reinforce(
         entropies = []
         done = False
 
-         # Annealing the rate if instructed to do so.
+        # Annealing the rate if instructed to do so.
         if Config.anneal_lr:
             frac = 1.0 - (step - 1.0) / updates
             lrnow = frac * Config.learning_rate
             optimizer.param_groups[0]["lr"] = lrnow
-            
+
         while True:
             result = policy_network.get_action(
                 torch.tensor(obs, device=Config.device, dtype=torch.float32)
@@ -527,13 +559,13 @@ def train_reinforce(
             if len(result) == 2:
                 action, log_prob = result
                 log_prob = log_prob.sum(dim=-1) if len(log_prob.shape) > 1 else log_prob
-               
+
                 dist = None
-                
+
             elif len(result) == 3:
                 action, log_prob, dist = result
                 log_prob = log_prob.sum(dim=-1) if len(log_prob.shape) > 1 else log_prob
-                
+
             else:
                 raise ValueError(
                     f"Error unpacking result from get_action. Expected 3 got {len(result)}"
@@ -560,7 +592,6 @@ def train_reinforce(
 
             new_obs, reward, terminated, truncated, info = env.step(action)
             rewards.append(reward)
-       
 
             log_probs.append(log_prob)
             if Config.use_entropy:
@@ -609,10 +640,14 @@ def train_reinforce(
             G = reward + Config.gamma * G
             returns.insert(0, G)
 
-        returns = torch.tensor(returns, device=Config.device, dtype=torch.float32).detach()
+        returns = torch.tensor(
+            returns, device=Config.device, dtype=torch.float32
+        ).detach()
 
         if Config.use_wandb:
-            wandb.log({"charts/returns_mean": returns.mean().item(), "step": global_step})
+            wandb.log(
+                {"charts/returns_mean": returns.mean().item(), "step": global_step}
+            )
 
         # Normalize returns
         returns = (returns - returns.mean()) / (returns.std() + 1e-8)
@@ -625,13 +660,11 @@ def train_reinforce(
                         ep_ret = info["episode"]["r"][i]
                         ep_len = info["episode"]["l"][i]
 
-                    
                         if Config.use_wandb:
                             wandb.log(
                                 {
                                     "charts/episodic_return": ep_ret,
                                     "charts/episodic_length": ep_len,
-                                    
                                 }
                             )
             else:
@@ -639,7 +672,6 @@ def train_reinforce(
                     ep_ret = info["episode"]["r"]
                     ep_len = info["episode"]["l"]
 
-              
                     if Config.use_wandb:
                         wandb.log(
                             {
@@ -669,7 +701,9 @@ def train_reinforce(
             entropy_loss = torch.stack(entropies).mean() * Config.entropy_coeff
 
             if Config.use_wandb:
-                wandb.log({"losses/entropy_loss": entropy_loss.item(), "step": global_step})
+                wandb.log(
+                    {"losses/entropy_loss": entropy_loss.item(), "step": global_step}
+                )
 
             loss = loss - entropy_loss
         loss.backward()
@@ -732,7 +766,10 @@ def train_reinforce(
             )
             if Config.use_wandb:
                 wandb.log(
-                    {"charts/SPS": int(step / (time.time() - start_time)), "step": global_step}
+                    {
+                        "charts/SPS": int(step / (time.time() - start_time)),
+                        "step": global_step,
+                    }
                 )
 
         # Model evaluation & saving
@@ -755,7 +792,6 @@ def train_reinforce(
                 wandb.log({"charts/val_avg_return": avg_return, "step": global_step})
             print(f"Evaluation returns: {episodic_returns}, Average: {avg_return:.2f}")
 
-   
         if Config.use_wandb:
             wandb.log(
                 {
@@ -769,8 +805,7 @@ def train_reinforce(
             os.makedirs(os.path.dirname(model_path), exist_ok=True)
             torch.save(policy_network.state_dict(), model_path)
             print(f"Model saved at episode {step} to {model_path}")
-            
-            
+
     # Save final video to WandB
     if Config.use_wandb:
         train_video_path = "videos/final.mp4"
@@ -793,9 +828,6 @@ def train_reinforce(
     env.close()
 
     return policy_network
-
-
-
 
 
 def train_reinforce_cnn(
@@ -865,8 +897,10 @@ def train_reinforce_cnn(
 
     # Set Config attributes from function arguments
     if env is not None and env_id is not None:
-        raise ValueError("Cannot provide both 'env' and 'env_id'. Provide either 'env' (pre-created environment) or 'env_id' (environment ID), not both.")
-    
+        raise ValueError(
+            "Cannot provide both 'env' and 'env_id'. Provide either 'env' (pre-created environment) or 'env_id' (environment ID), not both."
+        )
+
     Config.env = env
     Config.env_id = env_id if env_id is not None else Config.env_id
 
@@ -896,7 +930,6 @@ def train_reinforce_cnn(
     Config.anneal_lr = anneal_lr
     Config.env_wrapper = None
 
-    
     if env is not None and Config.env_id != env_id:
         raise ValueError(
             "Cannot provide both env_id and env. Use env_id for default environments or env for custom environments."
@@ -948,19 +981,33 @@ def train_reinforce_cnn(
 
     if Config.env is not None:
         env = Config.env
-    
+
     if Config.n_envs > 1:
         env = gym.vector.SyncVectorEnv(
             [
                 make_env(
-                    env_id=Config.env_id, env=Config.env, seed=Config.seed, idx=i, render_mode="rgb_array", atari_wrapper=Config.atari_wrapper, grid_env=Config.grid_env, env_wrapper=Config.env_wrapper
+                    env_id=Config.env_id,
+                    env=Config.env,
+                    seed=Config.seed,
+                    idx=i,
+                    render_mode="rgb_array",
+                    atari_wrapper=Config.atari_wrapper,
+                    grid_env=Config.grid_env,
+                    env_wrapper=Config.env_wrapper,
                 )
                 for i in range(Config.n_envs)
             ]
         )
     else:
         env = make_env(
-            env_id=Config.env_id, env=Config.env, seed=Config.seed, idx=0, render_mode="rgb_array", atari_wrapper=Config.atari_wrapper, grid_env=Config.grid_env, env_wrapper=Config.env_wrapper
+            env_id=Config.env_id,
+            env=Config.env,
+            seed=Config.seed,
+            idx=0,
+            render_mode="rgb_array",
+            atari_wrapper=Config.atari_wrapper,
+            grid_env=Config.grid_env,
+            env_wrapper=Config.env_wrapper,
         )()
 
     # Determine if we're dealing with discrete observation spaces
@@ -995,20 +1042,26 @@ def train_reinforce_cnn(
     if Config.custom_agent is not None:
         if isinstance(Config.custom_agent, nn.Module):
             # Custom agent is an instance
-            validate_policy_network_dimensions(Config.custom_agent, obs_shape, action_shape)
+            validate_policy_network_dimensions(
+                Config.custom_agent, obs_shape, action_shape
+            )
             policy_network = Config.custom_agent.to(Config.device)
-        elif isinstance(Config.custom_agent, type) and issubclass(Config.custom_agent, nn.Module):
+        elif isinstance(Config.custom_agent, type) and issubclass(
+            Config.custom_agent, nn.Module
+        ):
             # Custom agent is a class
             policy_network = Config.custom_agent(action_shape).to(Config.device)
         else:
-            raise ValueError("custom_agent must be an instance of nn.Module or a subclass of nn.Module")
+            raise ValueError(
+                "custom_agent must be an instance of nn.Module or a subclass of nn.Module"
+            )
     else:
         policy_network = PolicyNet(obs_shape, action_shape).to(Config.device)
 
     optimizer = optim.Adam(policy_network.parameters(), lr=Config.learning_rate)
 
     # Print network architecture
-    
+
     print("Policy-Network Architecture:")
     print(policy_network)
 
@@ -1021,7 +1074,7 @@ def train_reinforce_cnn(
     start_time = time.time()
 
     updates = Config.episodes // Config.n_envs
-    
+
     for step in tqdm(range(updates)):
         global_step = step * Config.n_envs
         obs, _ = env.reset()
@@ -1030,27 +1083,26 @@ def train_reinforce_cnn(
         entropies = []
         done = False
 
-         # Annealing the rate if instructed to do so.
+        # Annealing the rate if instructed to do so.
         if Config.anneal_lr:
             frac = 1.0 - (step - 1.0) / updates
             lrnow = frac * Config.learning_rate
             optimizer.param_groups[0]["lr"] = lrnow
-            
+
         while True:
-          
             result = policy_network.get_action(
                 torch.tensor(obs, device=Config.device, dtype=torch.float32)
             )
             if len(result) == 2:
                 action, log_prob = result
                 log_prob = log_prob.sum(dim=-1) if len(log_prob.shape) > 1 else log_prob
-               
+
                 dist = None
-                
+
             elif len(result) == 3:
                 action, log_prob, dist = result
                 log_prob = log_prob.sum(dim=-1) if len(log_prob.shape) > 1 else log_prob
-                
+
             else:
                 raise ValueError(
                     f"Error unpacking result from get_action. Expected 3 got {len(result)}"
@@ -1077,7 +1129,6 @@ def train_reinforce_cnn(
 
             new_obs, reward, terminated, truncated, info = env.step(action)
             rewards.append(reward)
-       
 
             log_probs.append(log_prob)
             if Config.use_entropy:
@@ -1126,10 +1177,14 @@ def train_reinforce_cnn(
             G = reward + Config.gamma * G
             returns.insert(0, G)
 
-        returns = torch.tensor(returns, device=Config.device, dtype=torch.float32).detach()
+        returns = torch.tensor(
+            returns, device=Config.device, dtype=torch.float32
+        ).detach()
 
         if Config.use_wandb:
-            wandb.log({"charts/returns_mean": returns.mean().item(), "step": global_step})
+            wandb.log(
+                {"charts/returns_mean": returns.mean().item(), "step": global_step}
+            )
 
         # Normalize returns
         returns = (returns - returns.mean()) / (returns.std() + 1e-8)
@@ -1142,13 +1197,11 @@ def train_reinforce_cnn(
                         ep_ret = info["episode"]["r"][i]
                         ep_len = info["episode"]["l"][i]
 
-                    
                         if Config.use_wandb:
                             wandb.log(
                                 {
                                     "charts/episodic_return": ep_ret,
                                     "charts/episodic_length": ep_len,
-                                    
                                 }
                             )
             else:
@@ -1156,7 +1209,6 @@ def train_reinforce_cnn(
                     ep_ret = info["episode"]["r"]
                     ep_len = info["episode"]["l"]
 
-              
                     if Config.use_wandb:
                         wandb.log(
                             {
@@ -1186,7 +1238,9 @@ def train_reinforce_cnn(
             entropy_loss = torch.stack(entropies).mean() * Config.entropy_coeff
 
             if Config.use_wandb:
-                wandb.log({"losses/entropy_loss": entropy_loss.item(), "step": global_step})
+                wandb.log(
+                    {"losses/entropy_loss": entropy_loss.item(), "step": global_step}
+                )
 
             loss = loss - entropy_loss
         loss.backward()
@@ -1249,7 +1303,10 @@ def train_reinforce_cnn(
             )
             if Config.use_wandb:
                 wandb.log(
-                    {"charts/SPS": int(step / (time.time() - start_time)), "step": global_step}
+                    {
+                        "charts/SPS": int(step / (time.time() - start_time)),
+                        "step": global_step,
+                    }
                 )
 
         # Model evaluation & saving
@@ -1272,7 +1329,6 @@ def train_reinforce_cnn(
                 wandb.log({"charts/val_avg_return": avg_return, "step": global_step})
             print(f"Evaluation returns: {episodic_returns}, Average: {avg_return:.2f}")
 
-   
         if Config.use_wandb:
             wandb.log(
                 {
@@ -1286,8 +1342,7 @@ def train_reinforce_cnn(
             os.makedirs(os.path.dirname(model_path), exist_ok=True)
             torch.save(policy_network.state_dict(), model_path)
             print(f"Model saved at episode {step} to {model_path}")
-            
-            
+
     # Save final video to WandB
     if Config.use_wandb:
         train_video_path = "videos/final.mp4"
@@ -1310,7 +1365,6 @@ def train_reinforce_cnn(
     env.close()
 
     return policy_network
-
 
 
 if __name__ == "__main__":

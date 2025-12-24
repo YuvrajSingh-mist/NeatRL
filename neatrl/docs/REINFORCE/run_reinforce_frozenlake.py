@@ -28,7 +28,7 @@ class PolicyNet(nn.Module):
         dist = torch.distributions.Categorical(
             action_probs
         )  # Create a categorical distribution from the probabilities
-        
+
         action = dist.sample()  # Sample an action from the distribution
         return action, dist.log_prob(action), dist
 

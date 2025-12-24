@@ -35,7 +35,7 @@ def test_ppo_taxi():
         log_gradients=True,
         grid_env=True,
         max_grad_norm=0.5,
-        value_clip=True
+        value_clip=True,
     )
 
     print("Training completed!")

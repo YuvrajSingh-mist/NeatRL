@@ -29,7 +29,6 @@ model = train_dqn(
 - **Video Recording**: Automatic training progress videos
 - **Hyperparameter Tuning**: Easy configuration of all training parameters
 - **Multiple Environments**: Support for Gymnasium environments
-- **Production Ready**: Clean APIs and comprehensive error handling
 
 📖 **[Complete NeatRL Documentation](./neatrl/README.md)**
 
@@ -160,10 +159,10 @@ If you use this repository in your research, please cite it as:
 ```bibtex
 @misc{singh2025deep-rl-projects,
   author       = {YuvrajSingh-mist},
-  title        = {Deep Reinforcement Learning Projects},
+  title        = {Deep Reinforcement Learning Algorithms Implementations},
   year         = {2025},
   howpublished = {GitHub repository},
-  url          = {https://github.com/YuvrajSingh-mist/Reinforcement-Learning},
+  url          = {https://github.com/YuvrajSingh-mist/NeatRL},
   note         = {commit 477ff21}
 }
 ```

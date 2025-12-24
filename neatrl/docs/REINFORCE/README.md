@@ -286,4 +286,8 @@ Check out these example scripts:
 
 ---
 
-Happy training! 🚀</content>
+Happy training! 🚀
+
+## PyPI
+
+For installation and more information, visit [NeatRL on PyPI](https://pypi.org/project/neatrl/)</content>

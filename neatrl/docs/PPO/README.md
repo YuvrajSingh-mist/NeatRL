@@ -297,13 +297,7 @@ Check out the example scripts in this directory:
 6. **Evaluation**: Monitor evaluation returns to avoid overfitting
 7. **Learning Rate**: Enable `anneal_lr` for stable training over long horizons
 
-## 🤝 Contributing
+## PyPI
 
-Found a bug or want to add a new feature? Check out our [contributing guidelines](../../CONTRIBUTING.md)!
+For installation and more information, visit [NeatRL on PyPI](https://pypi.org/project/neatrl/)
 
-## 📚 Further Reading
-
-- [PPO Paper](https://arxiv.org/abs/1707.06347) - Original Proximal Policy Optimization paper
-- [GAE Paper](https://arxiv.org/abs/1506.02438) - Generalized Advantage Estimation
-- [NeatRL Documentation](../../README.md) - Main library documentation</content>
-<parameter name="filePath">/Users/yuvrajsingh9886/Desktop/NeatRL/NeatRL/neatrl/docs/PPO/README.md

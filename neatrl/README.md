@@ -28,19 +28,31 @@ NeatRL provides high-quality implementations of popular RL algorithms with a foc
   - Better performance on complex environments
   
 - **REINFORCE** - Policy gradient method for discrete and continuous action spaces
-  - ✨ **NEW**: Atari game support with automatic CNN architecture
-  - ✨ **NEW**: Parallel environment training (`n_envs` support)
-  - ✨ **NEW**: Continuous action space support
-  - ✨ **NEW**: Per-layer gradient logging
+  - **NEW**: Atari game support with automatic CNN architecture
+  - **NEW**: Parallel environment training (`n_envs` support)
+  - **NEW**: Continuous action space support
+  - **NEW**: Per-layer gradient logging
   - Episode-based Monte Carlo returns
   - Variance reduction through baseline subtraction
 
+- **PPO (Proximal Policy Optimization)** - State-of-the-art policy gradient method with GAE
+  - **NEW**: Full PPO implementation with Generalized Advantage Estimation (GAE)
+  - **NEW**: Support for both discrete and continuous action spaces
+  - **NEW**: Atari game support with automatic CNN architecture (`train_ppo_cnn`)
+  - **NEW**: Clipped surrogate objective for stable policy updates
+  - **NEW**: Value function clipping and entropy regularization
+  - **NEW**: Vectorized environments for parallel training
+  - **NEW**: Comprehensive WandB logging with advantage distributions
+  - **NEW**: Per-layer gradient monitoring and video recording
+  - Generalized Advantage Estimation with configurable lambda
+  - Flexible network architecture with custom actor/critic classes
+
 - **PPO-RND** (Proximal Policy Optimization with Random Network Distillation) - State-of-the-art exploration method
-  - ✨ **NEW**: Intrinsic motivation through novelty detection
-  - ✨ **NEW**: Combined extrinsic and intrinsic rewards for better exploration
-  - ✨ **NEW**: Support for both discrete and continuous action spaces
-  - ✨ **NEW**: Automatic render mode handling for video recording
-  - ✨ **NEW**: Comprehensive WandB logging with global step tracking
+  - **NEW**: Intrinsic motivation through novelty detection
+  - **NEW**: Combined extrinsic and intrinsic rewards for better exploration
+  - **NEW**: Support for both discrete and continuous action spaces
+  - **NEW**: Automatic render mode handling for video recording
+  - **NEW**: Comprehensive WandB logging with global step tracking
   - PPO with clipped surrogate objective
   - Vectorized environments for parallel training
   - Intrinsic reward normalization and advantage calculation
@@ -51,9 +63,9 @@ NeatRL provides high-quality implementations of popular RL algorithms with a foc
 
 ```bash
 python -m venv neatrl-env
-source neatrl-env/bin/activate  # On Windows use `neatrl-env\Scripts
+source neatrl-env/bin/activate 
 
-pip install neatrl"[classic,box2d,atari]""[classic,box2d,atari]"
+pip install neatrl"[classic,box2d,atari]"
 ```
 
 ## 🚀 Quick Start
@@ -114,6 +126,37 @@ model = train_reinforce(
     env_id="Pendulum-v1",
     total_steps=2000,
     custom_agent=ContinuousPolicyNet(3, 1),
+    seed=42
+)
+```
+
+### Train PPO on Classic Control
+
+```python
+from neatrl import train_ppo
+
+model = train_ppo(
+    env_id="CartPole-v1",
+    total_timesteps=50000,
+    n_envs=4,           # Parallel environments
+    GAE=0.95,           # Generalized Advantage Estimation lambda
+    clip_value=0.2,     # PPO clipping parameter
+    use_wandb=True,     # Track with WandB
+    seed=42
+)
+```
+
+### Train PPO on Atari
+
+```python
+from neatrl import train_ppo_cnn
+
+model = train_ppo_cnn(
+    env_id="BreakoutNoFrameskip-v4",
+    total_timesteps=100000,
+    n_envs=8,           # More parallel environments for Atari
+    atari_wrapper=True, # Automatic Atari preprocessing
+    use_wandb=True,     # Track with WandB
     seed=42
 )
 ```

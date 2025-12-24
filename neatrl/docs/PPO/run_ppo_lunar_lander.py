@@ -34,7 +34,7 @@ def test_ppo_lunar_lander():
         num_eval_episodes=2,
         log_gradients=True,
         grid_env=False,
-        normalize_obs=True
+        normalize_obs=True,
     )
 
     print("Training completed!")

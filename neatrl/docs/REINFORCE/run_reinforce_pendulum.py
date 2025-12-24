@@ -31,7 +31,7 @@ class PolicyNet(nn.Module):
         dist = torch.distributions.Normal(
             mean, std
         )  # Create a normal distribution from the mean and std
-        
+
         action = dist.sample()  # Sample an action from the distribution
         return action, dist.log_prob(action), dist
 
@@ -64,7 +64,7 @@ def test_reinforce_pendulum():
         use_entropy=True,
         entropy_coeff=0.01,
         normalize_obs=True,
-        normalize_reward=False
+        normalize_reward=False,
     )
 
     print("REINFORCE training on Pendulum-v0 completed successfully!")

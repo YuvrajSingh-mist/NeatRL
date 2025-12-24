@@ -6,6 +6,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.5.0] - 2025-12-24
+
+### Added - PPO Algorithm Implementation
+- **PPO (Proximal Policy Optimization)**: Full implementation of PPO with Generalized Advantage Estimation (GAE)
+  - **Standard PPO**: `train_ppo()` function for discrete and continuous action spaces
+  - **PPO with CNN**: `train_ppo_cnn()` function for Atari/image-based environments with automatic CNN architecture
+  - **GAE Support**: Generalized Advantage Estimation with configurable lambda parameter for improved advantage estimation
+  - **Clipped Surrogate Objective**: PPO's signature clipped surrogate loss for stable policy updates
+  - **Value Function Clipping**: Optional value function clipping for additional stability
+  - **Entropy Regularization**: Configurable entropy coefficient for exploration control
+  - **Vectorized Environments**: Support for parallel environments (`n_envs` parameter)
+  - **Comprehensive WandB Logging**: Full integration with Weights & Biases including:
+    - Policy and value losses
+    - Entropy and KL divergence tracking
+    - Advantage and return distributions
+    - Per-layer gradient monitoring
+    - Episode returns and lengths
+    - Video recording capabilities
+  - **Flexible Network Architecture**: Support for custom actor and critic network classes
+  - **Environment Wrapper Support**: Custom environment wrappers for preprocessing
+  - **Grid Environment Support**: Automatic one-hot encoding for discrete grid states
+  - **Atari Preprocessing**: Built-in Atari game preprocessing and frame stacking
+
+### Added - DDPG Enhancements
+- **Environment Wrapper Support**: Added `env_wrapper` parameter to DDPG functions for custom environment preprocessing
+- **Grid Environment Parameters**: Added `grid_env` and `atari_wrapper` parameters to DDPG functions for consistency with other algorithms
+- **Enhanced WandB Logging**: Added reward distribution statistics (mean/std) to DDPG training logs
+- **Return Distribution Statistics**: Added return standard deviation to evaluation logging for better performance monitoring
+
+### Changed
+- **API Consistency**: DDPG functions now have the same parameter structure as other algorithms (PPO, etc.)
+- **Reward Statistics**: Enhanced monitoring with reward mean and standard deviation during training
+
+### Fixed
+- **DDPG Parameter Parity**: DDPG now supports all environment preprocessing options available in other algorithms
+
+
 ## [0.3.0] - 2025-12-22
 
 ### Added - PPO-RND Algorithm Implementation

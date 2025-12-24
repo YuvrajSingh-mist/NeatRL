@@ -21,7 +21,7 @@ class Config:
 
     # Experiment settings
     exp_name: str = (
-        "PPO-RND-Vectorized-ClipWalking"  # Experiment name for logging and saving
+        "PPO-RND"  # Experiment name for logging and saving
     )
     seed: int = 42  # Random seed for reproducibility
     env_id: Optional[str] = "CliffWalking-v0"  # Gymnasium environment ID
@@ -635,16 +635,23 @@ def train_ppo_rnd_cnn(
     # Create actor network
     if isinstance(actor_class, nn.Module):
         # Use custom actor instance
-        validate_policy_network_dimensions(actor_class, obs_space_shape[0] if len(obs_space_shape) == 1 else obs_space_shape, action_space_n)
+        validate_policy_network_dimensions(
+            actor_class,
+            obs_space_shape[0] if len(obs_space_shape) == 1 else obs_space_shape,
+            action_space_n,
+        )
         actor_network = actor_class.to(device)
     else:
         # Use actor class
         actor_network = actor_class(obs_space_shape, action_space_n).to(device)
 
-    # Create critic network  
+    # Create critic network
     if isinstance(critic_class, nn.Module):
         # Use custom critic instance
-        validate_critic_network_dimensions(critic_class, obs_space_shape[0] if len(obs_space_shape) == 1 else obs_space_shape)
+        validate_critic_network_dimensions(
+            critic_class,
+            obs_space_shape[0] if len(obs_space_shape) == 1 else obs_space_shape,
+        )
         critic_network = critic_class.to(device)
     else:
         # Use critic class
@@ -654,7 +661,11 @@ def train_ppo_rnd_cnn(
     if isinstance(predictor_class, nn.Module):
         # Use custom predictor instance - assume same feature dim as default
         feature_dim = 256  # Default feature dimension
-        validate_feature_network_dimensions(predictor_class, obs_space_shape[0] if len(obs_space_shape) == 1 else obs_space_shape, feature_dim)
+        validate_feature_network_dimensions(
+            predictor_class,
+            obs_space_shape[0] if len(obs_space_shape) == 1 else obs_space_shape,
+            feature_dim,
+        )
         predictor_network = predictor_class.to(device)
     else:
         # Use predictor class
@@ -664,7 +675,11 @@ def train_ppo_rnd_cnn(
     if isinstance(target_class, nn.Module):
         # Use custom target instance - assume same feature dim as predictor
         feature_dim = 256  # Default feature dimension
-        validate_feature_network_dimensions(target_class, obs_space_shape[0] if len(obs_space_shape) == 1 else obs_space_shape, feature_dim)
+        validate_feature_network_dimensions(
+            target_class,
+            obs_space_shape[0] if len(obs_space_shape) == 1 else obs_space_shape,
+            feature_dim,
+        )
         target_network = target_class.to(device)
     else:
         # Use target class
@@ -700,9 +715,9 @@ def train_ppo_rnd_cnn(
 
     # Tensor Storage
 
-    obs_storage = torch.zeros(
-        (Config.max_steps, Config.n_envs) + obs_space_shape
-    ).to(device)
+    obs_storage = torch.zeros((Config.max_steps, Config.n_envs) + obs_space_shape).to(
+        device
+    )
     actions_storage = torch.zeros((Config.max_steps, Config.n_envs) + action_shape).to(
         device
     )
@@ -733,7 +748,7 @@ def train_ppo_rnd_cnn(
         # Rollout Phase
         for step in range(0, Config.max_steps):
             global_step = (update - 1) * batch_size + step * Config.n_envs
-          
+
             obs_storage[step] = next_obs
 
             dones_storage[step] = next_done
@@ -768,7 +783,7 @@ def train_ppo_rnd_cnn(
 
             ext_values_storage[step] = ext_value.flatten()
             int_values_storage[step] = int_value.flatten()
-           
+
             actions_storage[step] = action
             logprobs_storage[step] = (
                 logprob.sum(dim=-1) if len(logprob.shape) > 1 else logprob
@@ -1116,8 +1131,6 @@ def train_ppo_rnd_cnn(
     return actor_network
 
 
-
-
 def train_ppo_rnd(
     env_id: Optional[str] = None,
     env: Optional[gym.Env] = Config.env,
@@ -1213,16 +1226,15 @@ def train_ppo_rnd(
     random.seed(Config.seed)
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
- 
+
     device = torch.device(Config.device)
 
     if Config.device == "cuda":
-        
         torch.backends.cudnn.deterministic = True
         torch.cuda.manual_seed(Config.seed)
         torch.cuda.manual_seed_all(Config.seed)
         torch.backends.cudnn.benchmark = False
-        
+
     # Create environments - check for pre-created env first, then default
     if env is not None:
         env_thunks = [
@@ -1282,7 +1294,7 @@ def train_ppo_rnd(
         # Use actor class
         actor_network = actor_class(obs_space_shape, action_space_n).to(device)
 
-    # Create critic network  
+    # Create critic network
     if isinstance(critic_class, nn.Module):
         # Use custom critic instance
         validate_critic_network_dimensions(critic_class, obs_space_shape)
@@ -1295,7 +1307,9 @@ def train_ppo_rnd(
     if isinstance(predictor_class, nn.Module):
         # Use custom predictor instance - assume same feature dim as default
         feature_dim = 256  # Default feature dimension
-        validate_feature_network_dimensions(predictor_class, obs_space_shape, feature_dim)
+        validate_feature_network_dimensions(
+            predictor_class, obs_space_shape, feature_dim
+        )
         predictor_network = predictor_class.to(device)
     else:
         # Use predictor class
@@ -1756,7 +1770,6 @@ def train_ppo_rnd(
         wandb.finish()
 
     return actor_network
-
 
 
 # --- Main Execution ---

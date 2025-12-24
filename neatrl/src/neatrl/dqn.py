@@ -23,7 +23,7 @@ class Config:
     # Experiment settings
     exp_name = "DQN"
     seed = 42
-    env_id = "BreakoutNoFrameskip-v4"
+    env_id = "DQN-Experiment"
 
     # Training parameters
     total_timesteps = 20000

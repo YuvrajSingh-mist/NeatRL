@@ -1,15 +1,19 @@
 """
-script for RND-PPO training on CarRacing using neatrl library.
-"""
+DDPG CNN Example for CarRacing Environment
 
+This example demonstrates how to use DDPG with CNN networks for the CarRacing environment.
+CarRacing has image observations and continuous action spaces, making it perfect for DDPG with CNN.
+
+"""
 import cv2
 import gymnasium as gym
 import numpy as np
 import torch
 import torch.nn as nn
+from typing import Union, Optional
+from neatrl.ddpg import train_ddpg_cnn
 
-from neatrl.reinforce import train_reinforce_cnn
-
+env = gym.make("CarRacing-v3", continuous=False)
 
 class PreprocessAndFrameStack(gym.ObservationWrapper):
     """
@@ -76,9 +80,9 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
 
 class FeatureExtractor(nn.Module):
     def __init__(self):
-        super().__init__()
+        super().__init__(obs_shape)
 
-        self.conv1 = layer_init(nn.Conv2d(3, 32, kernel_size=8, stride=4))
+        self.conv1 = layer_init(nn.Conv2d(obs_shape, 32, kernel_size=8, stride=4))
         self.relu1 = nn.ReLU()
         self.conv2 = layer_init(nn.Conv2d(32, 64, kernel_size=4, stride=2))
         self.relu2 = nn.ReLU()
@@ -86,7 +90,7 @@ class FeatureExtractor(nn.Module):
         self.relu3 = nn.ReLU()
         self.flatten = nn.Flatten()
         self.fc = layer_init(nn.Linear(64 * 8 * 8, 512))  # Adjusted for 96x96 input
-        self.relu_fc = nn.ReLU()
+        self.relu_fc = nn.Tanh()
 
     def forward(self, x):
         x = self.relu1(self.conv1(x))
@@ -110,6 +114,7 @@ class ActorNet(nn.Module):
         self.out = layer_init(nn.Linear(512, action_space))
 
     def forward(self, x):
+        print(x.shape)
         x = x.unsqueeze(0)
         x = x.permute(0, 3, 1, 2)  # [B, H, W, C] -> [B, C, H, W]
         x = self.network(x / 255.0)
@@ -126,36 +131,52 @@ class ActorNet(nn.Module):
         return action, log_prob, dist
 
 
-def test_reinforce_carracing():
-    """Test RND-PPO training on CarRacing-v3."""
-    print("Testing RND-PPO training on CarRacing-v3 with neatrl...")
+class QNet(nn.Module):
+    def __init__(self, state_space: Union[int, tuple[int, ...]], action_space: int):
+        super().__init__()
+        # Handle state_space as tuple or int
+        state_dim = state_space[0] if isinstance(state_space, tuple) else state_space
+        self.netowkr = FeatureExtractor()
+        self.fc1 = nn.Linear(state_dim, 256)
+        self.fc2 = nn.Linear(action_space, 256)
+        self.fc3 = nn.Linear(512, 512)
+        self.reduce = nn.Linear(512, 256)  # Output a single Q-value
+        self.out = nn.Linear(256, 1)
+    
+    def forward(self, state, act):
+        st = self.network(state)
+        action = torch.nn.functional.mish(self.fc2(act))
+        temp = torch.cat((st, action), dim=1)  # Concatenate state and action
+        x = torch.nn.functional.mish(self.fc3(temp))
+        x = torch.nn.functional.mish(self.reduce(x))
+        x = self.out(x)
+        return x
 
-    # Train RND-PPO on CarRacing
-    model = train_reinforce_cnn(
-        env=gym.make("CarRacing-v3", render_mode="rgb_array", continuous=False),
-        total_steps=2000,
+
+
+def main():
+    """Train DDPG with CNN on CarRacing environment."""
+
+    train_ddpg_cnn(
+        env_id="CarRacing-v3",  # CarRacing environment
+        total_timesteps=500000,  # CarRacing needs more timesteps
         seed=42,
-        learning_rate=2e-3,
+        learning_rate=1e-4,
+        buffer_size=100000,
+        batch_size=64,
+        learning_starts=1000,
+        train_frequency=4,
+        target_network_frequency=100,
         gamma=0.99,
-        capture_video=True,
-        use_wandb=True,
-        wandb_project="cleanRL",
-        wandb_entity="",
-        exp_name="REINFORCE-CarRacing",
-        eval_every=100,
-        save_every=1000,
-        atari_wrapper=False,
-        n_envs=1,
-        num_eval_eps=10,
-        device="cpu",
-        grid_env=False,
-        custom_agent=ActorNet,
-        env_wrapper=car_racing_wrapper,
+        tau=0.005,
+        exploration_fraction=0.1,
+        use_wandb=True,  # Set to True to enable logging
+        capture_video=False,
+        eval_every=10000,
+        save_every=50000,
+        num_eval_episodes=5,
+        device="cpu"  # Use "cuda" if you have GPU
     )
 
-    print("Training completed!")
-    return model
-
-
 if __name__ == "__main__":
-    test_reinforce_carracing()
+    main()

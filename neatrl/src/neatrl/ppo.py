@@ -21,7 +21,7 @@ class Config:
 
     # Experiment settings
     exp_name: str = (
-        "PPO-Vectorized-ClipWalking"  # Experiment name for logging and saving
+        "PPO-Experiment"  # Experiment name for logging and saving
     )
     seed: int = 42  # Random seed for reproducibility
     env_id: Optional[str] = "CliffWalking-v0"  # Gymnasium environment ID
@@ -44,7 +44,7 @@ class Config:
         0.0  # Maximum gradient norm for gradient clipping (0.0 to disable)
     )
     value_clip: bool = False  # Whether to apply value function clipping
-    
+
     # Logging & Saving
     capture_video: bool = True  # Whether to capture evaluation videos
     use_wandb: bool = True  # Whether to use Weights & Biases for logging
@@ -55,14 +55,13 @@ class Config:
     atari_wrapper: bool = (
         False  # Whether to apply Atari preprocessing and frame stacking
     )
+    env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = None,  # Optional custom environment wrapper
     normalize_obs: bool = False  # Whether to normalize observations
     normalize_reward: bool = False  # Whether to normalize rewards
     log_gradients: bool = True  # Whether to log gradient norms to W&B
     device: str = "cpu"  # Device for training: "auto", "cpu", "cuda", or "cuda:0" etc.
     custom_agent: Optional[nn.Module] = None  # Custom neural network class or instance
     env: Optional[gym.Env] = None  # Optional pre-created environment
-
-
 
 
 # --- Networks ---
@@ -126,9 +125,6 @@ class CriticNet(nn.Module):
         return self.value(x)
 
 
-
-
-
 class OneHotWrapper(gym.ObservationWrapper):
     def __init__(self, env: gym.Env, obs_shape: int = 16) -> None:
         super().__init__(env)
@@ -161,15 +157,15 @@ def make_env(
             env_to_use = gym.make(env_id, render_mode=render_mode)
 
         env_to_use = gym.wrappers.RecordEpisodeStatistics(env_to_use)
-       
+
         if grid_env:
             env_to_use = OneHotWrapper(
                 env_to_use, obs_shape=env_to_use.observation_space.n
             )
-        
+
         if Config.normalize_reward:
             env_to_use = gym.wrappers.NormalizeReward(env_to_use)
-            
+
         if Config.normalize_obs:
             env_to_use = gym.wrappers.NormalizeObservation(env_to_use)
         if atari_wrapper:
@@ -388,11 +384,15 @@ def evaluate(
                 frame = eval_env.render()
                 frames.append(frame)
             with torch.no_grad():
-                obs = torch.tensor(obs, device=device, dtype=torch.float32)
-                action, _, _ = model.get_action(obs, deterministic=True)
+                obs = torch.tensor(obs, device=device, dtype=torch.float32).unsqueeze(0)
+                action, _, _ = model.get_action(obs)
                 action = action.cpu().numpy()
                 if isinstance(eval_env.action_space, gym.spaces.Discrete):
                     action = action.item()
+                else:
+                    # For continuous action spaces, squeeze the batch dimension
+                 
+                    action = action.squeeze(0) if action.shape[0] >= 1 else action
 
             obs, rewards_curr, terminated, truncated, info = eval_env.step(action)
             done = terminated or truncated
@@ -420,9 +420,6 @@ def evaluate(
     model.train()
 
     return returns, frames
-
-
-
 
 
 def train_ppo(
@@ -459,7 +456,6 @@ def train_ppo(
     normalize_reward: bool = Config.normalize_reward,
     device: str = Config.device,
     value_clip: bool = False,
-    
 ) -> nn.Module:
     # Update Config with passed arguments
     Config.env_id = env_id
@@ -517,16 +513,15 @@ def train_ppo(
     random.seed(Config.seed)
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
- 
+
     device = torch.device(Config.device)
 
     if Config.device == "cuda":
-        
         torch.backends.cudnn.deterministic = True
         torch.cuda.manual_seed(Config.seed)
         torch.cuda.manual_seed_all(Config.seed)
         torch.backends.cudnn.benchmark = False
-        
+
     # Create environments - check for pre-created env first, then default
     if env is not None:
         env_thunks = [
@@ -586,7 +581,7 @@ def train_ppo(
         # Use actor class
         actor_network = actor_class(obs_space_shape, action_space_n).to(device)
 
-    # Create critic network  
+    # Create critic network
     if isinstance(critic_class, nn.Module):
         # Use custom critic instance
         validate_critic_network_dimensions(critic_class, obs_space_shape)
@@ -606,8 +601,7 @@ def train_ppo(
     num_updates = Config.total_timesteps // batch_size
 
     optimizer = optim.Adam(
-        list(actor_network.parameters())
-        + list(critic_network.parameters()),
+        list(actor_network.parameters()) + list(critic_network.parameters()),
         lr=Config.lr,
         eps=1e-5,
     )
@@ -682,7 +676,6 @@ def train_ppo(
                 logprob.sum(dim=-1) if len(logprob.shape) > 1 else logprob
             )
 
-          
             # Step the environment
             new_obs, reward, terminated, truncated, info = envs.step(
                 action.cpu().numpy()
@@ -701,21 +694,25 @@ def train_ppo(
 
             # Initialize tensors for advantages
             advantages = torch.zeros_like(rewards_storage).to(device)
-            
+
             # Set the initial "next state" value. If an env was done, this is 0, otherwise it's the bootstrap value.
             lastgae = 0.0
 
             # Loop backwards from the last step to the first
             for t in reversed(range(Config.max_steps)):
                 if t == Config.max_steps - 1:
-                    nextnonterminal = (1.0 - next_done)
+                    nextnonterminal = 1.0 - next_done
                     next_value = bootstrap_value * nextnonterminal
                 else:
-                    nextnonterminal = (1.0 - dones_storage[t + 1])
+                    nextnonterminal = 1.0 - dones_storage[t + 1]
                     next_value = values_storage[t + 1] * nextnonterminal
-                
-                delta = rewards_storage[t] + Config.gamma * next_value - values_storage[t]
-                advantages[t] = lastgae = delta + Config.GAE * lastgae * nextnonterminal * Config.gamma
+
+                delta = (
+                    rewards_storage[t] + Config.gamma * next_value - values_storage[t]
+                )
+                advantages[t] = lastgae = (
+                    delta + Config.GAE * lastgae * nextnonterminal * Config.gamma
+                )
 
         # Calculate returns
         returns = advantages + values_storage
@@ -731,7 +728,7 @@ def train_ppo(
         b_returns = returns.reshape(-1)
         b_values = values_storage.reshape(-1)
         clipfracs = []
-        
+
         # PPO Update Phase
         b_inds = np.arange(batch_size)
         for _epoch in range(Config.PPO_EPOCHS):
@@ -745,14 +742,17 @@ def train_ppo(
                 _, new_log_probs, dist = actor_network.get_action(
                     b_obs[mb_inds], b_actions[mb_inds]
                 )
+                new_log_probs = new_log_probs.sum(dim=-1) if len(new_log_probs.shape) > 1 else new_log_probs
                 logratio = new_log_probs - b_logprobs[mb_inds]
                 ratio = logratio.exp()
-                
+
                 with torch.no_grad():
                     # calculate approx_kl http://joschu.net/blog/kl-approx.html
                     old_approx_kl = (-logratio).mean()
                     approx_kl = ((ratio - 1) - logratio).mean()
-                    clipfracs += [((ratio - 1.0).abs() > Config.clip_value).float().mean().item()]
+                    clipfracs += [
+                        ((ratio - 1.0).abs() > Config.clip_value).float().mean().item()
+                    ]
                     if Config.use_wandb:
                         wandb.log({"charts/approx_kl": approx_kl.item()})
 
@@ -763,22 +763,27 @@ def train_ppo(
                 policy_loss = -torch.min(pg_loss1, pg_loss2).mean()
 
                 current_values = critic_network(b_obs[mb_inds])
-                
+
                 # Value clipping
                 if Config.value_clip:
-                    
                     v_loss_unclipped = (current_values - b_returns[mb_inds]) ** 2
                     v_clipped = b_values[mb_inds] + torch.clamp(
-                        current_values - b_values[mb_inds], -Config.clip_value, Config.clip_value
+                        current_values - b_values[mb_inds],
+                        -Config.clip_value,
+                        Config.clip_value,
                     )
                     v_loss_clipped = (v_clipped - b_returns[mb_inds]) ** 2
                     v_loss_max = torch.max(v_loss_unclipped, v_loss_clipped)
-                    
+
                     critic_loss = Config.VALUE_COEFF * 0.5 * v_loss_max.mean()
-                    
+
                 else:
-                    critic_loss = Config.VALUE_COEFF * 0.5 * F.mse_loss(current_values.squeeze(), b_returns[mb_inds])
-                
+                    critic_loss = (
+                        Config.VALUE_COEFF
+                        * 0.5
+                        * F.mse_loss(current_values.squeeze(), b_returns[mb_inds])
+                    )
+
                 critic_loss = F.mse_loss(current_values.squeeze(), b_returns[mb_inds])
                 entropy_loss = dist.entropy().mean()
 
@@ -825,7 +830,7 @@ def train_ppo(
                                     "global_step": global_step,
                                 }
                             )
-                   
+
                     wandb.log(
                         {
                             "gradients/norm_before_clip": total_norm_before.item(),
@@ -887,7 +892,7 @@ def train_ppo(
                     "global_step": global_step,
                     "kl/approx_kl": approx_kl.item(),
                     "kl/old_approx_kl": old_approx_kl.item(),
-                    "clipfrac/clip_fraction": np.mean(clipfracs)
+                    "clipfrac/clip_fraction": np.mean(clipfracs),
                 }
             )
             print(
@@ -929,7 +934,6 @@ def train_ppo(
                 {
                     "actor": actor_network.state_dict(),
                     "critic": critic_network.state_dict(),
-                  
                 },
                 model_path,
             )
@@ -966,12 +970,6 @@ def train_ppo(
     return actor_network
 
 
-
-
-
-
-
-
 def train_ppo_cnn(
     env_id: Optional[str] = None,
     env: Optional[gym.Env] = Config.env,
@@ -1006,7 +1004,6 @@ def train_ppo_cnn(
     normalize_reward: bool = Config.normalize_reward,
     device: str = Config.device,
     value_clip: bool = False,
-    
 ) -> nn.Module:
     # Update Config with passed arguments
     Config.env_id = env_id
@@ -1064,16 +1061,15 @@ def train_ppo_cnn(
     random.seed(Config.seed)
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
- 
+
     device = torch.device(Config.device)
 
     if Config.device == "cuda":
-        
         torch.backends.cudnn.deterministic = True
         torch.cuda.manual_seed(Config.seed)
         torch.cuda.manual_seed_all(Config.seed)
         torch.backends.cudnn.benchmark = False
-        
+
     # Create environments - check for pre-created env first, then default
     if env is not None:
         env_thunks = [
@@ -1133,7 +1129,7 @@ def train_ppo_cnn(
         # Use actor class
         actor_network = actor_class(obs_space_shape, action_space_n).to(device)
 
-    # Create critic network  
+    # Create critic network
     if isinstance(critic_class, nn.Module):
         # Use custom critic instance
         validate_critic_network_dimensions(critic_class, obs_space_shape)
@@ -1153,16 +1149,16 @@ def train_ppo_cnn(
     num_updates = Config.total_timesteps // batch_size
 
     optimizer = optim.Adam(
-        list(actor_network.parameters())
-        + list(critic_network.parameters()),
+        list(actor_network.parameters()) + list(critic_network.parameters()),
         lr=Config.lr,
         eps=1e-5,
     )
 
     # Tensor Storage
 
-    obs_storage = torch.zeros(
-        (Config.max_steps, Config.n_envs) + obs_space_shape).to(device)
+    obs_storage = torch.zeros((Config.max_steps, Config.n_envs) + obs_space_shape).to(
+        device
+    )
     actions_storage = torch.zeros((Config.max_steps, Config.n_envs) + action_shape).to(
         device
     )
@@ -1228,7 +1224,6 @@ def train_ppo_cnn(
                 logprob.sum(dim=-1) if len(logprob.shape) > 1 else logprob
             )
 
-          
             # Step the environment
             new_obs, reward, terminated, truncated, info = envs.step(
                 action.cpu().numpy()
@@ -1247,21 +1242,25 @@ def train_ppo_cnn(
 
             # Initialize tensors for advantages
             advantages = torch.zeros_like(rewards_storage).to(device)
-            
+
             # Set the initial "next state" value. If an env was done, this is 0, otherwise it's the bootstrap value.
             lastgae = 0.0
 
             # Loop backwards from the last step to the first
             for t in reversed(range(Config.max_steps)):
                 if t == Config.max_steps - 1:
-                    nextnonterminal = (1.0 - next_done)
+                    nextnonterminal = 1.0 - next_done
                     next_value = bootstrap_value * nextnonterminal
                 else:
-                    nextnonterminal = (1.0 - dones_storage[t + 1])
+                    nextnonterminal = 1.0 - dones_storage[t + 1]
                     next_value = values_storage[t + 1] * nextnonterminal
-                
-                delta = rewards_storage[t] + Config.gamma * next_value - values_storage[t]
-                advantages[t] = lastgae = delta + Config.GAE * lastgae * nextnonterminal * Config.gamma
+
+                delta = (
+                    rewards_storage[t] + Config.gamma * next_value - values_storage[t]
+                )
+                advantages[t] = lastgae = (
+                    delta + Config.GAE * lastgae * nextnonterminal * Config.gamma
+                )
 
         # Calculate returns
         returns = advantages + values_storage
@@ -1277,7 +1276,7 @@ def train_ppo_cnn(
         b_returns = returns.reshape(-1)
         b_values = values_storage.reshape(-1)
         clipfracs = []
-        
+
         # PPO Update Phase
         b_inds = np.arange(batch_size)
         for _epoch in range(Config.PPO_EPOCHS):
@@ -1293,12 +1292,14 @@ def train_ppo_cnn(
                 )
                 logratio = new_log_probs - b_logprobs[mb_inds]
                 ratio = logratio.exp()
-                
+
                 with torch.no_grad():
                     # calculate approx_kl http://joschu.net/blog/kl-approx.html
                     old_approx_kl = (-logratio).mean()
                     approx_kl = ((ratio - 1) - logratio).mean()
-                    clipfracs += [((ratio - 1.0).abs() > Config.clip_value).float().mean().item()]
+                    clipfracs += [
+                        ((ratio - 1.0).abs() > Config.clip_value).float().mean().item()
+                    ]
                     if Config.use_wandb:
                         wandb.log({"charts/approx_kl": approx_kl.item()})
 
@@ -1309,22 +1310,27 @@ def train_ppo_cnn(
                 policy_loss = -torch.min(pg_loss1, pg_loss2).mean()
 
                 current_values = critic_network(b_obs[mb_inds])
-                
+
                 # Value clipping
                 if Config.value_clip:
-                    
                     v_loss_unclipped = (current_values - b_returns[mb_inds]) ** 2
                     v_clipped = b_values[mb_inds] + torch.clamp(
-                        current_values - b_values[mb_inds], -Config.clip_value, Config.clip_value
+                        current_values - b_values[mb_inds],
+                        -Config.clip_value,
+                        Config.clip_value,
                     )
                     v_loss_clipped = (v_clipped - b_returns[mb_inds]) ** 2
                     v_loss_max = torch.max(v_loss_unclipped, v_loss_clipped)
-                    
+
                     critic_loss = Config.VALUE_COEFF * 0.5 * v_loss_max.mean()
-                    
+
                 else:
-                    critic_loss = Config.VALUE_COEFF * 0.5 * F.mse_loss(current_values.squeeze(), b_returns[mb_inds])
-                
+                    critic_loss = (
+                        Config.VALUE_COEFF
+                        * 0.5
+                        * F.mse_loss(current_values.squeeze(), b_returns[mb_inds])
+                    )
+
                 critic_loss = F.mse_loss(current_values.squeeze(), b_returns[mb_inds])
                 entropy_loss = dist.entropy().mean()
 
@@ -1371,7 +1377,7 @@ def train_ppo_cnn(
                                     "global_step": global_step,
                                 }
                             )
-                   
+
                     wandb.log(
                         {
                             "gradients/norm_before_clip": total_norm_before.item(),
@@ -1433,7 +1439,7 @@ def train_ppo_cnn(
                     "global_step": global_step,
                     "kl/approx_kl": approx_kl.item(),
                     "kl/old_approx_kl": old_approx_kl.item(),
-                    "clipfrac/clip_fraction": np.mean(clipfracs)
+                    "clipfrac/clip_fraction": np.mean(clipfracs),
                 }
             )
             print(
@@ -1475,7 +1481,6 @@ def train_ppo_cnn(
                 {
                     "actor": actor_network.state_dict(),
                     "critic": critic_network.state_dict(),
-                  
                 },
                 model_path,
             )
@@ -1510,7 +1515,6 @@ def train_ppo_cnn(
         wandb.finish()
 
     return actor_network
-
 
 
 # --- Main Execution ---
