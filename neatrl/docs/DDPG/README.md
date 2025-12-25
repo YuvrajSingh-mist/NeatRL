@@ -62,17 +62,77 @@ train_ddpg_cnn(
 - Action FC: action_dim → 512
 - Combined: 1024 → 512 → 1
 
-## Key Parameters
+## 🔧 Configuration Arguments
 
-- `total_timesteps`: Total training steps
-- `learning_rate`: Adam learning rate (3e-4)
-- `buffer_size`: Replay buffer size (100k)
-- `gamma`: Discount factor (0.99)
-- `tau`: Target network soft update (0.005)
-- `batch_size`: Training batch size (256)
-- `exploration_fraction`: Exploration noise scale (0.1)
-- `learning_starts`: Steps before training begins (25k)
-- `target_network_frequency`: Target update frequency (1-50)
+The `train_ddpg` and `train_ddpg_cnn` functions accept the following arguments for customizing your DDPG training:
+
+| Argument | Type | Default | Description |
+|----------|------|---------|-------------|
+| **Environment Settings** | | | |
+| `env_id` | str | `"HalfCheetah-v5"` | Gymnasium environment ID to train on |
+| `env` | gym.Env | `None` | Optional pre-created environment instance |
+| `grid_env` | bool | `False` | Whether to apply one-hot encoding for discrete state spaces |
+| `atari_wrapper` | bool | `False` | Whether to apply Atari preprocessing (grayscale, frame stack, etc.) |
+| `env_wrapper` | Callable | `None` | Optional custom environment wrapper function |
+| `n_envs` | int | `1` | Number of parallel environments for vectorized training |
+| **Training Parameters** | | | |
+| `total_timesteps` | int | `1000000` | Total number of environment steps to train for |
+| `learning_rate` | float | `3e-4` | Learning rate for both actor and critic Adam optimizers |
+| `buffer_size` | int | `100000` | Maximum size of the replay buffer |
+| `gamma` | float | `0.99` | Discount factor for future rewards |
+| `tau` | float | `0.005` | Soft update coefficient for target networks (0 < τ ≤ 1) |
+| `batch_size` | int | `256` | Batch size for training on replay buffer samples |
+| `learning_starts` | int | `25000` | Number of steps to collect before starting training |
+| `train_frequency` | int | `2` | How often to perform gradient updates (in steps) |
+| `target_network_frequency` | int | `50` | How often to update target networks (in steps) |
+| **Exploration** | | | |
+| `exploration_fraction` | float | `0.1` | Fraction of total timesteps for exploration noise decay |
+| `low` | float | `-1.0` | Lower bound for action space |
+| `high` | float | `1.0` | Upper bound for action space |
+| `noise_clip` | float | `0.5` | Maximum absolute value for exploration noise clipping |
+| **Normalization** | | | |
+| `normalize_obs` | bool | `False` | Whether to normalize observations using running statistics |
+| `normalize_reward` | bool | `False` | Whether to normalize rewards using running statistics |
+| **Logging & Evaluation** | | | |
+| `seed` | int | `42` | Random seed for reproducibility |
+| `exp_name` | str | `"DDPG-Experiment"` | Experiment name for logging and saving |
+| `use_wandb` | bool | `True` | Whether to log metrics to Weights & Biases |
+| `wandb_project` | str | `"cleanRL"` | W&B project name |
+| `wandb_entity` | str | `""` | W&B username/team name |
+| `capture_video` | bool | `True` | Whether to record evaluation videos |
+| `eval_every` | int | `500` | Frequency of evaluation during training (in steps) |
+| `save_every` | int | `10000` | Frequency of saving model checkpoints (in steps) |
+| `num_eval_episodes` | int | `10` | Number of episodes to run during evaluation |
+| `log_gradients` | bool | `True` | Whether to log gradient norms to W&B |
+| **Network & Device** | | | |
+| `actor_class` | nn.Module | `ActorNet` | Custom actor network class or instance |
+| `critic_class` | nn.Module | `QNet` | Custom Q-network class or instance |
+| `max_grad_norm` | float | `0.0` | Maximum gradient norm for clipping (0.0 to disable) |
+| `device` | str | `"cpu"` | Device for training: "cpu", "cuda", "mps", or "auto" |
+
+### Example: Custom Configuration
+
+```python
+from neatrl import train_ddpg
+
+model = train_ddpg(
+    env_id="BipedalWalker-v3",
+    total_timesteps=500000,
+    learning_rate=1e-3,
+    buffer_size=200000,
+    gamma=0.99,
+    tau=0.005,
+    batch_size=128,
+    learning_starts=10000,
+    exploration_fraction=0.2,
+    use_wandb=True,
+    wandb_project="my-ddpg-experiments",
+    exp_name="bipedal-walker-custom",
+    capture_video=True,
+    eval_every=1000,
+    num_eval_episodes=5
+)
+```
 
 ## Atari Environments
 

@@ -485,7 +485,7 @@ def train_a2c_cnn(
     Config.gamma = gamma
     Config.n_envs = n_envs
     Config.max_steps = max_steps
-    Config.PPO_EPOCHS = PPO_EPOCHS
+    Config.update_epochs = update_epochs
     Config.clip_value = clip_value
     Config.ENTROPY_COEFF = ENTROPY_COEFF
     Config.VALUE_COEFF = VALUE_COEFF
@@ -760,7 +760,7 @@ def train_a2c_cnn(
                 end = start + minibatch_size
                 mb_inds = b_inds[start:end]
 
-                # --- PPO Policy and Value Loss ---
+                # --- A2C Policy and Value Loss ---
 
                 _, new_log_probs, dist = actor_network.get_action(
                     b_obs[mb_inds], b_actions[mb_inds]
@@ -924,7 +924,7 @@ def train_a2c_cnn(
             print(f"Evaluation returns: {episodic_returns}, Average: {avg_return:.2f}")
 
         if update % Config.save_every == 0 and update > 0:
-            model_path = f"runs/{run_name}/models/ppo_model_step_{global_step}.pth"
+            model_path = f"runs/{run_name}/models/a2c_model_step_{global_step}.pth"
             torch.save(
                 {
                     "actor": actor_network.state_dict(),
@@ -1006,7 +1006,7 @@ def train_a2c(
     Config.gamma = gamma
     Config.n_envs = n_envs
     Config.max_steps = max_steps
-    Config.PPO_EPOCHS = PPO_EPOCHS
+    Config.update_epochs = update_epochs
     Config.clip_value = clip_value
     Config.ENTROPY_COEFF = ENTROPY_COEFF
     Config.VALUE_COEFF = VALUE_COEFF
@@ -1279,7 +1279,7 @@ def train_a2c(
                 end = start + minibatch_size
                 mb_inds = b_inds[start:end]
 
-                # --- PPO Policy and Value Loss ---
+                # --- A2C Policy and Value Loss ---
 
                 _, new_log_probs, dist = actor_network.get_action(
                     b_obs[mb_inds], b_actions[mb_inds]
@@ -1443,7 +1443,7 @@ def train_a2c(
             print(f"Evaluation returns: {episodic_returns}, Average: {avg_return:.2f}")
 
         if update % Config.save_every == 0 and update > 0:
-            model_path = f"runs/{run_name}/models/ppo_model_step_{global_step}.pth"
+            model_path = f"runs/{run_name}/models/a2c_model_step_{global_step}.pth"
             torch.save(
                 {
                     "actor": actor_network.state_dict(),
