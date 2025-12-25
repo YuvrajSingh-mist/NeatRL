@@ -22,24 +22,27 @@ class Config:
     # Experiment settings
     exp_name: str = "A2C"  # Experiment name for logging and saving
     seed: int = 42  # Random seed for reproducibility
-    env_id: Optional[str] = "CliffWalking-v0"  # Gymnasium environment ID
-    total_timesteps: int = 5_000_000  # Total number of timesteps to train
+    env_id: Optional[str] = "LunarLander-v3"  # Gymnasium environment ID
+    episodes: int = 200000  # Total number of episodes to train
+    total_timesteps: int = 1000000  # Total timesteps for training (for compatibility)
 
     # A2C & Agent settings
-    lr: float = 3e-4  # Learning rate for optimizer
+    lr: float = 2e-3  # Learning rate for optimizer
     gamma: float = 0.99  # Discount factor for rewards
-    n_envs: int = 1  # Number of parallel environments for data collection
-    max_steps: int = 128  # Maximum steps per rollout before updating
-    num_minibatches: int = 4  # Number of minibatches for updates
-    update_epochs: int = 1  # Number of epochs per update (1 for standard A2C)
-    clip_value: float = 0.2  # Clipping value for policy ratio (if using PPO variant)
-    ENTROPY_COEFF: float = 0.01  # Entropy coefficient for exploration
-    VALUE_COEFF: float = 0.5  # Value loss coefficient in total loss
-    num_eval_episodes: int = 5  # Number of evaluation episodes
-    anneal_lr: bool = True  # Whether to anneal learning rate over time
+    VALUE_COEFF: float = 0.5  # Value loss coefficient in total loss (not used in pure A2C)
+    num_eval_episodes: int = 10  # Number of evaluation episodes
     max_grad_norm: float = (
         0.0  # Maximum gradient norm for gradient clipping (0.0 to disable)
     )
+    
+    # PPO-specific (kept for compatibility but not used in pure A2C)
+    n_envs: int = 1  # Number of parallel environments
+    max_steps: int = 2048  # Max steps per rollout
+    update_epochs: int = 1  # Update epochs (A2C uses 1)
+    clip_value: float = 0.2  # Not used in A2C
+    ENTROPY_COEFF: float = 0.01  # Not used in pure A2C
+    num_minibatches: int = 1  # Not used in pure A2C
+    anneal_lr: bool = False  # Learning rate annealing
 
     # Logging & Saving
     capture_video: bool = True  # Whether to capture evaluation videos
@@ -477,8 +480,9 @@ def train_a2c_cnn(
     normalize_reward: bool = Config.normalize_reward,
     device: str = Config.device,
 ) -> nn.Module:
+    
     # Update Config with passed arguments
-    Config.env_id = env_id
+    Config.env_id = env_id if env is None else env.spec.id
     Config.total_timesteps = total_timesteps
     Config.seed = seed
     Config.lr = lr
@@ -621,20 +625,16 @@ def train_a2c_cnn(
     minibatch_size = batch_size // Config.num_minibatches
     num_updates = Config.total_timesteps // batch_size
 
-    optimizer = optim.Adam(
-        list(actor_network.parameters()) + list(critic_network.parameters()),
-        lr=Config.lr,
-        eps=1e-5,
-    )
+    # Separate optimizers for actor and critic (A2C style)
+    actor_optim = optim.Adam(actor_network.parameters(), lr=Config.lr)
+    critic_optim = optim.Adam(critic_network.parameters(), lr=Config.lr)
 
     # Tensor Storage
 
     obs_storage = torch.zeros((Config.max_steps, Config.n_envs) + obs_space_shape).to(
         device
     )
-    actions_storage = torch.zeros((Config.max_steps, Config.n_envs) + action_shape).to(
-        device
-    )
+    
     logprobs_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(device)
     rewards_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(device)
     dones_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(device)
@@ -653,47 +653,36 @@ def train_a2c_cnn(
         if Config.anneal_lr:
             frac = 1.0 - (update - 1.0) / num_updates
             lrnow = frac * Config.lr
-            optimizer.param_groups[0]["lr"] = lrnow
+            actor_optim.param_groups[0]["lr"] = lrnow
+            critic_optim.param_groups[0]["lr"] = lrnow
 
-        # Rollout Phase
+        # Rollout Phase - Collect full episode
         for step in range(0, Config.max_steps):
             global_step = (update - 1) * batch_size + step * Config.n_envs
 
             obs_storage[step] = next_obs
-
             dones_storage[step] = next_done
 
-            with torch.no_grad():
-                action, logprob, dist = actor_network.get_action(next_obs)
-                value = critic_network(next_obs)
+            # Get action and value
+            action, logprob, dist = actor_network.get_action(next_obs)
+            value = critic_network(next_obs)
 
-                # Log distribution statistics
-                if Config.use_wandb:
-                    if hasattr(dist, "probs"):
-                        # Discrete
-                        probs = dist.probs
-                        wandb.log(
-                            {
-                                "policy/dist_mean": probs.mean().item(),
-                                "policy/dist_std": probs.std().item(),
-                                "policy/entropy": dist.entropy().mean().item(),
-                                "global_step": global_step,
-                            }
-                        )
-                    else:
-                        # Continuous
-                        wandb.log(
-                            {
-                                "policy/dist_mean": dist.mean.mean().item(),
-                                "policy/dist_std": dist.stddev.mean().item(),
-                                "policy/entropy": dist.entropy().mean().item(),
-                                "global_step": global_step,
-                            }
-                        )
+            # Log distribution statistics
+            if Config.use_wandb and step % 100 == 0:
+                if hasattr(dist, "probs"):
+                    # Discrete
+                    probs = dist.probs
+                    wandb.log(
+                        {
+                            "policy/dist_mean": probs.mean().item(),
+                            "policy/dist_std": probs.std().item(),
+                            "policy/entropy": dist.entropy().mean().item(),
+                            "global_step": global_step,
+                        }
+                    )
 
             values_storage[step] = value.flatten()
-
-            actions_storage[step] = action
+            
             logprobs_storage[step] = (
                 logprob.sum(dim=-1) if len(logprob.shape) > 1 else logprob
             )
@@ -707,144 +696,94 @@ def train_a2c_cnn(
             rewards_storage[step] = torch.tensor(reward).to(device)
             next_obs = torch.Tensor(new_obs).to(device)
             next_done = torch.Tensor(done).to(device)
-            if Config.use_wandb:
-                wandb.log(
-                    {
-                        "rewards/reward": rewards_storage[step].mean().item(),
-                        "global_step": global_step,
-                    }
-                )
 
-        # Calculate returns after the rollout is complete
-        with torch.no_grad():
-            # Get the bootstrapped value from the state after the last step
-            bootstrap_value = critic_network(next_obs)
+        # Calculate returns (Monte Carlo)
+        returns = torch.zeros_like(rewards_storage).to(device)
+        rt = 0.0
+        for t in reversed(range(Config.max_steps)):
+            rt = rewards_storage[t] + rt * Config.gamma
+            returns[t] = rt
 
-            # Initialize tensors for returns
-            returns = torch.zeros_like(rewards_storage).to(device)
-
-            # Set the initial "next state" return. If an env was done, this is 0, otherwise it's the bootstrap value.
-            # (1.0 - next_done) is a trick to multiply by 0 if done, and 1 if not done.
-            gt_next_state = bootstrap_value.squeeze() * (1.0 - next_done)
-
-            # Loop backwards from the last step to the first
-            for t in reversed(range(Config.max_steps)):
-                # Calculate return at step t
-                rt = rewards_storage[t] + Config.gamma * gt_next_state
-
-                # Store the calculated returns
-                returns[t] = rt
-
-                # Update the "next state" for the previous step (t-1).
-                # If an episode was done at step t, the return propagation is cut off (multiplied by 0).
-                gt_next_state = rt * (1.0 - dones_storage[t])
-
-        # Calculate advantages as the difference between returns and value function estimates
-        advantages = returns - values_storage
-
-        # Normalize the final combined advantages
-        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-
-        # Flatten the batch
-        b_obs = obs_storage.reshape((-1,) + obs_space_shape)
+        # Flatten tensors for batch processing
+        
         b_logprobs = logprobs_storage.reshape(-1)
-        b_actions = actions_storage.reshape((-1,) + action_shape)
-        b_advantages = advantages.reshape(-1)
+       
+        b_values = values_storage.reshape(-1)
         b_returns = returns.reshape(-1)
 
-        # A2C Update Phase
-        b_inds = np.arange(batch_size)
-        for _epoch in range(Config.update_epochs):
-            np.random.shuffle(b_inds)
-            for start in range(0, batch_size, minibatch_size):
-                end = start + minibatch_size
-                mb_inds = b_inds[start:end]
+        # Calculate advantages (no normalization in pure A2C)
+        advantages = (b_returns - b_values)
 
-                # --- A2C Policy and Value Loss ---
+        # A2C Update - Single pass through data
+        # Actor Loss: policy gradient with advantage
+        policy_loss = []
+        for log_prob, advantage in zip(b_logprobs, advantages):
+            policy_loss.append(-log_prob * advantage)
 
-                _, new_log_probs, dist = actor_network.get_action(
-                    b_obs[mb_inds], b_actions[mb_inds]
-                )
-                ratio = torch.exp(new_log_probs - b_logprobs[mb_inds])
+        policy_loss = torch.stack(policy_loss).mean()
 
-                with torch.no_grad():
-                    logratio = new_log_probs - b_logprobs[mb_inds]
-                    approx_kl = ((ratio - 1) - logratio).mean()
-                    if Config.use_wandb:
-                        wandb.log({"charts/approx_kl": approx_kl.item()})
+        # Critic Loss: MSE between value predictions and returns
+        critic_loss = F.mse_loss(b_values, b_returns)
 
-                pg_loss1 = b_advantages[mb_inds] * ratio
-                pg_loss2 = b_advantages[mb_inds] * torch.clamp(
-                    ratio, 1 - Config.clip_value, 1 + Config.clip_value
-                )
-                policy_loss = -torch.min(pg_loss1, pg_loss2).mean()
+        # Optimize Actor
+        actor_optim.zero_grad()
+        policy_loss.backward()
 
-                current_values = critic_network(b_obs[mb_inds])
-
-                critic_loss = F.mse_loss(
-                    current_values.squeeze(), b_returns[mb_inds]
-                )
-                entropy_loss = dist.entropy().mean()
-
-                # Total Loss
-                loss = (
-                    policy_loss
-                    + Config.VALUE_COEFF * critic_loss
-                    - Config.ENTROPY_COEFF * entropy_loss
-                )
-
-                optimizer.zero_grad()
-                loss.backward()
-
-                # Log gradient norm per layer
-                if Config.use_wandb and Config.log_gradients:
-                    # Calculate gradient norm before clipping
-                    total_norm_before = torch.norm(
-                        torch.stack(
-                            [
-                                torch.norm(p.grad.detach(), 2)
-                                for p in list(actor_network.parameters())
-                                + list(critic_network.parameters())
-                                if p.grad is not None
-                            ]
-                        ),
-                        2,
-                    )
-
-                    for name, param in actor_network.named_parameters():
-                        if param.grad is not None:
-                            grad_norm = torch.norm(param.grad.detach(), 2).item()
-                            wandb.log(
-                                {
-                                    f"gradients/actor_layer_{name}": grad_norm,
-                                    "global_step": global_step,
-                                }
-                            )
-                    for name, param in critic_network.named_parameters():
-                        if param.grad is not None:
-                            grad_norm = torch.norm(param.grad.detach(), 2).item()
-                            wandb.log(
-                                {
-                                    f"gradients/critic_layer_{name}": grad_norm,
-                                    "global_step": global_step,
-                                }
-                            )
+        # Log gradient norms for actor
+        if Config.use_wandb and Config.log_gradients:
+            total_norm = 0
+            for name, param in actor_network.named_parameters():
+                if param.grad is not None:
+                    param_norm = param.grad.data.norm(2)
                     wandb.log(
                         {
-                            "gradients/norm_before_clip": total_norm_before.item(),
+                            f"gradients/actor_{name}": param_norm.item(),
                             "global_step": global_step,
                         }
                     )
+                    total_norm += param_norm.item() ** 2
+            wandb.log(
+                {
+                    "gradients/actor_total_norm": total_norm**0.5,
+                    "global_step": global_step,
+                }
+            )
 
-                # Apply gradient clipping
-                if Config.max_grad_norm != 0.0:
-                    torch.nn.utils.clip_grad_norm_(
-                        list(actor_network.parameters())
-                        + list(critic_network.parameters()),
-                        max_norm=Config.max_grad_norm,
+        if Config.max_grad_norm != 0.0:
+            torch.nn.utils.clip_grad_norm_(
+                actor_network.parameters(), max_norm=Config.max_grad_norm
+            )
+        actor_optim.step()
+
+        # Optimize Critic
+        critic_optim.zero_grad()
+        critic_loss.backward()
+
+        # Log gradient norms for critic
+        if Config.use_wandb and Config.log_gradients:
+            total_norm = 0
+            for name, param in critic_network.named_parameters():
+                if param.grad is not None:
+                    param_norm = param.grad.data.norm(2)
+                    wandb.log(
+                        {
+                            f"gradients/critic_{name}": param_norm.item(),
+                            "global_step": global_step,
+                        }
                     )
+                    total_norm += param_norm.item() ** 2
+            wandb.log(
+                {
+                    "gradients/critic_total_norm": total_norm**0.5,
+                    "global_step": global_step,
+                }
+            )
 
-                optimizer.step()
+        if Config.max_grad_norm != 0.0:
+            torch.nn.utils.clip_grad_norm_(
+                critic_network.parameters(), max_norm=Config.max_grad_norm
+            )
+        critic_optim.step()
 
         # Log episode returns
         if "episode" in info:
@@ -879,19 +818,19 @@ def train_a2c_cnn(
         if Config.use_wandb and update % 10 == 0:
             wandb.log(
                 {
-                    "losses/total_loss": loss.item(),
                     "losses/policy_loss": policy_loss.item(),
-                    "losses/value_loss": critic_loss.item(),
-                    "charts/learning_rate": optimizer.param_groups[0]["lr"],
+                    "losses/critic_loss": critic_loss.item(),
+                    "charts/learning_rate": actor_optim.param_groups[0]["lr"],
                     "charts/rewards_mean": np.mean(rewards_storage.cpu().numpy()),
-                    "advantages/advantages_mean": b_advantages.mean().item(),
-                    "advantages/advantages_std": b_advantages.std().item(),
+                    "advantages/advantages_mean": advantages.mean().item(),
+                    "advantages/advantages_std": advantages.std().item(),
                     "charts/returns_mean": b_returns.mean().item(),
+                    "calculated_return": b_returns.mean().item(),
                     "global_step": global_step,
                 }
             )
             print(
-                f"Update {update}, Global Step: {global_step}, Policy Loss: {policy_loss.item():.4f}, Value Loss: {critic_loss.item():.4f}, SPS: {int(global_step / (time.time() - start_time))}"
+                f"Update {update}, Global Step: {global_step}, Policy Loss: {policy_loss.item():.4f}, Critic Loss: {critic_loss.item():.4f}, SPS: {int(global_step / (time.time() - start_time))}"
             )
 
             if Config.use_wandb:
@@ -999,7 +938,7 @@ def train_a2c(
     device: str = Config.device,
 ) -> nn.Module:
     # Update Config with passed arguments
-    Config.env_id = env_id
+    Config.env_id = env_id if env is None else env.spec.id
     Config.total_timesteps = total_timesteps
     Config.seed = seed
     Config.lr = lr
@@ -1139,11 +1078,9 @@ def train_a2c(
     minibatch_size = batch_size // Config.num_minibatches
     num_updates = Config.total_timesteps // batch_size
 
-    optimizer = optim.Adam(
-        list(actor_network.parameters()) + list(critic_network.parameters()),
-        lr=Config.lr,
-        eps=1e-5,
-    )
+    # Separate optimizers for actor and critic (A2C style)
+    actor_optim = optim.Adam(actor_network.parameters(), lr=Config.lr)
+    critic_optim = optim.Adam(critic_network.parameters(), lr=Config.lr)
 
     # Tensor Storage
 
@@ -1171,48 +1108,35 @@ def train_a2c(
         if Config.anneal_lr:
             frac = 1.0 - (update - 1.0) / num_updates
             lrnow = frac * Config.lr
-            optimizer.param_groups[0]["lr"] = lrnow
+            actor_optim.param_groups[0]["lr"] = lrnow
+            critic_optim.param_groups[0]["lr"] = lrnow
 
-        # Rollout Phase
+        # Rollout Phase - Collect full episode
         for step in range(0, Config.max_steps):
             global_step = (update - 1) * batch_size + step * Config.n_envs
-            # print(obs_space_shape, next_obs.shape)
-            # print(obs_storage[step].shape)
-            obs_storage[step] = next_obs
 
+            obs_storage[step] = next_obs
             dones_storage[step] = next_done
 
-            with torch.no_grad():
-                action, logprob, dist = actor_network.get_action(next_obs)
-                value = critic_network(next_obs)
+            # Get action and value
+            action, logprob, dist = actor_network.get_action(next_obs)
+            value = critic_network(next_obs)
 
-                # Log distribution statistics
-                if Config.use_wandb:
-                    if hasattr(dist, "probs"):
-                        # Discrete
-                        probs = dist.probs
-                        wandb.log(
-                            {
-                                "policy/dist_mean": probs.mean().item(),
-                                "policy/dist_std": probs.std().item(),
-                                "policy/entropy": dist.entropy().mean().item(),
-                                "global_step": global_step,
-                            }
-                        )
-                    else:
-                        # Continuous
-                        wandb.log(
-                            {
-                                "policy/dist_mean": dist.mean.mean().item(),
-                                "policy/dist_std": dist.stddev.mean().item(),
-                                "policy/entropy": dist.entropy().mean().item(),
-                                "global_step": global_step,
-                            }
-                        )
+            # Log distribution statistics
+            if Config.use_wandb and step % 100 == 0:
+                if hasattr(dist, "probs"):
+                    # Discrete
+                    probs = dist.probs
+                    wandb.log(
+                        {
+                            "policy/dist_mean": probs.mean().item(),
+                            "policy/dist_std": probs.std().item(),
+                            "policy/entropy": dist.entropy().mean().item(),
+                            "global_step": global_step,
+                        }
+                    )
 
             values_storage[step] = value.flatten()
-
-            actions_storage[step] = action
             logprobs_storage[step] = (
                 logprob.sum(dim=-1) if len(logprob.shape) > 1 else logprob
             )
@@ -1226,144 +1150,92 @@ def train_a2c(
             rewards_storage[step] = torch.tensor(reward).to(device)
             next_obs = torch.Tensor(new_obs).to(device)
             next_done = torch.Tensor(done).to(device)
-            if Config.use_wandb:
-                wandb.log(
-                    {
-                        "rewards/reward": rewards_storage[step].mean().item(),
-                        "global_step": global_step,
-                    }
-                )
 
-        # Calculate returns after the rollout is complete
-        with torch.no_grad():
-            # Get the bootstrapped value from the state after the last step
-            bootstrap_value = critic_network(next_obs)
+        # Calculate returns (Monte Carlo)
+        returns = torch.zeros_like(rewards_storage).to(device)
+        rt = 0.0
+        for t in reversed(range(Config.max_steps)):
+            rt = rewards_storage[t] + rt * Config.gamma
+            returns[t] = rt
 
-            # Initialize tensors for returns
-            returns = torch.zeros_like(rewards_storage).to(device)
-
-            # Set the initial "next state" return. If an env was done, this is 0, otherwise it's the bootstrap value.
-            # (1.0 - next_done) is a trick to multiply by 0 if done, and 1 if not done.
-            gt_next_state = bootstrap_value.squeeze() * (1.0 - next_done)
-
-            # Loop backwards from the last step to the first
-            for t in reversed(range(Config.max_steps)):
-                # Calculate return at step t
-                rt = rewards_storage[t] + Config.gamma * gt_next_state
-
-                # Store the calculated returns
-                returns[t] = rt
-
-                # Update the "next state" for the previous step (t-1).
-                # If an episode was done at step t, the return propagation is cut off (multiplied by 0).
-                gt_next_state = rt * (1.0 - dones_storage[t])
-
-        # Calculate advantages as the difference between returns and value function estimates
-        advantages = returns - values_storage
-
-        # Normalize the final combined advantages
-        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-
-        # Flatten the batch
-        b_obs = obs_storage.reshape((-1,) + (obs_space_shape,))
+        # Flatten tensors for batch processing
         b_logprobs = logprobs_storage.reshape(-1)
-        b_actions = actions_storage.reshape((-1,) + action_shape)
-        b_advantages = advantages.reshape(-1)
+        b_values = values_storage.reshape(-1)
         b_returns = returns.reshape(-1)
 
-        # A2C Update Phase
-        b_inds = np.arange(batch_size)
-        for _epoch in range(Config.update_epochs):
-            np.random.shuffle(b_inds)
-            for start in range(0, batch_size, minibatch_size):
-                end = start + minibatch_size
-                mb_inds = b_inds[start:end]
+        # Calculate advantages (no normalization in pure A2C)
+        advantages = (b_returns - b_values)
 
-                # --- A2C Policy and Value Loss ---
+        # A2C Update - Single pass through data
+        # Actor Loss: policy gradient with advantage
+        policy_loss = []
+        for log_prob, advantage in zip(b_logprobs, advantages):
+            policy_loss.append(-log_prob * advantage)
 
-                _, new_log_probs, dist = actor_network.get_action(
-                    b_obs[mb_inds], b_actions[mb_inds]
-                )
-                ratio = torch.exp(new_log_probs - b_logprobs[mb_inds])
+        policy_loss = torch.stack(policy_loss).mean()
 
-                with torch.no_grad():
-                    logratio = new_log_probs - b_logprobs[mb_inds]
-                    approx_kl = ((ratio - 1) - logratio).mean()
-                    if Config.use_wandb:
-                        wandb.log({"charts/approx_kl": approx_kl.item()})
+        # Critic Loss: MSE between value predictions and returns
+        critic_loss = F.mse_loss(b_values, b_returns)
 
-                pg_loss1 = b_advantages[mb_inds] * ratio
-                pg_loss2 = b_advantages[mb_inds] * torch.clamp(
-                    ratio, 1 - Config.clip_value, 1 + Config.clip_value
-                )
-                policy_loss = -torch.min(pg_loss1, pg_loss2).mean()
+        # Optimize Actor
+        actor_optim.zero_grad()
+        policy_loss.backward()
 
-                current_values = critic_network(b_obs[mb_inds])
-
-                critic_loss = F.mse_loss(
-                    current_values.squeeze(), b_returns[mb_inds]
-                )
-                entropy_loss = dist.entropy().mean()
-
-                # Total Loss
-                loss = (
-                    policy_loss
-                    + Config.VALUE_COEFF * critic_loss
-                    - Config.ENTROPY_COEFF * entropy_loss
-                )
-
-                optimizer.zero_grad()
-                loss.backward()
-
-                # Log gradient norm per layer
-                if Config.use_wandb and Config.log_gradients:
-                    # Calculate gradient norm before clipping
-                    total_norm_before = torch.norm(
-                        torch.stack(
-                            [
-                                torch.norm(p.grad.detach(), 2)
-                                for p in list(actor_network.parameters())
-                                + list(critic_network.parameters())
-                                if p.grad is not None
-                            ]
-                        ),
-                        2,
-                    )
-
-                    for name, param in actor_network.named_parameters():
-                        if param.grad is not None:
-                            grad_norm = torch.norm(param.grad.detach(), 2).item()
-                            wandb.log(
-                                {
-                                    f"gradients/actor_layer_{name}": grad_norm,
-                                    "global_step": global_step,
-                                }
-                            )
-                    for name, param in critic_network.named_parameters():
-                        if param.grad is not None:
-                            grad_norm = torch.norm(param.grad.detach(), 2).item()
-                            wandb.log(
-                                {
-                                    f"gradients/critic_layer_{name}": grad_norm,
-                                    "global_step": global_step,
-                                }
-                            )
+        # Log gradient norms for actor
+        if Config.use_wandb and Config.log_gradients:
+            total_norm = 0
+            for name, param in actor_network.named_parameters():
+                if param.grad is not None:
+                    param_norm = param.grad.data.norm(2)
                     wandb.log(
                         {
-                            "gradients/norm_before_clip": total_norm_before.item(),
+                            f"gradients/actor_{name}": param_norm.item(),
                             "global_step": global_step,
                         }
                     )
+                    total_norm += param_norm.item() ** 2
+            wandb.log(
+                {
+                    "gradients/actor_total_norm": total_norm**0.5,
+                    "global_step": global_step,
+                }
+            )
 
-                # Apply gradient clipping
-                if Config.max_grad_norm != 0.0:
-                    torch.nn.utils.clip_grad_norm_(
-                        list(actor_network.parameters())
-                        + list(critic_network.parameters()),
-                        max_norm=Config.max_grad_norm,
+        if Config.max_grad_norm != 0.0:
+            torch.nn.utils.clip_grad_norm_(
+                actor_network.parameters(), max_norm=Config.max_grad_norm
+            )
+        actor_optim.step()
+
+        # Optimize Critic
+        critic_optim.zero_grad()
+        critic_loss.backward()
+
+        # Log gradient norms for critic
+        if Config.use_wandb and Config.log_gradients:
+            total_norm = 0
+            for name, param in critic_network.named_parameters():
+                if param.grad is not None:
+                    param_norm = param.grad.data.norm(2)
+                    wandb.log(
+                        {
+                            f"gradients/critic_{name}": param_norm.item(),
+                            "global_step": global_step,
+                        }
                     )
+                    total_norm += param_norm.item() ** 2
+            wandb.log(
+                {
+                    "gradients/critic_total_norm": total_norm**0.5,
+                    "global_step": global_step,
+                }
+            )
 
-                optimizer.step()
+        if Config.max_grad_norm != 0.0:
+            torch.nn.utils.clip_grad_norm_(
+                critic_network.parameters(), max_norm=Config.max_grad_norm
+            )
+        critic_optim.step()
 
         # Log episode returns
         if "episode" in info:
@@ -1398,19 +1270,19 @@ def train_a2c(
         if Config.use_wandb and update % 10 == 0:
             wandb.log(
                 {
-                    "losses/total_loss": loss.item(),
                     "losses/policy_loss": policy_loss.item(),
-                    "losses/value_loss": critic_loss.item(),
-                    "charts/learning_rate": optimizer.param_groups[0]["lr"],
+                    "losses/critic_loss": critic_loss.item(),
+                    "charts/learning_rate": actor_optim.param_groups[0]["lr"],
                     "charts/rewards_mean": np.mean(rewards_storage.cpu().numpy()),
-                    "advantages/advantages_mean": b_advantages.mean().item(),
-                    "advantages/advantages_std": b_advantages.std().item(),
+                    "advantages/advantages_mean": advantages.mean().item(),
+                    "advantages/advantages_std": advantages.std().item(),
                     "charts/returns_mean": b_returns.mean().item(),
+                    "calculated_return": b_returns.mean().item(),
                     "global_step": global_step,
                 }
             )
             print(
-                f"Update {update}, Global Step: {global_step}, Policy Loss: {policy_loss.item():.4f}, Value Loss: {critic_loss.item():.4f}, SPS: {int(global_step / (time.time() - start_time))}"
+                f"Update {update}, Global Step: {global_step}, Policy Loss: {policy_loss.item():.4f}, Critic Loss: {critic_loss.item():.4f}, SPS: {int(global_step / (time.time() - start_time))}"
             )
 
             if Config.use_wandb:

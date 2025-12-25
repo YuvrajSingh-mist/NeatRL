@@ -200,11 +200,14 @@ def make_env(
 
     def thunk():
         if env is not None:
-            # Use provided environment (assume already wrapped)
+            # Use provided environment but still apply wrappers
             env_to_use = env
         else:
             # Create new environment
             env_to_use = gym.make(env_id, render_mode=render_mode)
+        
+        # Always apply RecordEpisodeStatistics if not already present
+        if env is None:
             env_to_use = gym.wrappers.RecordEpisodeStatistics(env_to_use)
 
         if grid_env:
@@ -440,9 +443,9 @@ def evaluate(
                 frame = eval_env.render()
                 frames.append(frame)
             with torch.no_grad():
-                obs = torch.tensor(obs, device=device, dtype=torch.float32).unsqueeze(0)
-                print("eval obs shape: ", obs.shape)
-                action = model(obs)
+                obs_tensor = torch.tensor(np.array(obs), device=device, dtype=torch.float32).unsqueeze(0)
+                action = model(obs_tensor)
+                action = torch.clip(action, Config.low, Config.high)  # Use args low and high
                 action = action.cpu().numpy()
                 if isinstance(eval_env.action_space, gym.spaces.Discrete):
                     action = action.item()
@@ -692,7 +695,6 @@ def train_ddpg(
         # Training step
         if step > Config.learning_starts:
             data = replay_buffer.sample(Config.batch_size)
-
             with torch.no_grad():
                 next_actions = target_actor_net(
                     data.next_observations.to(torch.float32)
@@ -829,13 +831,13 @@ def train_ddpg(
 
             # Evaluation
             if Config.eval_every > 0 and step % Config.eval_every == 0:
-                eval_env_id = "" if env is not None else Config.env_id
-                eval_env = env
+                # eval_env_id = "" if env is not None else Config.env_id
+                # eval_env = env
                 episodic_returns, eval_frames = evaluate(
                     actor_net,
                     device,
-                    eval_env_id,
-                    env=eval_env,
+                    Config.env_id,
+                    env=None,
                     seed=Config.seed,
                     num_eval_eps=Config.num_eval_episodes,
                     record=Config.capture_video,
@@ -1136,7 +1138,6 @@ def train_ddpg_cnn(
         # Training step
         if step > Config.learning_starts:
             data = replay_buffer.sample(Config.batch_size)
-
             with torch.no_grad():
                 next_actions = target_actor_net(
                     data.next_observations.to(torch.float32)
@@ -1272,13 +1273,13 @@ def train_ddpg_cnn(
 
             # Evaluation
             if Config.eval_every > 0 and step % Config.eval_every == 0:
-                eval_env_id = "" if env is not None else Config.env_id
-                eval_env = env
+                # eval_env_id = "" if env is not None else Config.env_id
+                # eval_env = env
                 episodic_returns, eval_frames = evaluate(
                     actor_net,
                     device,
-                    eval_env_id,
-                    env=eval_env,
+                    Config.env_id,
+                    env=None,
                     seed=Config.seed,
                     num_eval_eps=Config.num_eval_episodes,
                     record=Config.capture_video,

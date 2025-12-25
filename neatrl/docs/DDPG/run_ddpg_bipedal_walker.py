@@ -13,14 +13,14 @@ def main():
 
     train_ddpg(
         env_id="BipedalWalker-v3",  # BipedalWalker environment
-        total_timesteps=1000000,  # BipedalWalker needs many timesteps
+        total_timesteps=4000000,  # BipedalWalker needs many timesteps
         seed=42,
         learning_rate=3e-4,
         buffer_size=50000,
         batch_size=256,
         learning_starts=25000,
-        train_frequency=10,
-        target_network_frequency=50,
+        train_frequency=2,
+        target_network_frequency=1,
         gamma=0.99,
         tau=0.005,
         exploration_fraction=0.1,

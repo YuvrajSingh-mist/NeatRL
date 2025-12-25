@@ -17,6 +17,11 @@ import torch.nn as nn
 from neatrl.ddpg import train_ddpg_cnn
 
 
+
+def car_racing_wrapper(env):
+    return PreprocessAndFrameStack(env, height=84, width=84, num_stack=4)
+
+
 class PreprocessAndFrameStack(gym.ObservationWrapper):
     """
     A wrapper that extracts the 'screen' observation, resizes, grayscales,
@@ -41,20 +46,23 @@ class PreprocessAndFrameStack(gym.ObservationWrapper):
         )
 
     def observation(self, obs):
+        # Convert LazyFrames to array if needed
+        obs_array = np.array(obs)
+        
         frames = []
         for i in range(self.num_stack):
-            frame = np.array(obs[i], dtype=np.uint8)
+            frame = obs_array[i]
+            
             if frame.ndim == 3 and frame.shape[2] == 3:
                 frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+                
             frame = cv2.resize(
                 frame, (self.width, self.height), interpolation=cv2.INTER_AREA
             )
             frames.append(frame)
-        return np.stack(frames, axis=0)
-
-
-def car_racing_wrapper(env):
-    return PreprocessAndFrameStack(env, height=84, width=84, num_stack=4)
+        
+        result = np.stack(frames, axis=0)
+        return result
 
 
 # --- Networks ---
@@ -116,8 +124,7 @@ class ActorNet(nn.Module):
 class QNet(nn.Module):
     def __init__(self, obs_shape: Union[int, tuple[int, ...]], action_space: int):
         super().__init__()
-        # Handle state_space as tuple or int
-        state_dim = obs_shape[0] if isinstance(obs_shape, tuple) else obs_shape
+      
         self.network = FeatureExtractor(obs_shape)
 
         self.fc2 = nn.Linear(action_space, 256)
@@ -137,15 +144,15 @@ def main():
     """Train DDPG with CNN on CarRacing environment."""
 
     train_ddpg_cnn(
-        env_id="CarRacing-v3",  # CarRacing environment
-        total_timesteps=500000,  # CarRacing needs more timesteps
+        env_id='CarRacing-v3',  # CarRacing environment
+        total_timesteps=1000000,  # CarRacing needs more timesteps
         seed=42,
-        learning_rate=1e-4,
+        learning_rate=3e-4,
         buffer_size=100000,
-        batch_size=64,
-        learning_starts=1000,
-        train_frequency=4,
-        target_network_frequency=100,
+        batch_size=256,
+        learning_starts=25000,
+        train_frequency=10,
+        target_network_frequency=50,
         gamma=0.99,
         tau=0.005,
         exploration_fraction=0.1,
@@ -153,7 +160,7 @@ def main():
         capture_video=True,
         eval_every=10000,
         save_every=50000,
-        num_eval_episodes=5,
+        num_eval_episodes=2,
         device="cpu",  # Use "cuda" if you have GPU
         actor_class=ActorNet,
         q_network_class=QNet,
