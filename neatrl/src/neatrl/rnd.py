@@ -20,9 +20,7 @@ class Config:
     """Configuration class for PPO-RND training."""
 
     # Experiment settings
-    exp_name: str = (
-        "PPO-RND"  # Experiment name for logging and saving
-    )
+    exp_name: str = "PPO-RND"  # Experiment name for logging and saving
     seed: int = 42  # Random seed for reproducibility
     env_id: Optional[str] = "CliffWalking-v0"  # Gymnasium environment ID
     total_timesteps: int = 5_000_000  # Total number of timesteps to train

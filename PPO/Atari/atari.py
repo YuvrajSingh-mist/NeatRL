@@ -330,7 +330,7 @@ if __name__ == "__main__":
         
         # Calculate advantages using the computed returns and stored values
         returns = advantages + values_storage
-        # advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
         # === PPO Update Phase ===
         b_obs = obs_storage.reshape((-1,) +  envs.single_observation_space.shape)
@@ -353,6 +353,7 @@ if __name__ == "__main__":
                 new_log_probs, entropy = actor_network.evaluate_get_action(b_obs[mb_inds], b_actions[mb_inds])
                 ratio = torch.exp(new_log_probs - b_logprobs[mb_inds])
                 logratio = new_log_probs - b_logprobs[mb_inds]
+                
                 with torch.no_grad():
                     approx_kl = ((ratio - 1) - logratio).mean()
                     wandb.log({"charts/approx_kl": approx_kl.item()})

@@ -9,14 +9,12 @@ and 6-dimensional continuous action space.
 
 from neatrl.ddpg import train_ddpg
 
+
 def main():
     """Train DDPG on MuJoCo Half Cheetah environment."""
 
-    # Train DDPG on Half Cheetah (you would need to install mujoco and mujoco-py)
-    # pip install mujoco mujoco-py
-
     train_ddpg(
-        env_id="HalfCheetah-v4",  # MuJoCo Half Cheetah environment
+        env_id="HalfCheetah-v5",  
         total_timesteps=1000000,  # MuJoCo environments need more timesteps
         seed=42,
         learning_rate=3e-4,
@@ -28,13 +26,14 @@ def main():
         gamma=0.99,
         tau=0.005,
         exploration_fraction=0.1,
-        use_wandb=False,  # Set to True to enable logging
-        capture_video=False,
+        use_wandb=True,  # Set to True to enable logging
+        capture_video=True,
         eval_every=10000,
         save_every=50000,
-        num_eval_episodes=10,
-        device="cpu"  # Use "cuda" if you have GPU
+        num_eval_episodes=2,
+        device="cpu",  # Use "cuda" if you have GPU
     )
+
 
 if __name__ == "__main__":
     main()

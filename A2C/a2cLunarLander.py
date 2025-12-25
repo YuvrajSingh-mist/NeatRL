@@ -185,30 +185,6 @@ for step in tqdm(range(args.episodes)):
     values = []
     
     
-    
-    #  # --- Learning Rate Annealing ---
-    # if step < args.decay_iters:
-    #     # Calculate the fraction of decay completed
-    #     fraction = step / args.decay_iters
-        
-    #     # Linearly interpolate Actor LR
-    #     current_actor_lr = args.lr - fraction * (args.lr - args.final_lr)
-    #     for param_group in actor_optim.param_groups:
-    #         param_group['lr'] = current_actor_lr
-        
-    #     for param_group in critic_optim.param_groups:
-            
-    #         param_group['lr'] = current_actor_lr
-
-       
-    # else:
-    #     # After decay period, keep LR at final_learning_rate
-    #     for param_group in actor_optim.param_groups:
-    #         param_group['lr'] = args.final_lr
-    #     for param_group in critic_optim.param_groups:
-    #         param_group['lr'] = args.final_lr
-            
-            
     while not done:
         # Preprocess observation
         # obs = preprocess_frame_albumentations(obs, TARGET_HEIGHT, TARGET_WIDTH, device)

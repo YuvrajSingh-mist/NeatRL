@@ -79,7 +79,7 @@ class QNet(nn.Module):
         self.fc1 = nn.Linear(state_space, 256)
         self.fc2 = nn.Linear(action_space, 256)
         self.fc3 = nn.Linear(512, 512)
-        self.reduce = nn.Linear(512, 256)  # Output a single Q-value
+        self.reduce = nn.Linear(512, 256)  
         self.out = nn.Linear(256, 1)
     def forward(self, state, act):
         st = torch.nn.functional.mish(self.fc1(state))

@@ -5,13 +5,17 @@ This example demonstrates how to use DDPG with CNN networks for the CarRacing en
 CarRacing has image observations and continuous action spaces, making it perfect for DDPG with CNN.
 
 """
+
+from typing import Union
+
 import cv2
 import gymnasium as gym
 import numpy as np
 import torch
 import torch.nn as nn
-from typing import Union, Optional
+
 from neatrl.ddpg import train_ddpg_cnn
+
 
 class PreprocessAndFrameStack(gym.ObservationWrapper):
     """
@@ -37,32 +41,16 @@ class PreprocessAndFrameStack(gym.ObservationWrapper):
         )
 
     def observation(self, obs):
-        # `obs` here is a LazyFrames object from FrameStack of shape (num_stack, H, W, C)
-        # 1. Convert LazyFrames to a single numpy array
-
-        stack = np.array(obs, dtype=np.uint8)
-
-        # 2. Extract 'screen' if obs is a dict (for VizDoom)
-        if (
-            isinstance(self.env.observation_space, gym.spaces.Dict)
-            and "screen" in stack[0]
-        ):
-            stack = np.array(list(stack))
-        else:
-            stack = np.array(list(stack))
-
-        # 3. Grayscale and Resize each frame in the stack
-        processed_stack = []
-        for frame in stack:
-            if frame.ndim == 3 and frame.shape[2] == 3:  # H, W, C
+        frames = []
+        for i in range(self.num_stack):
+            frame = np.array(obs[i], dtype=np.uint8)
+            if frame.ndim == 3 and frame.shape[2] == 3:
                 frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
             frame = cv2.resize(
                 frame, (self.width, self.height), interpolation=cv2.INTER_AREA
             )
-            processed_stack.append(frame)
-
-        # 4. Stack frames along a new channel dimension
-        return np.stack(processed_stack, axis=0)
+            frames.append(frame)
+        return np.stack(frames, axis=0)
 
 
 def car_racing_wrapper(env):
@@ -91,7 +79,6 @@ class FeatureExtractor(nn.Module):
         self.relu_fc = nn.ReLU()
 
     def forward(self, x):
-    
         x = self.relu1(self.conv1(x))
 
         x = self.relu2(self.conv2(x))
@@ -115,16 +102,14 @@ class ActorNet(nn.Module):
         self.out3 = layer_init(nn.Linear(512, 1))
 
     def forward(self, x):
-        
-
         x = self.network(x / 255.0)
         out1 = torch.nn.functional.tanh(self.out1(x))
         out2 = torch.nn.functional.tanh(self.out2(x))
         out3 = torch.nn.functional.tanh(self.out3(x))
         action1 = out1
-        action2 = (out2 + 1 ) / 2
+        action2 = (out2 + 1) / 2
         action3 = (out3 + 1) / 2
-       
+
         return torch.cat([action1, action2, action3], dim=-1)
 
 
@@ -133,12 +118,12 @@ class QNet(nn.Module):
         super().__init__()
         # Handle state_space as tuple or int
         state_dim = obs_shape[0] if isinstance(obs_shape, tuple) else obs_shape
-        self.network= FeatureExtractor(obs_shape)
-        self.fc1 = nn.Linear(state_dim, 256)
+        self.network = FeatureExtractor(obs_shape)
+
         self.fc2 = nn.Linear(action_space, 256)
         self.fc3 = nn.Linear(768, 512)
-        self.out = nn.Linear(512, 1) # Output a single Q-value
-    
+        self.out = nn.Linear(512, 1)  # Output a single Q-value
+
     def forward(self, state, act):
         st = self.network(state / 255.0)
         action = torch.nn.functional.mish(self.fc2(act))
@@ -146,7 +131,6 @@ class QNet(nn.Module):
         x = torch.nn.functional.mish(self.fc3(combined))
         x = self.out(x)
         return x
-
 
 
 def main():
@@ -173,8 +157,9 @@ def main():
         device="cpu",  # Use "cuda" if you have GPU
         actor_class=ActorNet,
         q_network_class=QNet,
-        env_wrapper=car_racing_wrapper
+        env_wrapper=car_racing_wrapper,
     )
+
 
 if __name__ == "__main__":
     main()

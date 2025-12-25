@@ -8,12 +8,11 @@ import imageio
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
+from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
 
 import wandb
-from stable_baselines3.common.buffers import ReplayBuffer
 
 
 # ===== CONFIGURATION =====
@@ -24,7 +23,7 @@ class Config:
     exp_name: str = "DDPG-Experiment"
     seed: int = 42
     env_id: Optional[str] = "HalfCheetah-v5"
-    
+
     low: float = -1.0
     noise_clip: float = 0.5
     high: float = 1.0  # Action space limits for BipedalWalker
@@ -34,13 +33,13 @@ class Config:
     buffer_size: int = 100000
     gamma: float = 0.99
     tau: float = 0.005  # Soft update parameter for target networks
-    target_network_frequency: int = 50 # How often to update target networks
+    target_network_frequency: int = 50  # How often to update target networks
     batch_size: int = 256
-   
+
     exploration_fraction: float = 0.1
     learning_starts: int = 25000
     train_frequency: int = 2
-    
+
     # Logging & Saving
     capture_video: bool = True  # Whether to capture evaluation videos
     use_wandb: bool = True  # Whether to use Weights & Biases for logging
@@ -52,14 +51,16 @@ class Config:
     normalize_reward: bool = False  # Whether to normalize rewards
     normalize_obs: bool = False  # Whether to normalize observations
     atari_wrapper: bool = False  # Whether to use Atari preprocessing and frame stacking
-    env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = None  # Optional custom environment wrapper
+    env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = (
+        None  # Optional custom environment wrapper
+    )
     grid_env: bool = False  # Whether it's a grid environment
     n_envs: int = 1  # Number of parallel environments for data collection
-    max_grad_norm: float = 0.0  # Maximum gradient norm for gradient clipping (0.0 to disable)
+    max_grad_norm: float = (
+        0.0  # Maximum gradient norm for gradient clipping (0.0 to disable)
+    )
     log_gradients: bool = True  # Whether to log gradient norms to W&B
     device: str = "cpu"  # Device for training: "auto", "cpu", "cuda", or "cuda:0" etc.
-
-
 
 
 class ActorNet(nn.Module):
@@ -78,8 +79,13 @@ class ActorNet(nn.Module):
         self.out = nn.Linear(256, action_space)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        
-        x = torch.tanh(self.out(torch.nn.functional.mish(self.fc2(torch.nn.functional.mish(self.fc1(x))))))
+        x = torch.tanh(
+            self.out(
+                torch.nn.functional.mish(
+                    self.fc2(torch.nn.functional.mish(self.fc1(x)))
+                )
+            )
+        )
         x = x * 1.0  # Scale to action limits
         return x
 
@@ -89,13 +95,13 @@ class QNet(nn.Module):
         super().__init__()
         # Handle state_space as tuple or int
         state_dim = state_space[0] if isinstance(state_space, tuple) else state_space
-        
+
         self.fc1 = nn.Linear(state_dim, 256)
         self.fc2 = nn.Linear(action_space, 256)
         self.fc3 = nn.Linear(512, 512)
         self.reduce = nn.Linear(512, 256)  # Output a single Q-value
         self.out = nn.Linear(256, 1)
-    
+
     def forward(self, state, act):
         st = torch.nn.functional.mish(self.fc1(state))
         action = torch.nn.functional.mish(self.fc2(act))
@@ -113,7 +119,7 @@ class ActorNetCNN(nn.Module):
         self.conv1 = nn.Conv2d(obs_shape[0], 32, kernel_size=8, stride=4)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
-        
+
         self.fc1 = nn.Linear(64 * 7 * 7, 512)
         self.out = nn.Linear(512, action_space)
 
@@ -136,13 +142,13 @@ class QNetCNN(nn.Module):
         self.conv1 = nn.Conv2d(obs_shape[0], 32, kernel_size=8, stride=4)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
-        
+
         # State processing
         self.state_fc = nn.Linear(64 * 7 * 7, 512)
-        
+
         # Action processing
         self.action_fc = nn.Linear(action_space, 512)
-        
+
         # Combined processing
         self.combined_fc = nn.Linear(1024, 512)
         self.out = nn.Linear(512, 1)
@@ -154,10 +160,10 @@ class QNetCNN(nn.Module):
         x = torch.nn.functional.relu(self.conv3(x))
         x = x.view(x.size(0), -1)  # Flatten
         state_features = torch.nn.functional.relu(self.state_fc(x))
-        
+
         # Process action
         action_features = torch.nn.functional.relu(self.action_fc(action))
-        
+
         # Combine state and action features
         combined = torch.cat([state_features, action_features], dim=1)
         x = torch.nn.functional.relu(self.combined_fc(combined))
@@ -191,7 +197,7 @@ def make_env(
         raise ValueError(
             "Cannot provide both env_id and env. Use env_id for Gymnasium environments or env for custom environments."
         )
-    
+
     def thunk():
         if env is not None:
             # Use provided environment (assume already wrapped)
@@ -408,7 +414,7 @@ def evaluate(
         raise ValueError(
             "Cannot provide both env_id and env. Use env_id for Gymnasium environments or env for custom environments."
         )
-    
+
     # Create evaluation environment
     eval_env = make_env(
         env_id if env is None else "",
@@ -434,7 +440,8 @@ def evaluate(
                 frame = eval_env.render()
                 frames.append(frame)
             with torch.no_grad():
-                obs = torch.tensor(obs, device=device, dtype=torch.float32)
+                obs = torch.tensor(obs, device=device, dtype=torch.float32).unsqueeze(0)
+                print("eval obs shape: ", obs.shape)
                 action = model(obs)
                 action = action.cpu().numpy()
                 if isinstance(eval_env.action_space, gym.spaces.Discrete):
@@ -505,8 +512,6 @@ def train_ddpg(
     actor_class: Any = ActorNet,
     q_network_class: Any = QNet,
 ) -> nn.Module:
-    
-    
     # Update Config with passed arguments
     Config.env_id = env_id or env.spec.id
     Config.total_timesteps = total_timesteps
@@ -537,7 +542,6 @@ def train_ddpg(
     Config.env_wrapper = env_wrapper
     Config.normalize_obs = normalize_obs
     Config.normalize_reward = normalize_reward
-    
 
     # Validate that only one of env_id or env is provided
     if env_id is not None and env is not None:
@@ -561,7 +565,6 @@ def train_ddpg(
         wandb.init(
             project=Config.wandb_project,
             entity=Config.wandb_entity,
-            
             config=vars(Config()),
             name=run_name,
             monitor_gym=True,
@@ -643,7 +646,6 @@ def train_ddpg(
     print("\nCritic Network Architecture:")
     print(q_network)
 
-
     # Optimizers
     actor_optim = optim.Adam(actor_net.parameters(), lr=Config.learning_rate)
     q_optim = optim.Adam(q_network.parameters(), lr=Config.learning_rate)
@@ -653,14 +655,14 @@ def train_ddpg(
     actor_net.train()
 
     # Replay buffer
-    
+
     replay_buffer = ReplayBuffer(
-        Config.buffer_size, 
-        env.observation_space, 
-        env.action_space, 
-        device=device, 
+        Config.buffer_size,
+        env.observation_space,
+        env.action_space,
+        device=device,
         handle_timeout_termination=False,
-        n_envs=Config.n_envs
+        n_envs=Config.n_envs,
     )
 
     obs, _ = env.reset()
@@ -669,32 +671,40 @@ def train_ddpg(
     for step in tqdm(range(Config.total_timesteps)):
         # Get action from actor network with exploration noise
         with torch.no_grad():
-            
-            action = actor_net(torch.tensor(obs, device=device, dtype=torch.float32).unsqueeze(0))
+            action = actor_net(
+                torch.tensor(obs, device=device, dtype=torch.float32).unsqueeze(0)
+            )
             action = action + torch.clip(
-                torch.randn_like(action) * Config.exploration_fraction, 
-                -Config.noise_clip, 
-                Config.noise_clip
+                torch.randn_like(action) * Config.exploration_fraction,
+                -Config.noise_clip,
+                Config.noise_clip,
             )
             action = torch.clip(action, Config.low, Config.high)
-        
-        action_np = action.cpu().numpy().flatten()
-        
-        new_obs, reward, terminated, truncated, info = env.step(action_np)
-        done = np. logical_or(terminated, truncated)
-        replay_buffer.add(obs, new_obs, action_np, np.array(reward), np.array(done), [info])
 
-    
+        action_np = action.cpu().numpy().flatten()
+
+        new_obs, reward, terminated, truncated, info = env.step(action_np)
+        done = np.logical_or(terminated, truncated)
+        replay_buffer.add(
+            obs, new_obs, action_np, np.array(reward), np.array(done), [info]
+        )
+
         # Training step
         if step > Config.learning_starts:
             data = replay_buffer.sample(Config.batch_size)
-            
+
             with torch.no_grad():
-                next_actions = target_actor_net(data.next_observations.to(torch.float32))
-                target_max = target_q_network(data.next_observations.to(torch.float32), next_actions)
+                next_actions = target_actor_net(
+                    data.next_observations.to(torch.float32)
+                )
+                target_max = target_q_network(
+                    data.next_observations.to(torch.float32), next_actions
+                )
                 td_target = data.rewards + Config.gamma * target_max * (1 - data.dones)
-            
-            old_val = q_network(data.observations.to(torch.float32), data.actions.to(torch.float32))
+
+            old_val = q_network(
+                data.observations.to(torch.float32), data.actions.to(torch.float32)
+            )
 
             q_optim.zero_grad()
             loss = nn.functional.mse_loss(old_val, td_target)
@@ -720,11 +730,14 @@ def train_ddpg(
                 )
 
             q_optim.step()
-            
+
             if step % Config.train_frequency == 0:
+                
                 actor_optim.zero_grad()
                 actions = actor_net(data.observations.to(torch.float32))
-                policy_loss = -q_network(data.observations.to(torch.float32), actions.to(torch.float32)).mean()
+                policy_loss = -q_network(
+                    data.observations.to(torch.float32), actions.to(torch.float32)
+                ).mean()
                 policy_loss.backward()
 
                 # Log gradient norm per layer for actor
@@ -738,8 +751,6 @@ def train_ddpg(
                                     "global_step": step,
                                 }
                             )
-                            
-                        
 
                 # Apply gradient clipping for actor
                 if Config.max_grad_norm != 0.0:
@@ -749,18 +760,26 @@ def train_ddpg(
                     )
 
                 actor_optim.step()
-            
+
             # Update target networks
             if step % Config.target_network_frequency == 0:
-                for q_params, target_params in zip(q_network.parameters(), target_q_network.parameters()):
-                    target_params.data.copy_(Config.tau * q_params.data + (1.0 - Config.tau) * target_params.data)
+                for q_params, target_params in zip(
+                    q_network.parameters(), target_q_network.parameters()
+                ):
+                    target_params.data.copy_(
+                        Config.tau * q_params.data
+                        + (1.0 - Config.tau) * target_params.data
+                    )
 
-                for actor_params, target_actor_params in zip(actor_net.parameters(), target_actor_net.parameters()):
-                    target_actor_params.data.copy_(Config.tau * actor_params.data + (1.0 - Config.tau) * target_actor_params.data)
-        
+                for actor_params, target_actor_params in zip(
+                    actor_net.parameters(), target_actor_net.parameters()
+                ):
+                    target_actor_params.data.copy_(
+                        Config.tau * actor_params.data
+                        + (1.0 - Config.tau) * target_actor_params.data
+                    )
 
-            
-             # Log episode returns
+            # Log episode returns
             if "episode" in info:
                 if Config.n_envs > 1:
                     for i in range(Config.n_envs):
@@ -789,24 +808,25 @@ def train_ddpg(
                                 }
                             )
 
-
-        
             # Log losses and metrics
             if step % 1000 == 0 and step > Config.learning_starts:
                 if Config.use_wandb:
-                    wandb.log({
-                        "losses/critic_loss": loss.item(),
-                        "losses/actor_loss": policy_loss.item() if step % Config.train_frequency == 0 else 0.0,
-                        "charts/learning_rate": actor_optim.param_groups[0]["lr"],
-                        "rewards/rewards_mean": data.rewards.mean().item(),
-                        "rewards/rewards_std": data.rewards.std().item(),
-                        "global_step": step
-                    })
+                    wandb.log(
+                        {
+                            "losses/critic_loss": loss.item(),
+                            "losses/actor_loss": policy_loss.item()
+                            if step % Config.train_frequency == 0
+                            else 0.0,
+                            "charts/learning_rate": actor_optim.param_groups[0]["lr"],
+                            "rewards/rewards_mean": data.rewards.mean().item(),
+                            "rewards/rewards_std": data.rewards.std().item(),
+                            "global_step": step,
+                        }
+                    )
                 print(
                     f"Step {step}, Critic Loss: {loss.item():.4f}, Actor Loss: {policy_loss.item() if step % Config.train_frequency == 0 else 0.0:.4f}, SPS: {int(step / (time.time() - start_time))}"
                 )
-            
-            
+
             # Evaluation
             if Config.eval_every > 0 and step % Config.eval_every == 0:
                 eval_env_id = "" if env is not None else Config.env_id
@@ -826,27 +846,33 @@ def train_ddpg(
                     use_wandb=Config.use_wandb,
                 )
                 avg_return = np.mean(episodic_returns)
-                
+
                 if Config.use_wandb:
-                    wandb.log({
-                        "val_episodic_returns": episodic_returns,
-                        "charts/val_avg_return": avg_return,
-                        "charts/val_return_std": np.std(episodic_returns),
-                        "val_step": step
-                    })
-                print(f"Evaluation returns: {[float(r) for r in episodic_returns]}, Average: {avg_return:.2f}")
-            
+                    wandb.log(
+                        {
+                            "val_episodic_returns": episodic_returns,
+                            "charts/val_avg_return": avg_return,
+                            "charts/val_return_std": np.std(episodic_returns),
+                            "val_step": step,
+                        }
+                    )
+                print(
+                    f"Evaluation returns: {[float(r) for r in episodic_returns]}, Average: {avg_return:.2f}"
+                )
+
                 # Save video if frames were captured
                 if eval_frames and Config.use_wandb:
                     video = np.stack(eval_frames)
                     video = np.transpose(video, (0, 3, 1, 2))
-                    wandb.log({
-                        "videos/eval_policy": wandb.Video(
-                            video,
-                            fps=30,
-                            format="mp4",
-                        )
-                    })
+                    wandb.log(
+                        {
+                            "videos/eval_policy": wandb.Video(
+                                video,
+                                fps=30,
+                                format="mp4",
+                            )
+                        }
+                    )
 
         # Save model
         if Config.save_every > 0 and step % Config.save_every == 0 and step > 0:
@@ -873,29 +899,26 @@ def train_ddpg(
         eval_env_id = "" if env is not None else Config.env_id
         eval_env = env
         episodic_returns, eval_frames = evaluate(
-            actor_net, 
-            device, 
-            eval_env_id, 
-            env=eval_env, 
-            record=True, 
+            actor_net,
+            device,
+            eval_env_id,
+            env=eval_env,
+            record=True,
             render_mode="rgb_array",
             grid_env=Config.grid_env,
             atari_wrapper=Config.atari_wrapper,
             env_wrapper=Config.env_wrapper,
-            use_wandb=Config.use_wandb
+            use_wandb=Config.use_wandb,
         )
-        
+
         if eval_frames:
             train_video_path = f"videos/final_{Config.env_id}.mp4"
-            imageio.mimsave(train_video_path, eval_frames, fps=30, codec='libx264')
+            imageio.mimsave(train_video_path, eval_frames, fps=30, codec="libx264")
             print(f"Final training video saved to {train_video_path}")
             wandb.finish()
 
     env.close()
     return actor_net
-    
-
-
 
 
 def train_ddpg_cnn(
@@ -931,8 +954,6 @@ def train_ddpg_cnn(
     actor_class: Any = ActorNet,
     q_network_class: Any = QNet,
 ) -> nn.Module:
-    
-    
     # Update Config with passed arguments
     Config.env_id = env_id or env.spec.id
     Config.total_timesteps = total_timesteps
@@ -1036,7 +1057,7 @@ def train_ddpg_cnn(
         else env.action_space.shape[0]
     )
 
-   # Create actor network
+    # Create actor network
     if isinstance(actor_class, nn.Module):
         # Use custom actor instance
         validate_policy_network_dimensions(actor_class, obs_shape, action_shape)
@@ -1070,7 +1091,6 @@ def train_ddpg_cnn(
     print("\nCritic Network Architecture:")
     print(q_network)
 
-
     # Optimizers
     actor_optim = optim.Adam(actor_net.parameters(), lr=Config.learning_rate)
     q_optim = optim.Adam(q_network.parameters(), lr=Config.learning_rate)
@@ -1082,12 +1102,12 @@ def train_ddpg_cnn(
     # Replay buffer
 
     replay_buffer = ReplayBuffer(
-        Config.buffer_size, 
-        env.observation_space, 
-        env.action_space, 
-        device=device, 
+        Config.buffer_size,
+        env.observation_space,
+        env.action_space,
+        device=device,
         handle_timeout_termination=False,
-        n_envs=Config.n_envs
+        n_envs=Config.n_envs,
     )
 
     obs, _ = env.reset()
@@ -1096,30 +1116,39 @@ def train_ddpg_cnn(
     for step in tqdm(range(Config.total_timesteps)):
         # Get action from actor network with exploration noise
         with torch.no_grad():
-            action = actor_net(torch.tensor(obs, device=device, dtype=torch.float32).unsqueeze(0))
+            action = actor_net(
+                torch.tensor(obs, device=device, dtype=torch.float32).unsqueeze(0)
+            )
             action = action + torch.clip(
-                torch.randn_like(action) * Config.exploration_fraction, 
-                -Config.noise_clip, 
-                Config.noise_clip
+                torch.randn_like(action) * Config.exploration_fraction,
+                -Config.noise_clip,
+                Config.noise_clip,
             )
             action = torch.clip(action, Config.low, Config.high)
         action_np = action.cpu().numpy().flatten()
-        
-        new_obs, reward, terminated, truncated, info = env.step(action_np)
-        done = np. logical_or(terminated, truncated)
-        replay_buffer.add(obs, new_obs, action_np, np.array(reward), np.array(done), [info])
 
-    
+        new_obs, reward, terminated, truncated, info = env.step(action_np)
+        done = np.logical_or(terminated, truncated)
+        replay_buffer.add(
+            obs, new_obs, action_np, np.array(reward), np.array(done), [info]
+        )
+
         # Training step
         if step > Config.learning_starts:
             data = replay_buffer.sample(Config.batch_size)
-            
+
             with torch.no_grad():
-                next_actions = target_actor_net(data.next_observations.to(torch.float32))
-                target_max = target_q_network(data.next_observations.to(torch.float32), next_actions)
+                next_actions = target_actor_net(
+                    data.next_observations.to(torch.float32)
+                )
+                target_max = target_q_network(
+                    data.next_observations.to(torch.float32), next_actions
+                )
                 td_target = data.rewards + Config.gamma * target_max * (1 - data.dones)
-            
-            old_val = q_network(data.observations.to(torch.float32), data.actions.to(torch.float32))
+
+            old_val = q_network(
+                data.observations.to(torch.float32), data.actions.to(torch.float32)
+            )
 
             q_optim.zero_grad()
             loss = nn.functional.mse_loss(old_val, td_target)
@@ -1145,11 +1174,13 @@ def train_ddpg_cnn(
                 )
 
             q_optim.step()
-            
+
             if step % Config.train_frequency == 0:
                 actor_optim.zero_grad()
                 actions = actor_net(data.observations.to(torch.float32))
-                policy_loss = -q_network(data.observations.to(torch.float32), actions.to(torch.float32)).mean()
+                policy_loss = -q_network(
+                    data.observations.to(torch.float32), actions.to(torch.float32)
+                ).mean()
                 policy_loss.backward()
 
                 # Log gradient norm per layer for actor
@@ -1163,8 +1194,6 @@ def train_ddpg_cnn(
                                     "global_step": step,
                                 }
                             )
-                            
-                        
 
                 # Apply gradient clipping for actor
                 if Config.max_grad_norm != 0.0:
@@ -1174,18 +1203,26 @@ def train_ddpg_cnn(
                     )
 
                 actor_optim.step()
-            
+
             # Update target networks
             if step % Config.target_network_frequency == 0:
-                for q_params, target_params in zip(q_network.parameters(), target_q_network.parameters()):
-                    target_params.data.copy_(Config.tau * q_params.data + (1.0 - Config.tau) * target_params.data)
+                for q_params, target_params in zip(
+                    q_network.parameters(), target_q_network.parameters()
+                ):
+                    target_params.data.copy_(
+                        Config.tau * q_params.data
+                        + (1.0 - Config.tau) * target_params.data
+                    )
 
-                for actor_params, target_actor_params in zip(actor_net.parameters(), target_actor_net.parameters()):
-                    target_actor_params.data.copy_(Config.tau * actor_params.data + (1.0 - Config.tau) * target_actor_params.data)
-        
+                for actor_params, target_actor_params in zip(
+                    actor_net.parameters(), target_actor_net.parameters()
+                ):
+                    target_actor_params.data.copy_(
+                        Config.tau * actor_params.data
+                        + (1.0 - Config.tau) * target_actor_params.data
+                    )
 
-            
-             # Log episode returns
+            # Log episode returns
             if "episode" in info:
                 if Config.n_envs > 1:
                     for i in range(Config.n_envs):
@@ -1214,24 +1251,25 @@ def train_ddpg_cnn(
                                 }
                             )
 
-
-        
             # Log losses and metrics
             if step % 100 == 0:
                 if Config.use_wandb:
-                    wandb.log({
-                        "losses/critic_loss": loss.item(),
-                        "losses/actor_loss": policy_loss.item() if step % Config.train_frequency == 0 else 0.0,
-                        "charts/learning_rate": actor_optim.param_groups[0]["lr"],
-                        "rewards/rewards_mean": data.rewards.mean().item(),
-                        "rewards/rewards_std": data.rewards.std().item(),
-                        "global_step": step
-                    })
+                    wandb.log(
+                        {
+                            "losses/critic_loss": loss.item(),
+                            "losses/actor_loss": policy_loss.item()
+                            if step % Config.train_frequency == 0
+                            else 0.0,
+                            "charts/learning_rate": actor_optim.param_groups[0]["lr"],
+                            "rewards/rewards_mean": data.rewards.mean().item(),
+                            "rewards/rewards_std": data.rewards.std().item(),
+                            "global_step": step,
+                        }
+                    )
                 print(
                     f"Step {step}, Critic Loss: {loss.item():.4f}, Actor Loss: {policy_loss.item() if step % Config.train_frequency == 0 else 0.0:.4f}, SPS: {int(step / (time.time() - start_time))}"
                 )
-            
-            
+
             # Evaluation
             if Config.eval_every > 0 and step % Config.eval_every == 0:
                 eval_env_id = "" if env is not None else Config.env_id
@@ -1251,27 +1289,33 @@ def train_ddpg_cnn(
                     use_wandb=Config.use_wandb,
                 )
                 avg_return = np.mean(episodic_returns)
-                
+
                 if Config.use_wandb:
-                    wandb.log({
-                        "val_episodic_returns": episodic_returns,
-                        "charts/val_avg_return": avg_return,
-                        "charts/val_return_std": np.std(episodic_returns),
-                        "val_step": step
-                    })
-                print(f"Evaluation returns: {[float(r) for r in episodic_returns]}, Average: {avg_return:.2f}")
-            
+                    wandb.log(
+                        {
+                            "val_episodic_returns": episodic_returns,
+                            "charts/val_avg_return": avg_return,
+                            "charts/val_return_std": np.std(episodic_returns),
+                            "val_step": step,
+                        }
+                    )
+                print(
+                    f"Evaluation returns: {[float(r) for r in episodic_returns]}, Average: {avg_return:.2f}"
+                )
+
                 # Save video if frames were captured
                 if eval_frames and Config.use_wandb:
                     video = np.stack(eval_frames)
                     video = np.transpose(video, (0, 3, 1, 2))
-                    wandb.log({
-                        "videos/eval_policy": wandb.Video(
-                            video,
-                            fps=30,
-                            format="mp4",
-                        )
-                    })
+                    wandb.log(
+                        {
+                            "videos/eval_policy": wandb.Video(
+                                video,
+                                fps=30,
+                                format="mp4",
+                            )
+                        }
+                    )
 
         # Save model
         if Config.save_every > 0 and step % Config.save_every == 0 and step > 0:
@@ -1298,21 +1342,21 @@ def train_ddpg_cnn(
         eval_env_id = "" if env is not None else Config.env_id
         eval_env = env
         episodic_returns, eval_frames = evaluate(
-            actor_net, 
-            device, 
-            eval_env_id, 
-            env=eval_env, 
-            record=True, 
+            actor_net,
+            device,
+            eval_env_id,
+            env=eval_env,
+            record=True,
             render_mode="rgb_array",
             grid_env=Config.grid_env,
             atari_wrapper=Config.atari_wrapper,
             env_wrapper=Config.env_wrapper,
-            use_wandb=Config.use_wandb
+            use_wandb=Config.use_wandb,
         )
-        
+
         if eval_frames:
             train_video_path = f"videos/final_{Config.env_id}.mp4"
-            imageio.mimsave(train_video_path, eval_frames, fps=30, codec='libx264')
+            imageio.mimsave(train_video_path, eval_frames, fps=30, codec="libx264")
             print(f"Final training video saved to {train_video_path}")
             wandb.finish()
 

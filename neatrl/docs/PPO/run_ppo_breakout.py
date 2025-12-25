@@ -2,11 +2,12 @@
 script for PPO training on Breakout using neatrl library.
 """
 
-from neatrl.ppo import train_ppo_cnn
-import torch 
-from torch import nn
 import numpy as np
-import torch.nn.functional as F
+import torch
+from torch import nn
+
+from neatrl.ppo import train_ppo_cnn
+
 
 # --- Networks ---
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
@@ -14,10 +15,11 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
 
+
 class FeatureExtractor(nn.Module):
     def __init__(self, input_shape):
         super().__init__()
-        
+
         self.conv1 = layer_init(nn.Conv2d(input_shape[0], 32, kernel_size=8, stride=4))
         self.relu1 = nn.ReLU()
         self.conv2 = layer_init(nn.Conv2d(32, 64, kernel_size=4, stride=2))
@@ -25,12 +27,12 @@ class FeatureExtractor(nn.Module):
         self.conv3 = layer_init(nn.Conv2d(64, 64, kernel_size=3, stride=1))
         self.relu3 = nn.ReLU()
         self.flatten = nn.Flatten()
-        self.linear = layer_init(nn.Linear(64 * 7 * 7, 512))  # For 84x84 input after convs
+        self.linear = layer_init(
+            nn.Linear(64 * 7 * 7, 512)
+        )  # For 84x84 input after convs
         self.relu4 = nn.ReLU()
-        
 
     def forward(self, x):
-        
         x = self.relu1(self.conv1(x))
         x = self.relu2(self.conv2(x))
         x = self.relu3(self.conv3(x))
@@ -50,18 +52,18 @@ class ActorNet(nn.Module):
     def forward(self, x):
         x = self.network(x / 255.0)
         out = torch.nn.functional.softmax(self.out(x), dim=-1)
-        return out   
+        return out
 
     def get_action(self, x, action=None):
         features = self.network(x)
         logits = self.out(features)
         probs = torch.softmax(logits, dim=-1)
         dist = torch.distributions.Categorical(probs=probs)
-       
+
         if action is None:
             action = dist.sample()
         log_prob = dist.log_prob(action)
-      
+
         return action, log_prob, dist
 
 

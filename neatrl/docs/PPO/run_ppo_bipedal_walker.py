@@ -104,8 +104,8 @@ def test_ppo_bipedal_walker():
         save_every=5000,
         num_eval_episodes=1,
         log_gradients=False,
-        critic_class= CriticNet,
-        actor_class= ActorNet,
+        critic_class=CriticNet,
+        actor_class=ActorNet,
     )
 
     print("Training completed!")

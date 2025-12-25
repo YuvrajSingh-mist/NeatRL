@@ -26,6 +26,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+mujoco = ["gymnasium[mujoco]"]
 atari = ["gymnasium[atari]", "ale-py"]
 classic = ["gymnasium[classic-control]"]
 box2d = ["swig", "gymnasium[box2d]"]
