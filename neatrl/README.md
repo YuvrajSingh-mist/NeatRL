@@ -28,31 +28,26 @@ NeatRL provides high-quality implementations of popular RL algorithms with a foc
   - Better performance on complex environments
   
 - **REINFORCE** - Policy gradient method for discrete and continuous action spaces
-  - **NEW**: Atari game support with automatic CNN architecture
-  - **NEW**: Parallel environment training (`n_envs` support)
-  - **NEW**: Continuous action space support
-  - **NEW**: Per-layer gradient logging
+  - Atari game support with automatic CNN architecture
+  - Parallel environment training (`n_envs` support)
+  - Continuous action space support
+  - Per-layer gradient logging
   - Episode-based Monte Carlo returns
   - Variance reduction through baseline subtraction
 
 - **PPO (Proximal Policy Optimization)** - State-of-the-art policy gradient method with GAE
-  - **NEW**: Full PPO implementation with Generalized Advantage Estimation (GAE)
-  - **NEW**: Support for both discrete and continuous action spaces
-  - **NEW**: Atari game support with automatic CNN architecture (`train_ppo_cnn`)
-  - **NEW**: Clipped surrogate objective for stable policy updates
-  - **NEW**: Value function clipping and entropy regularization
-  - **NEW**: Vectorized environments for parallel training
-  - **NEW**: Comprehensive WandB logging with advantage distributions
-  - **NEW**: Per-layer gradient monitoring and video recording
-  - Generalized Advantage Estimation with configurable lambda
-  - Flexible network architecture with custom actor/critic classes
+  - Full PPO implementation with Generalized Advantage Estimation (GAE)
+  - Support for both discrete and continuous action spaces
+  - Atari game support with automatic CNN architecture (`train_ppo_cnn`)
+  - Clipped surrogate objective for stable policy updates
+  - Value function clipping and entropy regularization
+  - Vectorized environments for parallel training
+
 
 - **PPO-RND** (Proximal Policy Optimization with Random Network Distillation) - State-of-the-art exploration method
-  - **NEW**: Intrinsic motivation through novelty detection
-  - **NEW**: Combined extrinsic and intrinsic rewards for better exploration
-  - **NEW**: Support for both discrete and continuous action spaces
-  - **NEW**: Automatic render mode handling for video recording
-  - **NEW**: Comprehensive WandB logging with global step tracking
+  - Intrinsic motivation through novelty detection
+  - Combined extrinsic and intrinsic rewards for better exploration
+  - Support for both discrete and continuous action spaces
   - PPO with clipped surrogate objective
   - Vectorized environments for parallel training
   - Intrinsic reward normalization and advantage calculation
@@ -78,54 +73,6 @@ from neatrl import train_dqn
 model = train_dqn(
     env_id="CartPole-v1",
     total_timesteps=10000,
-    seed=42
-)
-```
-
-### Train REINFORCE on Atari
-
-```python
-from neatrl import train_reinforce
-
-model = train_reinforce(
-    env_id="BreakoutNoFrameskip-v4",
-    total_steps=2000,
-    atari_wrapper=True,  # Automatic Atari preprocessing
-    n_envs=4,            # Parallel environments
-    use_wandb=True,      # Track with WandB
-    seed=42
-)
-```
-
-### Train REINFORCE with Continuous Actions
-
-```python
-from neatrl import train_reinforce
-import torch.nn as nn
-
-# Custom policy for continuous actions
-class ContinuousPolicyNet(nn.Module):
-    def __init__(self, state_space, action_space):
-        super().__init__()
-        self.fc1 = nn.Linear(state_space, 32)
-        self.fc2 = nn.Linear(32, 16)
-        self.mean = nn.Linear(16, action_space)
-        self.logstd = nn.Linear(16, action_space)
-    
-    def forward(self, x):
-        x = torch.relu(self.fc2(torch.relu(self.fc1(x))))
-        return self.mean(x), torch.exp(self.logstd(x))
-    
-    def get_action(self, x):
-        mean, std = self.forward(x)
-        dist = torch.distributions.Normal(mean, std)
-        action = dist.sample()
-        return action, dist.log_prob(action).sum(dim=-1)
-
-model = train_reinforce(
-    env_id="Pendulum-v1",
-    total_steps=2000,
-    custom_agent=ContinuousPolicyNet(3, 1),
     seed=42
 )
 ```

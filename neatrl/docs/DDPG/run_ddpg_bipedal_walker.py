@@ -6,9 +6,8 @@ BipedalWalker has continuous action spaces and vector observations, making it pe
 """
 
 from neatrl.ddpg import train_ddpg
-
-
-def main():
+    
+def train_ddpg_bipedal_walker():
     """Train DDPG on BipedalWalker environment."""
 
     train_ddpg(
@@ -19,8 +18,8 @@ def main():
         buffer_size=50000,
         batch_size=256,
         learning_starts=25000,
-        train_frequency=2,
-        target_network_frequency=1,
+        train_frequency=4,
+        target_network_frequency=10,
         gamma=0.99,
         tau=0.005,
         exploration_fraction=0.1,
@@ -31,8 +30,10 @@ def main():
         num_eval_episodes=2,
         normalize_obs=True,
         device="cpu",  # Use "cuda" if you have GPU
+        low=-1.0,
+        high=1.0,
     )
 
 
 if __name__ == "__main__":
-    main()
+    train_ddpg_bipedal_walker()

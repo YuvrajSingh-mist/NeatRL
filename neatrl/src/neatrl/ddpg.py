@@ -514,6 +514,10 @@ def train_ddpg(
     normalize_reward: bool = Config.normalize_reward,
     actor_class: Any = ActorNet,
     q_network_class: Any = QNet,
+    exploration_noise: float = Config.exploration_fraction,
+    noise_clip: float = Config.noise_clip,
+    low: float = Config.low,
+    high: float = Config.high,
 ) -> nn.Module:
     # Update Config with passed arguments
     Config.env_id = env_id or env.spec.id
@@ -545,7 +549,11 @@ def train_ddpg(
     Config.env_wrapper = env_wrapper
     Config.normalize_obs = normalize_obs
     Config.normalize_reward = normalize_reward
-
+    Config.exploration_fraction = exploration_noise
+    Config.noise_clip = noise_clip
+    Config.low = low
+    Config.high = high
+    
     # Validate that only one of env_id or env is provided
     if env_id is not None and env is not None:
         raise ValueError(
@@ -937,6 +945,10 @@ def train_ddpg_cnn(
     exploration_fraction: float = Config.exploration_fraction,
     learning_starts: int = Config.learning_starts,
     train_frequency: int = Config.train_frequency,
+    exploration_noise: float = Config.exploration_fraction,
+    noise_clip: float = Config.noise_clip,
+    low: float = Config.low,
+    high: float = Config.high,
     capture_video: bool = Config.capture_video,
     use_wandb: bool = Config.use_wandb,
     wandb_project: str = Config.wandb_project,
@@ -984,6 +996,10 @@ def train_ddpg_cnn(
     Config.grid_env = grid_env
     Config.atari_wrapper = atari_wrapper
     Config.env_wrapper = env_wrapper
+    Config.exploration_fraction = exploration_noise
+    Config.noise_clip = noise_clip
+    Config.low = low
+    Config.high = high
     Config.normalize_obs = False  # Not supported for CNN-based DDPG
     Config.normalize_reward = normalize_reward
 

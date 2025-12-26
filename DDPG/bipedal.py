@@ -129,7 +129,7 @@ def evaluate(model, device, run_name, num_eval_eps = 10, record = False):
             # with torch.no_grad():
             with torch.no_grad():
                 action = model(torch.tensor(obs, device=device).unsqueeze(0))
-                # action += torch.randn_like(action) * args.exploration_fraction # Add some noise for exploration
+               
                 action = torch.clip(action, args.low, args.high)  # Use args low and high
                 action_numpy = action.cpu().numpy().flatten()  # Convert to numpy for environment
             obs, reward, terminated, truncated, _ = eval_env.step(action_numpy)
@@ -138,19 +138,10 @@ def evaluate(model, device, run_name, num_eval_eps = 10, record = False):
 
           
         returns.append(episode_reward)
-        # if eps == 0:  # Save frames only for the first episode (optional)
-        #     frames = episode_frames.copy()  # Avoid memory issues
+ 
 
     eval_env.close()
     
-    # # Save video
-    # if frames:
-    #     os.makedirs(f"videos/{run_name}/eval", exist_ok=True)
-    #     imageio.mimsave(
-    #         f"videos/{run_name}/eval/eval_video.mp4",
-    #         frames,
-    #         fps=30
-    #     )
     
     return returns, frames
 

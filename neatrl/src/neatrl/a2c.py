@@ -23,7 +23,6 @@ class Config:
     exp_name: str = "A2C"  # Experiment name for logging and saving
     seed: int = 42  # Random seed for reproducibility
     env_id: Optional[str] = "LunarLander-v3"  # Gymnasium environment ID
-    episodes: int = 200000  # Total number of episodes to train
     total_timesteps: int = 1000000  # Total timesteps for training (for compatibility)
 
     # A2C & Agent settings
@@ -37,26 +36,24 @@ class Config:
     
     # PPO-specific (kept for compatibility but not used in pure A2C)
     n_envs: int = 1  # Number of parallel environments
-    max_steps: int = 2048  # Max steps per rollout
     update_epochs: int = 1  # Update epochs (A2C uses 1)
     clip_value: float = 0.2  # Not used in A2C
     ENTROPY_COEFF: float = 0.01  # Not used in pure A2C
-    num_minibatches: int = 1  # Not used in pure A2C
     anneal_lr: bool = False  # Learning rate annealing
 
     # Logging & Saving
     capture_video: bool = True  # Whether to capture evaluation videos
     use_wandb: bool = True  # Whether to use Weights & Biases for logging
     wandb_project: str = "cleanRL"  # W&B project name
-    grid_env: bool = True  # Whether the environment uses discrete grid observations (applies OneHot wrapper)
+    grid_env: bool = False  # Whether the environment uses discrete grid observations (applies OneHot wrapper)
     eval_every: int = 10000  # Frequency of evaluation during training (in updates)
     save_every: int = 10000  # Frequency of saving the model (in updates)
     atari_wrapper: bool = (
         False  # Whether to apply Atari preprocessing and frame stacking
     )
-    normalize_obs: bool = True  # Whether to normalize observations
+    normalize_obs: bool = False  # Whether to normalize observations
     normalize_reward: bool = False  # Whether to normalize rewards
-    log_gradients: bool = True  # Whether to log gradient norms to W&B
+    log_gradients: bool = False  # Whether to log gradient norms to W&B
     device: str = "cpu"  # Device for training: "auto", "cpu", "cuda", or "cuda:0" etc.
     custom_agent: Optional[nn.Module] = None  # Custom neural network class or instance
     env: Optional[gym.Env] = None  # Optional pre-created environment
@@ -447,19 +444,16 @@ def evaluate(
     return returns, frames
 
 
-def train_a2c_cnn(
-    env_id: str = Config.env_id,
-    env: Optional[gym.Env] = None,
+
+def train_a2c(
+    env_id: Optional[str] = None,
+    env: Optional[gym.Env] = Config.env,
     total_timesteps: int = Config.total_timesteps,
     seed: int = Config.seed,
     lr: float = Config.lr,
     gamma: float = Config.gamma,
     n_envs: int = Config.n_envs,
-    max_steps: int = Config.max_steps,
-    update_epochs: int = Config.update_epochs,
-    clip_value: float = Config.clip_value,
     ENTROPY_COEFF: float = Config.ENTROPY_COEFF,
-    VALUE_COEFF: float = Config.VALUE_COEFF,
     capture_video: bool = Config.capture_video,
     use_wandb: bool = Config.use_wandb,
     wandb_project: str = Config.wandb_project,
@@ -472,7 +466,7 @@ def train_a2c_cnn(
     env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = None,
     actor_class: Any = ActorNet,
     critic_class: Any = CriticNet,
-    num_minibatches: int = Config.num_minibatches,
+    
     log_gradients: bool = Config.log_gradients,
     num_eval_episodes: int = Config.num_eval_episodes,
     anneal_lr: bool = Config.anneal_lr,
@@ -480,7 +474,6 @@ def train_a2c_cnn(
     normalize_reward: bool = Config.normalize_reward,
     device: str = Config.device,
 ) -> nn.Module:
-    
     # Update Config with passed arguments
     Config.env_id = env_id if env is None else env.spec.id
     Config.total_timesteps = total_timesteps
@@ -488,11 +481,7 @@ def train_a2c_cnn(
     Config.lr = lr
     Config.gamma = gamma
     Config.n_envs = n_envs
-    Config.max_steps = max_steps
-    Config.update_epochs = update_epochs
-    Config.clip_value = clip_value
     Config.ENTROPY_COEFF = ENTROPY_COEFF
-    Config.VALUE_COEFF = VALUE_COEFF
     Config.capture_video = capture_video
     Config.use_wandb = use_wandb
     Config.wandb_project = wandb_project
@@ -502,7 +491,6 @@ def train_a2c_cnn(
     Config.eval_every = eval_every
     Config.save_every = save_every
     Config.atari_wrapper = atari_wrapper
-    Config.num_minibatches = num_minibatches
     Config.log_gradients = log_gradients
     Config.num_eval_episodes = num_eval_episodes
     Config.anneal_lr = anneal_lr
@@ -535,10 +523,14 @@ def train_a2c_cnn(
     random.seed(Config.seed)
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
-    if Config.device == "auto":
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    else:
-        device = torch.device(Config.device)
+
+    device = torch.device(Config.device)
+
+    if Config.device == "cuda":
+        torch.backends.cudnn.deterministic = True
+        torch.cuda.manual_seed(Config.seed)
+        torch.cuda.manual_seed_all(Config.seed)
+        torch.backends.cudnn.benchmark = False
 
     # Create environments - check for pre-created env first, then default
     if env is not None:
@@ -574,30 +566,22 @@ def train_a2c_cnn(
     if isinstance(envs.single_observation_space, gym.spaces.Discrete):
         obs_space_shape = (envs.single_observation_space.n,)
     else:
-        obs_space_shape = envs.single_observation_space.shape
+        obs_space_shape = envs.single_observation_space.shape[0]
 
     action_space_n = (
         envs.single_action_space.n
         if isinstance(envs.single_action_space, gym.spaces.Discrete)
-        else envs.single_action_space.shape
+        else envs.single_action_space.shape[0]
     )
 
-    action_shape = (
-        ()
-        if isinstance(envs.single_action_space, gym.spaces.Discrete)
-        else (action_space_n,)
-    )
+    
 
     print(f"Observation Space: {obs_space_shape}, Action Space: {action_space_n}")
 
     # Create actor network
     if isinstance(actor_class, nn.Module):
         # Use custom actor instance
-        validate_policy_network_dimensions(
-            actor_class,
-            obs_space_shape[0] if len(obs_space_shape) == 1 else obs_space_shape,
-            action_space_n,
-        )
+        validate_policy_network_dimensions(actor_class, obs_space_shape, action_space_n)
         actor_network = actor_class.to(device)
     else:
         # Use actor class
@@ -606,10 +590,7 @@ def train_a2c_cnn(
     # Create critic network
     if isinstance(critic_class, nn.Module):
         # Use custom critic instance
-        validate_critic_network_dimensions(
-            critic_class,
-            obs_space_shape[0] if len(obs_space_shape) == 1 else obs_space_shape,
-        )
+        validate_critic_network_dimensions(critic_class, obs_space_shape)
         critic_network = critic_class.to(device)
     else:
         # Use critic class
@@ -620,56 +601,60 @@ def train_a2c_cnn(
     print("\nCritic Network Architecture:")
     print(critic_network)
 
-    # Compute derived values from passed parameters
-    batch_size = Config.n_envs * Config.max_steps
-    minibatch_size = batch_size // Config.num_minibatches
-    num_updates = Config.total_timesteps // batch_size
+
+    num_updates = Config.total_timesteps // Config.n_envs
 
     # Separate optimizers for actor and critic (A2C style)
     actor_optim = optim.Adam(actor_network.parameters(), lr=Config.lr)
     critic_optim = optim.Adam(critic_network.parameters(), lr=Config.lr)
 
-    # Tensor Storage
-
-    obs_storage = torch.zeros((Config.max_steps, Config.n_envs) + obs_space_shape).to(
-        device
-    )
-    
-    logprobs_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(device)
-    rewards_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(device)
-    dones_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(device)
-    values_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(device)
-
     global_step = 0
 
     next_obs, _ = envs.reset(seed=Config.seed)
     next_obs = torch.Tensor(next_obs).to(device)
-    next_done = torch.zeros(Config.n_envs).to(device)
-
+    
     start_time = time.time()
 
-    for update in tqdm(range(1, num_updates + 1), desc="Training Updates"):
+    for step in tqdm(range(1, num_updates + 1), desc="Training Updates"):
         # Annealing the rate if instructed to do so.
+        global_step = step * Config.n_envs
         if Config.anneal_lr:
-            frac = 1.0 - (update - 1.0) / num_updates
+            frac = 1.0 - (step - 1.0) / num_updates
             lrnow = frac * Config.lr
             actor_optim.param_groups[0]["lr"] = lrnow
             critic_optim.param_groups[0]["lr"] = lrnow
 
         # Rollout Phase - Collect full episode
-        for step in range(0, Config.max_steps):
-            global_step = (update - 1) * batch_size + step * Config.n_envs
-
-            obs_storage[step] = next_obs
-            dones_storage[step] = next_done
-
+     
+        log_probs = []
+        rewards = []
+        values = []
+        entropies = []
+        
+        while True:
             # Get action and value
-            action, logprob, dist = actor_network.get_action(next_obs)
+            result = actor_network.get_action(next_obs)
+            if len(result) == 2:
+                action, logprob = result
+                logprob = logprob.sum(dim=-1) if len(logprob.shape) > 1 else logprob
+                dist = None
+            elif len(result) == 3:
+                action, logprob, dist = result
+                logprob = logprob.sum(dim=-1) if len(logprob.shape) > 1 else logprob
+            else:
+                raise ValueError(
+                    f"Error unpacking result from get_action. Expected 2 or 3 values, got {len(result)}"
+                )
+            
+            # Track entropy if enabled
+            if Config.ENTROPY_COEFF > 0.0 and dist is not None:
+                entropies.append(dist.entropy())
+            
             value = critic_network(next_obs)
 
             # Log distribution statistics
             if Config.use_wandb and step % 100 == 0:
-                if hasattr(dist, "probs"):
+                if dist is not None and hasattr(dist, "probs"):
                     # Discrete
                     probs = dist.probs
                     wandb.log(
@@ -681,11 +666,9 @@ def train_a2c_cnn(
                         }
                     )
 
-            values_storage[step] = value.flatten()
-            
-            logprobs_storage[step] = (
-                logprob.sum(dim=-1) if len(logprob.shape) > 1 else logprob
-            )
+            values.append(value.flatten())
+      
+            log_probs.append(logprob)
 
             # Step the environment
             new_obs, reward, terminated, truncated, info = envs.step(
@@ -693,34 +676,46 @@ def train_a2c_cnn(
             )
             done = np.logical_or(terminated, truncated)
 
-            rewards_storage[step] = torch.tensor(reward).to(device)
+            rewards.append(torch.tensor(reward, dtype=torch.float32).to(device).view(-1))
             next_obs = torch.Tensor(new_obs).to(device)
-            next_done = torch.Tensor(done).to(device)
-
+           
+            if np.all(done):
+                break
+        
+        # Convert lists to tensors
+       
+        log_probs_tensor = torch.stack(log_probs)
+        rewards_tensor = torch.stack(rewards)
+    
+        values_tensor = torch.stack(values)
+        
         # Calculate returns (Monte Carlo)
-        returns = torch.zeros_like(rewards_storage).to(device)
+        num_steps = len(rewards)
+        returns = torch.zeros_like(rewards_tensor, dtype=torch.float32).to(device)
         rt = 0.0
-        for t in reversed(range(Config.max_steps)):
-            rt = rewards_storage[t] + rt * Config.gamma
+        for t in reversed(range(num_steps)):
+            rt = rewards_tensor[t] + rt * Config.gamma
             returns[t] = rt
 
-        # Flatten tensors for batch processing
-        
-        b_logprobs = logprobs_storage.reshape(-1)
-       
-        b_values = values_storage.reshape(-1)
-        b_returns = returns.reshape(-1)
-
         # Calculate advantages (no normalization in pure A2C)
-        advantages = (b_returns - b_values)
+        advantages = (returns - values_tensor).detach()
+        
+        # Flatten for batch processing
+        b_logprobs = log_probs_tensor.flatten()
+        b_values = values_tensor.flatten()
+        b_returns = returns.flatten()
+        b_advantages = advantages.flatten()
 
         # A2C Update - Single pass through data
         # Actor Loss: policy gradient with advantage
-        policy_loss = []
-        for log_prob, advantage in zip(b_logprobs, advantages):
-            policy_loss.append(-log_prob * advantage)
-
-        policy_loss = torch.stack(policy_loss).mean()
+        policy_loss = -(b_logprobs * b_advantages).mean()
+        
+        # Add entropy bonus if enabled
+        if Config.ENTROPY_COEFF > 0.0 and entropies:
+            entropy_loss = torch.stack(entropies).mean() * Config.ENTROPY_COEFF
+            policy_loss = policy_loss - entropy_loss
+            if Config.use_wandb:
+                wandb.log({"losses/entropy_loss": entropy_loss.item(), "global_step": global_step})
 
         # Critic Loss: MSE between value predictions and returns
         critic_loss = F.mse_loss(b_values, b_returns)
@@ -815,13 +810,13 @@ def train_a2c_cnn(
                         )
 
         # Log losses and metrics
-        if Config.use_wandb and update % 10 == 0:
+        if Config.use_wandb and step % 10 == 0:
             wandb.log(
                 {
                     "losses/policy_loss": policy_loss.item(),
                     "losses/critic_loss": critic_loss.item(),
                     "charts/learning_rate": actor_optim.param_groups[0]["lr"],
-                    "charts/rewards_mean": np.mean(rewards_storage.cpu().numpy()),
+                    "charts/rewards_mean": rewards_tensor.mean().item(),
                     "advantages/advantages_mean": advantages.mean().item(),
                     "advantages/advantages_std": advantages.std().item(),
                     "charts/returns_mean": b_returns.mean().item(),
@@ -830,7 +825,7 @@ def train_a2c_cnn(
                 }
             )
             print(
-                f"Update {update}, Global Step: {global_step}, Policy Loss: {policy_loss.item():.4f}, Critic Loss: {critic_loss.item():.4f}, SPS: {int(global_step / (time.time() - start_time))}"
+                f"Step {step}, Global Step: {global_step}, Policy Loss: {policy_loss.item():.4f}, Critic Loss: {critic_loss.item():.4f}, SPS: {int(global_step / (time.time() - start_time))}"
             )
 
             if Config.use_wandb:
@@ -840,7 +835,7 @@ def train_a2c_cnn(
                         "charts/global_step": global_step,
                     }
                 )
-        if update % Config.eval_every == 0:
+        if step % Config.eval_every == 0:
             episodic_returns, _ = evaluate(
                 actor_network,
                 device,
@@ -862,7 +857,7 @@ def train_a2c_cnn(
                 )
             print(f"Evaluation returns: {episodic_returns}, Average: {avg_return:.2f}")
 
-        if update % Config.save_every == 0 and update > 0:
+        if step % Config.save_every == 0 and step > 0:
             model_path = f"runs/{run_name}/models/a2c_model_step_{global_step}.pth"
             torch.save(
                 {
@@ -871,7 +866,7 @@ def train_a2c_cnn(
                 },
                 model_path,
             )
-            print(f"Model saved at update {update} step {global_step} to {model_path}")
+            print(f"Model saved at step {step} step {global_step} to {model_path}")
 
     # --- Final Evaluation and Video Saving ---
     if Config.use_wandb:
@@ -904,17 +899,16 @@ def train_a2c_cnn(
     return actor_network
 
 
-def train_a2c(
-    env_id: Optional[str] = None,
-    env: Optional[gym.Env] = Config.env,
+
+
+def train_a2c_cnn(
+    env_id: str = Config.env_id,
+    env: Optional[gym.Env] = None,
     total_timesteps: int = Config.total_timesteps,
     seed: int = Config.seed,
     lr: float = Config.lr,
     gamma: float = Config.gamma,
     n_envs: int = Config.n_envs,
-    max_steps: int = Config.max_steps,
-    update_epochs: int = Config.update_epochs,
-    clip_value: float = Config.clip_value,
     ENTROPY_COEFF: float = Config.ENTROPY_COEFF,
     VALUE_COEFF: float = Config.VALUE_COEFF,
     capture_video: bool = Config.capture_video,
@@ -929,7 +923,6 @@ def train_a2c(
     env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = None,
     actor_class: Any = ActorNet,
     critic_class: Any = CriticNet,
-    num_minibatches: int = Config.num_minibatches,
     log_gradients: bool = Config.log_gradients,
     num_eval_episodes: int = Config.num_eval_episodes,
     anneal_lr: bool = Config.anneal_lr,
@@ -937,6 +930,7 @@ def train_a2c(
     normalize_reward: bool = Config.normalize_reward,
     device: str = Config.device,
 ) -> nn.Module:
+    
     # Update Config with passed arguments
     Config.env_id = env_id if env is None else env.spec.id
     Config.total_timesteps = total_timesteps
@@ -944,9 +938,6 @@ def train_a2c(
     Config.lr = lr
     Config.gamma = gamma
     Config.n_envs = n_envs
-    Config.max_steps = max_steps
-    Config.update_epochs = update_epochs
-    Config.clip_value = clip_value
     Config.ENTROPY_COEFF = ENTROPY_COEFF
     Config.VALUE_COEFF = VALUE_COEFF
     Config.capture_video = capture_video
@@ -991,14 +982,10 @@ def train_a2c(
     random.seed(Config.seed)
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
-
-    device = torch.device(Config.device)
-
-    if Config.device == "cuda":
-        torch.backends.cudnn.deterministic = True
-        torch.cuda.manual_seed(Config.seed)
-        torch.cuda.manual_seed_all(Config.seed)
-        torch.backends.cudnn.benchmark = False
+    if Config.device == "auto":
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    else:
+        device = torch.device(Config.device)
 
     # Create environments - check for pre-created env first, then default
     if env is not None:
@@ -1034,26 +1021,26 @@ def train_a2c(
     if isinstance(envs.single_observation_space, gym.spaces.Discrete):
         obs_space_shape = (envs.single_observation_space.n,)
     else:
-        obs_space_shape = envs.single_observation_space.shape[0]
+        obs_space_shape = envs.single_observation_space.shape
 
     action_space_n = (
         envs.single_action_space.n
         if isinstance(envs.single_action_space, gym.spaces.Discrete)
-        else envs.single_action_space.shape[0]
+        else envs.single_action_space.shape
     )
 
-    action_shape = (
-        ()
-        if isinstance(envs.single_action_space, gym.spaces.Discrete)
-        else (action_space_n,)
-    )
+    
 
     print(f"Observation Space: {obs_space_shape}, Action Space: {action_space_n}")
 
     # Create actor network
     if isinstance(actor_class, nn.Module):
         # Use custom actor instance
-        validate_policy_network_dimensions(actor_class, obs_space_shape, action_space_n)
+        validate_policy_network_dimensions(
+            actor_class,
+            obs_space_shape[0] if len(obs_space_shape) == 1 else obs_space_shape,
+            action_space_n,
+        )
         actor_network = actor_class.to(device)
     else:
         # Use actor class
@@ -1062,7 +1049,10 @@ def train_a2c(
     # Create critic network
     if isinstance(critic_class, nn.Module):
         # Use custom critic instance
-        validate_critic_network_dimensions(critic_class, obs_space_shape)
+        validate_critic_network_dimensions(
+            critic_class,
+            obs_space_shape[0] if len(obs_space_shape) == 1 else obs_space_shape,
+        )
         critic_network = critic_class.to(device)
     else:
         # Use critic class
@@ -1075,25 +1065,11 @@ def train_a2c(
 
     # Compute derived values from passed parameters
     batch_size = Config.n_envs * Config.max_steps
-    minibatch_size = batch_size // Config.num_minibatches
     num_updates = Config.total_timesteps // batch_size
 
     # Separate optimizers for actor and critic (A2C style)
     actor_optim = optim.Adam(actor_network.parameters(), lr=Config.lr)
     critic_optim = optim.Adam(critic_network.parameters(), lr=Config.lr)
-
-    # Tensor Storage
-
-    obs_storage = torch.zeros(
-        (Config.max_steps, Config.n_envs) + (obs_space_shape,)
-    ).to(device)
-    actions_storage = torch.zeros((Config.max_steps, Config.n_envs) + action_shape).to(
-        device
-    )
-    logprobs_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(device)
-    rewards_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(device)
-    dones_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(device)
-    values_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(device)
 
     global_step = 0
 
@@ -1112,19 +1088,42 @@ def train_a2c(
             critic_optim.param_groups[0]["lr"] = lrnow
 
         # Rollout Phase - Collect full episode
+     
+   
+        log_probs = []
+        rewards = []
+        dones = []
+        values = []
+        entropies = []
+        
         for step in range(0, Config.max_steps):
             global_step = (update - 1) * batch_size + step * Config.n_envs
 
-            obs_storage[step] = next_obs
-            dones_storage[step] = next_done
+            dones.append(next_done)
 
             # Get action and value
-            action, logprob, dist = actor_network.get_action(next_obs)
+            result = actor_network.get_action(next_obs)
+            if len(result) == 2:
+                action, logprob = result
+                logprob = logprob.sum(dim=-1) if len(logprob.shape) > 1 else logprob
+                dist = None
+            elif len(result) == 3:
+                action, logprob, dist = result
+                logprob = logprob.sum(dim=-1) if len(logprob.shape) > 1 else logprob
+            else:
+                raise ValueError(
+                    f"Error unpacking result from get_action. Expected 2 or 3 values, got {len(result)}"
+                )
+            
+            # Track entropy if enabled
+            if Config.ENTROPY_COEFF > 0.0 and dist is not None:
+                entropies.append(dist.entropy())
+            
             value = critic_network(next_obs)
 
             # Log distribution statistics
             if Config.use_wandb and step % 100 == 0:
-                if hasattr(dist, "probs"):
+                if dist is not None and hasattr(dist, "probs"):
                     # Discrete
                     probs = dist.probs
                     wandb.log(
@@ -1136,10 +1135,9 @@ def train_a2c(
                         }
                     )
 
-            values_storage[step] = value.flatten()
-            logprobs_storage[step] = (
-                logprob.sum(dim=-1) if len(logprob.shape) > 1 else logprob
-            )
+            values.append(value.flatten())
+            
+            log_probs.append(logprob)
 
             # Step the environment
             new_obs, reward, terminated, truncated, info = envs.step(
@@ -1147,32 +1145,42 @@ def train_a2c(
             )
             done = np.logical_or(terminated, truncated)
 
-            rewards_storage[step] = torch.tensor(reward).to(device)
+            rewards.append(torch.tensor(reward, dtype=torch.float32).to(device).view(-1))
             next_obs = torch.Tensor(new_obs).to(device)
             next_done = torch.Tensor(done).to(device)
 
+        # Convert lists to tensors
+    
+        log_probs_tensor = torch.stack(log_probs)
+        rewards_tensor = torch.stack(rewards)
+        values_tensor = torch.stack(values)
+        
         # Calculate returns (Monte Carlo)
-        returns = torch.zeros_like(rewards_storage).to(device)
+        num_steps = len(rewards)
+        returns = torch.zeros_like(rewards_tensor, dtype=torch.float32).to(device)
         rt = 0.0
-        for t in reversed(range(Config.max_steps)):
-            rt = rewards_storage[t] + rt * Config.gamma
+        for t in reversed(range(num_steps)):
+            rt = rewards_tensor[t] + rt * Config.gamma
             returns[t] = rt
 
         # Flatten tensors for batch processing
-        b_logprobs = logprobs_storage.reshape(-1)
-        b_values = values_storage.reshape(-1)
+        b_logprobs = log_probs_tensor.reshape(-1)
+        b_values = values_tensor.reshape(-1)
         b_returns = returns.reshape(-1)
 
         # Calculate advantages (no normalization in pure A2C)
-        advantages = (b_returns - b_values)
+        advantages = (b_returns - b_values).detach()
 
         # A2C Update - Single pass through data
         # Actor Loss: policy gradient with advantage
-        policy_loss = []
-        for log_prob, advantage in zip(b_logprobs, advantages):
-            policy_loss.append(-log_prob * advantage)
-
-        policy_loss = torch.stack(policy_loss).mean()
+        policy_loss = -(b_logprobs * advantages).mean()
+        
+        # Add entropy bonus if enabled
+        if Config.ENTROPY_COEFF > 0.0 and entropies:
+            entropy_loss = torch.stack(entropies).mean() * Config.ENTROPY_COEFF
+            policy_loss = policy_loss - entropy_loss
+            if Config.use_wandb:
+                wandb.log({"losses/entropy_loss": entropy_loss.item(), "global_step": global_step})
 
         # Critic Loss: MSE between value predictions and returns
         critic_loss = F.mse_loss(b_values, b_returns)
