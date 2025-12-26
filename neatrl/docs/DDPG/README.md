@@ -152,10 +152,28 @@ For Atari games, the implementation automatically applies:
 
 ## Examples
 
-- `run_ddpg_half_cheetah.py`: Training on MuJoCo HalfCheetah environment
-- `run_ddpg_cnn_car_racing.py`: Training on CarRacing environment
-- `run_ddpg_bipedal_walker.py`: Training on BipedalWalker environment
-- `run_ddpg_cliff_walking.py`: Training on CliffWalking environment (experimental)
+Check out these example scripts:
+
+- [`run_ddpg_pendulum.py`](./run_ddpg_pendulum.py) - DDPG training on Pendulum
+- [`run_ddpg_half_cheetah.py`](./run_ddpg_half_cheetah.py) - DDPG training on HalfCheetah
+- [`run_ddpg_bipedal_walker.py`](./run_ddpg_bipedal_walker.py) - DDPG training on BipedalWalker
+- [`run_ddpg_cnn_car_racing.py`](./run_ddpg_cnn_car_racing.py) - DDPG CNN training on CarRacing
+
+## Installation
+
+```bash
+# Install base package
+pip install neatrl
+
+# Install extras based on environments you want to use
+pip install neatrl[atari]      # For CarRacing
+pip install neatrl[box2d]      # For BipedalWalker
+pip install neatrl[classic]    # For Pendulum
+pip install neatrl[mujoco]     # For HalfCheetah
+
+# Or install all extras at once
+pip install neatrl[atari,box2d,classic,mujoco]
+```
 
 ## PyPI
 

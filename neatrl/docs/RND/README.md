@@ -251,6 +251,20 @@ Check out these example scripts:
 - [`run_rnd_ppo_carracing.py`](./run_rnd_ppo_carracing.py) - RND-PPO with CNN on CarRacing
 - [`run_rnd_mountain_car.py`](./run_rnd_mountain_car.py) - RND-PPO training on MountainCar
 
+## Installation
+
+```bash
+# Install base package
+pip install neatrl
+
+# Install extras based on environments you want to use
+pip install neatrl[atari]      # For CarRacing
+pip install neatrl[classic]    # For CliffWalking, FrozenLake, MountainCar
+
+# Or install all extras at once
+pip install neatrl[atari,classic]
+```
+
 ---
 
 Happy training with RND-PPO! 🚀

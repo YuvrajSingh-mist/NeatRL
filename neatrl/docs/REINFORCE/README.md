@@ -284,6 +284,20 @@ Check out these example scripts:
 - [`run_reinforce_pendulum.py`](./run_reinforce_pendulum.py) - REINFORCE training on Pendulum (continuous actions - experimental)
 - [`run_reinforce_car_racing.py`](./run_reinforce_car_racing.py) - REINFORCE training on CarRacing (CNN architecture)
 
+## Installation
+
+```bash
+# Install base package
+pip install neatrl
+
+# Install extras based on environments you want to use
+pip install neatrl[atari]      # For CarRacing
+pip install neatrl[classic]    # For CartPole, FrozenLake, Pendulum
+
+# Or install all extras at once
+pip install neatrl[atari,classic]
+```
+
 ---
 
 Happy training! 🚀

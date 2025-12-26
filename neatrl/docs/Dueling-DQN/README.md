@@ -254,6 +254,20 @@ Check out these example scripts:
 - [`run_duel_dqn_frozenlake.py`](./run_duel_dqn_frozenlake.py) - Dueling DQN training on FrozenLake
 - [`run_duel_dqn_lunar.py`](./run_duel_dqn_lunar.py) - Dueling DQN training on LunarLander
 
+## Installation
+
+```bash
+# Install base package
+pip install neatrl
+
+# Install extras based on environments you want to use
+pip install neatrl[box2d]      # For LunarLander
+pip install neatrl[classic]    # For CliffWalking, FrozenLake
+
+# Or install all extras at once
+pip install neatrl[box2d,classic]
+```
+
 ---
 
 Happy training with Dueling DQN! 🚀

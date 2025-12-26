@@ -297,6 +297,21 @@ Check out the example scripts in this directory:
 6. **Evaluation**: Monitor evaluation returns to avoid overfitting
 7. **Learning Rate**: Enable `anneal_lr` for stable training over long horizons
 
+## Installation
+
+```bash
+# Install base package
+pip install neatrl
+
+# Install extras based on environments you want to use
+pip install neatrl[atari]      # For Breakout
+pip install neatrl[box2d]      # For LunarLander, BipedalWalker
+pip install neatrl[classic]    # For Taxi
+
+# Or install all extras at once
+pip install neatrl[atari,box2d,classic]
+```
+
 ## PyPI
 
 For installation and more information, visit [NeatRL on PyPI](https://pypi.org/project/neatrl/)

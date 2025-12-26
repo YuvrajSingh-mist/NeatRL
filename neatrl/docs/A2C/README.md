@@ -68,15 +68,42 @@ train_a2c_cnn(
 - FC: 512 units
 - Output: Single value estimate
 
-## Key Parameters
+## Configuration Parameters
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `lr` | 3e-4 | Learning rate for both actor and critic |
+| **Experiment Settings** | | |
+| `exp_name` | "A2C" | Experiment name for logging and saving |
+| `seed` | 42 | Random seed for reproducibility |
+| `env_id` | "LunarLander-v3" | Gymnasium environment ID |
+| `total_timesteps` | 1000000 | Total timesteps for training |
+| **A2C & Agent Settings** | | |
+| `lr` | 2e-3 | Learning rate for optimizer |
 | `gamma` | 0.99 | Discount factor for rewards |
-| `max_steps` | 2048 | Maximum steps per episode rollout |
-| `max_grad_norm` | 0.5 | Gradient clipping threshold |
-| `update_epochs` | 1 | Number of update epochs (A2C uses 1) |
+| `VALUE_COEFF` | 0.5 | Value loss coefficient (not used in pure A2C) |
+| `num_eval_episodes` | 10 | Number of evaluation episodes |
+| `max_grad_norm` | 0.0 | Maximum gradient norm for clipping (0.0 to disable) |
+| `max_steps` | 128 | Maximum steps per rollout (for safety) |
+| **Compatibility Settings** | | |
+| `n_envs` | 1 | Number of parallel environments |
+| `update_epochs` | 1 | Update epochs (A2C uses 1) |
+| `clip_value` | 0.2 | PPO clipping value (not used in A2C) |
+| `ENTROPY_COEFF` | 0.01 | Entropy coefficient (not used in pure A2C) |
+| `anneal_lr` | False | Learning rate annealing |
+| **Logging & Saving** | | |
+| `capture_video` | True | Whether to capture evaluation videos |
+| `use_wandb` | True | Whether to use Weights & Biases for logging |
+| `wandb_project` | "cleanRL" | W&B project name |
+| `grid_env` | False | Whether environment uses discrete grid observations |
+| `eval_every` | 10000 | Frequency of evaluation (in updates) |
+| `save_every` | 10000 | Frequency of saving the model (in updates) |
+| `atari_wrapper` | False | Whether to apply Atari preprocessing |
+| `normalize_obs` | False | Whether to normalize observations |
+| `normalize_reward` | False | Whether to normalize rewards |
+| `log_gradients` | False | Whether to log gradient norms to W&B |
+| `device` | "cpu" | Device for training: "auto", "cpu", "cuda", etc. |
+| `custom_agent` | None | Custom neural network class or instance |
+| `env` | None | Optional pre-created environment |
 
 ## Examples
 
@@ -113,34 +140,32 @@ A(s,a) = Q(s,a) - V(s) = Return - V(s)
 
 Where returns are computed using Monte Carlo estimation from full episode rollouts.
 
-## Performance Tips
+## Example Scripts
 
-1. **Learning Rate**: Start with 3e-4 and adjust based on convergence
-2. **Gradient Clipping**: Use 0.5 for stable training
-3. **Environment-Specific Tuning**: 
-   - Acrobot: No observation normalization needed
-   - CarRacing: Use frame stacking (4 frames) and CNN architecture
-4. **Batch Size**: A2C is on-policy, so it processes full episodes
-5. **Exploration**: A2C naturally explores through its stochastic policy
+Check out these example scripts:
 
-## Differences from PPO
+- [`run_a2c_pendulum.py`](./run_a2c_pendulum.py) - A2C training on Pendulum
+- [`run_a2c_lunarlander.py`](./run_a2c_lunarlander.py) - A2C training on LunarLander
+- [`run_a2c_frozen_lake.py`](./run_a2c_frozen_lake.py) - A2C training on FrozenLake
+- [`run_a2c_reacher.py`](./run_a2c_reacher.py) - A2C training on Reacher
+- [`run_a2c_cnn_car_racing.py`](./run_a2c_cnn_car_racing.py) - A2C CNN training on CarRacing
 
-Unlike PPO, A2C:
-- Does NOT use clipped surrogate objective
-- Does NOT use entropy bonus
-- Uses simpler advantage estimation (Monte Carlo returns)
-- Updates after each episode (on-policy)
-- Has separate optimizers for actor and critic
+## Installation
 
-This makes A2C simpler and faster per update, but potentially less sample-efficient than PPO.
+```bash
+# Install base package
+pip install neatrl
 
-## Common Issues
+# Install extras based on environments you want to use
+pip install neatrl[atari]      # For CarRacing
+pip install neatrl[box2d]      # For LunarLander
+pip install neatrl[classic]    # For Pendulum, FrozenLake
+pip install neatrl[mujoco]     # For Reacher
 
-1. **Unstable Training**: Reduce learning rate or increase gradient clipping
-2. **Poor Performance on CarRacing**: Ensure frame stacking is working correctly and CNN architecture matches input shape
-3. **Slow Convergence**: Try increasing learning rate or adjusting gamma
+# Or install all extras at once
+pip install neatrl[atari,box2d,classic,mujoco]
+```
 
-## References
+## PyPI
 
-- [Mnih et al., 2016: Asynchronous Methods for Deep Reinforcement Learning](https://arxiv.org/abs/1602.01783)
-- [OpenAI Spinning Up: A2C](https://spinningup.openai.com/en/latest/algorithms/vpg.html)
+For installation and more information, visit [NeatRL on PyPI](https://pypi.org/project/neatrl/)

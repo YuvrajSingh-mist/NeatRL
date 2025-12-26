@@ -250,6 +250,21 @@ Check out these example scripts:
 - [`run_dqn_carracing.py`](./run_dqn_carracing.py) - DQN training on CarRacing (discrete)
 - [`run_dqn_atari.py`](./run_dqn_atari.py) - DQN training on Atari-Breakout
 
+## Installation
+
+```bash
+# Install base package
+pip install neatrl
+
+# Install extras based on environments you want to use
+pip install neatrl[atari]      # For CarRacing, Atari-Breakout
+pip install neatrl[box2d]      # For LunarLander
+pip install neatrl[classic]    # For CartPole, FrozenLake, MountainCar, Acrobot
+
+# Or install all extras at once
+pip install neatrl[atari,box2d,classic]
+```
+
 ---
 
 Happy training! 🚀

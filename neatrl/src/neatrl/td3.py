@@ -17,28 +17,29 @@ import wandb
 
 # ===== CONFIGURATION =====
 class Config:
-    """Configuration class for DDPG training."""
+    """Configuration class for TD3 training."""
 
     # Experiment settings
-    exp_name: str = "DDPG-Experiment"
+    exp_name: str = "TD3-Experiment"
     seed: int = 42
     env_id: Optional[str] = "HalfCheetah-v5"
 
     low: float = -1.0
     noise_clip: float = 0.5
     high: float = 1.0  # Action space limits for BipedalWalker
+    policy_noise: float = 0.2  # Noise added to target policy during critic update (for smoothing)
     # Training parameters
     total_timesteps: int = 1000000
     learning_rate: float = 3e-4
     buffer_size: int = 100000
     gamma: float = 0.99
     tau: float = 0.005  # Soft update parameter for target networks
-    target_network_frequency: int = 50  # How often to update target networks
+    target_network_frequency: int = 1  # How often to update target networks (TD3 uses 1)
     batch_size: int = 256
 
     exploration_fraction: float = 0.1
     learning_starts: int = 25000
-    train_frequency: int = 2
+    train_frequency: int = 2  # Delayed policy updates (update actor every N critic updates)
 
     # Logging & Saving
     capture_video: bool = True  # Whether to capture evaluation videos
@@ -485,7 +486,7 @@ def evaluate(
     return returns, frames
 
 
-def train_ddpg(
+def train_td3(
     env_id: Optional[str] = None,
     env: Optional[gym.Env] = None,
     total_timesteps: int = Config.total_timesteps,
@@ -520,6 +521,7 @@ def train_ddpg(
     q_network_class: Any = QNet,
     exploration_noise: float = Config.exploration_fraction,
     noise_clip: float = Config.noise_clip,
+    policy_noise: float = Config.policy_noise,
     low: float = Config.low,
     high: float = Config.high,
 ) -> nn.Module:
@@ -555,6 +557,7 @@ def train_ddpg(
     Config.normalize_reward = normalize_reward
     Config.exploration_fraction = exploration_noise
     Config.noise_clip = noise_clip
+    Config.policy_noise = policy_noise
     Config.low = low
     Config.high = high
 
@@ -639,34 +642,42 @@ def train_ddpg(
         # Use actor class
         actor_net = actor_class(obs_shape, action_shape).to(device)
 
-    # Create critic network
+    # Create twin critic networks (TD3 uses two Q-networks)
     if isinstance(q_network_class, nn.Module):
         # Use custom critic instance
         validate_critic_network_dimensions(q_network_class, obs_shape, action_shape)
-        q_network = q_network_class.to(device)
+        q1_network = q_network_class.to(device)
     else:
         # Use critic class
-        q_network = q_network_class(obs_shape, action_shape).to(device)
+        q1_network = q_network_class(obs_shape, action_shape).to(device)
+    
+    q2_network = q_network_class(obs_shape, action_shape).to(device)
 
     # Create target networks
     target_actor_net = actor_class(obs_shape, action_shape).to(device)
-    target_q_network = q_network_class(obs_shape, action_shape).to(device)
+    target_q1_network = q_network_class(obs_shape, action_shape).to(device)
+    target_q2_network = q_network_class(obs_shape, action_shape).to(device)
 
-    target_q_network.load_state_dict(q_network.state_dict())
+    target_q1_network.load_state_dict(q1_network.state_dict())
+    target_q2_network.load_state_dict(q2_network.state_dict())
     target_actor_net.load_state_dict(actor_net.state_dict())
 
     # Print network architecture
     print("Actor Network Architecture:")
     print(actor_net)
-    print("\nCritic Network Architecture:")
-    print(q_network)
+    print("\nQ1 Network Architecture:")
+    print(q1_network)
+    print("\nQ2 Network Architecture:")
+    print(q2_network)
 
     # Optimizers
     actor_optim = optim.Adam(actor_net.parameters(), lr=Config.learning_rate)
-    q_optim = optim.Adam(q_network.parameters(), lr=Config.learning_rate)
+    q1_optim = optim.Adam(q1_network.parameters(), lr=Config.learning_rate)
+    q2_optim = optim.Adam(q2_network.parameters(), lr=Config.learning_rate)
 
     # Set networks to training mode
-    q_network.train()
+    q1_network.train()
+    q2_network.train()
     actor_net.train()
 
     # Replay buffer
@@ -707,48 +718,86 @@ def train_ddpg(
         # Training step
         if step > Config.learning_starts:
             data = replay_buffer.sample(Config.batch_size)
+            
+            # TD3: Target Policy Smoothing - add noise to target actions
             with torch.no_grad():
                 next_actions = target_actor_net(
                     data.next_observations.to(torch.float32)
                 )
-                target_max = target_q_network(
+                noise = torch.clip(
+                    torch.randn_like(next_actions) * Config.policy_noise,
+                    -Config.noise_clip,
+                    Config.noise_clip
+                )
+                next_actions = next_actions + noise
+                next_actions = torch.clip(next_actions, Config.low, Config.high)
+                
+                # TD3: Clipped Double Q-learning - use min of two Q-networks
+                target_q1 = target_q1_network(
                     data.next_observations.to(torch.float32), next_actions
                 )
+                target_q2 = target_q2_network(
+                    data.next_observations.to(torch.float32), next_actions
+                )
+                target_max = torch.min(target_q1, target_q2)
                 td_target = data.rewards + Config.gamma * target_max * (1 - data.dones)
 
-            old_val = q_network(
+            # Update both Q-networks
+            old_val1 = q1_network(
+                data.observations.to(torch.float32), data.actions.to(torch.float32)
+            )
+            old_val2 = q2_network(
                 data.observations.to(torch.float32), data.actions.to(torch.float32)
             )
 
-            q_optim.zero_grad()
-            loss = nn.functional.mse_loss(old_val, td_target)
-            loss.backward()
+            q1_optim.zero_grad()
+            loss1 = nn.functional.mse_loss(old_val1, td_target)
+            loss1.backward(retain_graph=True)
+            q1_optim.step()
+            
+            q2_optim.zero_grad()
+            loss2 = nn.functional.mse_loss(old_val2, td_target)
+            loss2.backward()
+            q2_optim.step()
 
-            # Log gradient norm per layer for critic
+            # Log gradient norm per layer for critics
             if Config.use_wandb and Config.log_gradients:
-                for name, param in q_network.named_parameters():
+                for name, param in q1_network.named_parameters():
                     if param.grad is not None:
                         grad_norm = torch.norm(param.grad.detach(), 2).item()
                         wandb.log(
                             {
-                                f"gradients/critic_layer_{name}": grad_norm,
+                                f"gradients/q1_layer_{name}": grad_norm,
+                                "global_step": step,
+                            }
+                        )
+                for name, param in q2_network.named_parameters():
+                    if param.grad is not None:
+                        grad_norm = torch.norm(param.grad.detach(), 2).item()
+                        wandb.log(
+                            {
+                                f"gradients/q2_layer_{name}": grad_norm,
                                 "global_step": step,
                             }
                         )
 
-            # Apply gradient clipping for critic
+            # Apply gradient clipping for critics
             if Config.max_grad_norm != 0.0:
                 torch.nn.utils.clip_grad_norm_(
-                    list(q_network.parameters()),
+                    list(q1_network.parameters()),
+                    max_norm=Config.max_grad_norm,
+                )
+                torch.nn.utils.clip_grad_norm_(
+                    list(q2_network.parameters()),
                     max_norm=Config.max_grad_norm,
                 )
 
-            q_optim.step()
-
+            # TD3: Delayed Policy Updates - update actor less frequently than critics
             if step % Config.train_frequency == 0:
                 actor_optim.zero_grad()
                 actions = actor_net(data.observations.to(torch.float32))
-                policy_loss = -q_network(
+                # Only use Q1 for policy gradient (standard practice in TD3)
+                policy_loss = -q1_network(
                     data.observations.to(torch.float32), actions.to(torch.float32)
                 ).mean()
                 policy_loss.backward()
@@ -768,16 +817,24 @@ def train_ddpg(
                 # Apply gradient clipping for actor
                 if Config.max_grad_norm != 0.0:
                     torch.nn.utils.clip_grad_norm_(
-                        list(actor_net.parameters() + q_network.parameters()),
+                        list(actor_net.parameters()),
                         max_norm=Config.max_grad_norm,
                     )
 
                 actor_optim.step()
 
-            # Update target networks
+            # Update target networks (soft update for both Q-networks and actor)
             if step % Config.target_network_frequency == 0:
                 for q_params, target_params in zip(
-                    q_network.parameters(), target_q_network.parameters()
+                    q1_network.parameters(), target_q1_network.parameters()
+                ):
+                    target_params.data.copy_(
+                        Config.tau * q_params.data
+                        + (1.0 - Config.tau) * target_params.data
+                    )
+                
+                for q_params, target_params in zip(
+                    q2_network.parameters(), target_q2_network.parameters()
                 ):
                     target_params.data.copy_(
                         Config.tau * q_params.data
@@ -826,7 +883,8 @@ def train_ddpg(
                 if Config.use_wandb:
                     wandb.log(
                         {
-                            "losses/critic_loss": loss.item(),
+                            "losses/q1_loss": loss1.item(),
+                            "losses/q2_loss": loss2.item(),
                             "losses/actor_loss": policy_loss.item()
                             if step % Config.train_frequency == 0
                             else 0.0,
@@ -837,7 +895,7 @@ def train_ddpg(
                         }
                     )
                 print(
-                    f"Step {step}, Critic Loss: {loss.item():.4f}, Actor Loss: {policy_loss.item() if step % Config.train_frequency == 0 else 0.0:.4f}, SPS: {int(step / (time.time() - start_time))}"
+                    f"Step {step}, Q1 Loss: {loss1.item():.4f}, Q2 Loss: {loss2.item():.4f}, Actor Loss: {policy_loss.item() if step % Config.train_frequency == 0 else 0.0:.4f}, SPS: {int(step / (time.time() - start_time))}"
                 )
 
             # Evaluation
@@ -893,9 +951,11 @@ def train_ddpg(
             torch.save(
                 {
                     "actor": actor_net.state_dict(),
-                    "q_network": q_network.state_dict(),
+                    "q1_network": q1_network.state_dict(),
+                    "q2_network": q2_network.state_dict(),
                     "target_actor": target_actor_net.state_dict(),
-                    "target_q_network": target_q_network.state_dict(),
+                    "target_q1_network": target_q1_network.state_dict(),
+                    "target_q2_network": target_q2_network.state_dict(),
                 },
                 model_path,
             )
@@ -934,7 +994,7 @@ def train_ddpg(
     return actor_net
 
 
-def train_ddpg_cnn(
+def train_td3_cnn(
     env_id: Optional[str] = None,
     env: Optional[gym.Env] = None,
     total_timesteps: int = Config.total_timesteps,
@@ -950,6 +1010,7 @@ def train_ddpg_cnn(
     train_frequency: int = Config.train_frequency,
     exploration_noise: float = Config.exploration_fraction,
     noise_clip: float = Config.noise_clip,
+    policy_noise: float = Config.policy_noise,
     low: float = Config.low,
     high: float = Config.high,
     capture_video: bool = Config.capture_video,
@@ -1001,9 +1062,10 @@ def train_ddpg_cnn(
     Config.env_wrapper = env_wrapper
     Config.exploration_fraction = exploration_noise
     Config.noise_clip = noise_clip
+    Config.policy_noise = policy_noise
     Config.low = low
     Config.high = high
-    Config.normalize_obs = False  # Not supported for CNN-based DDPG
+    Config.normalize_obs = False  # Not supported for CNN-based TD3
     Config.normalize_reward = normalize_reward
 
     # Validate that only one of env_id or env is provided
@@ -1097,27 +1159,34 @@ def train_ddpg_cnn(
         q_network = q_network_class(obs_shape, action_shape).to(device)
 
     actor_net = actor_class(obs_shape, action_shape).to(device)
-    q_network = q_network_class(obs_shape, action_shape).to(device)
+    q1_network = q_network_class(obs_shape, action_shape).to(device)
+    q2_network = q_network_class(obs_shape, action_shape).to(device)
 
     # Create target networks
     target_actor_net = actor_class(obs_shape, action_shape).to(device)
-    target_q_network = q_network_class(obs_shape, action_shape).to(device)
+    target_q1_network = q_network_class(obs_shape, action_shape).to(device)
+    target_q2_network = q_network_class(obs_shape, action_shape).to(device)
 
-    target_q_network.load_state_dict(q_network.state_dict())
+    target_q1_network.load_state_dict(q1_network.state_dict())
+    target_q2_network.load_state_dict(q2_network.state_dict())
     target_actor_net.load_state_dict(actor_net.state_dict())
 
     # Print network architecture
     print("Actor Network Architecture:")
     print(actor_net)
-    print("\nCritic Network Architecture:")
-    print(q_network)
+    print("\nQ1 Network Architecture:")
+    print(q1_network)
+    print("\nQ2 Network Architecture:")
+    print(q2_network)
 
     # Optimizers
     actor_optim = optim.Adam(actor_net.parameters(), lr=Config.learning_rate)
-    q_optim = optim.Adam(q_network.parameters(), lr=Config.learning_rate)
+    q1_optim = optim.Adam(q1_network.parameters(), lr=Config.learning_rate)
+    q2_optim = optim.Adam(q2_network.parameters(), lr=Config.learning_rate)
 
     # Set networks to training mode
-    q_network.train()
+    q1_network.train()
+    q2_network.train()
     actor_net.train()
 
     # Replay buffer
@@ -1157,48 +1226,85 @@ def train_ddpg_cnn(
         # Training step
         if step > Config.learning_starts:
             data = replay_buffer.sample(Config.batch_size)
+            
+            # TD3: Target Policy Smoothing
             with torch.no_grad():
                 next_actions = target_actor_net(
                     data.next_observations.to(torch.float32)
                 )
-                target_max = target_q_network(
+                noise = torch.clip(
+                    torch.randn_like(next_actions) * Config.policy_noise,
+                    -Config.noise_clip,
+                    Config.noise_clip
+                )
+                next_actions = next_actions + noise
+                next_actions = torch.clip(next_actions, Config.low, Config.high)
+                
+                # TD3: Clipped Double Q-learning
+                target_q1 = target_q1_network(
                     data.next_observations.to(torch.float32), next_actions
                 )
+                target_q2 = target_q2_network(
+                    data.next_observations.to(torch.float32), next_actions
+                )
+                target_max = torch.min(target_q1, target_q2)
                 td_target = data.rewards + Config.gamma * target_max * (1 - data.dones)
 
-            old_val = q_network(
+            # Update both Q-networks
+            old_val1 = q1_network(
+                data.observations.to(torch.float32), data.actions.to(torch.float32)
+            )
+            old_val2 = q2_network(
                 data.observations.to(torch.float32), data.actions.to(torch.float32)
             )
 
-            q_optim.zero_grad()
-            loss = nn.functional.mse_loss(old_val, td_target)
-            loss.backward()
+            q1_optim.zero_grad()
+            loss1 = nn.functional.mse_loss(old_val1, td_target)
+            loss1.backward(retain_graph=True)
+            q1_optim.step()
+            
+            q2_optim.zero_grad()
+            loss2 = nn.functional.mse_loss(old_val2, td_target)
+            loss2.backward()
+            q2_optim.step()
 
-            # Log gradient norm per layer for critic
+            # Log gradient norm per layer for critics
             if Config.use_wandb and Config.log_gradients:
-                for name, param in q_network.named_parameters():
+                for name, param in q1_network.named_parameters():
                     if param.grad is not None:
                         grad_norm = torch.norm(param.grad.detach(), 2).item()
                         wandb.log(
                             {
-                                f"gradients/critic_layer_{name}": grad_norm,
+                                f"gradients/q1_layer_{name}": grad_norm,
+                                "global_step": step,
+                            }
+                        )
+                for name, param in q2_network.named_parameters():
+                    if param.grad is not None:
+                        grad_norm = torch.norm(param.grad.detach(), 2).item()
+                        wandb.log(
+                            {
+                                f"gradients/q2_layer_{name}": grad_norm,
                                 "global_step": step,
                             }
                         )
 
-            # Apply gradient clipping for critic
+            # Apply gradient clipping for critics
             if Config.max_grad_norm != 0.0:
                 torch.nn.utils.clip_grad_norm_(
-                    list(q_network.parameters()),
+                    list(q1_network.parameters()),
+                    max_norm=Config.max_grad_norm,
+                )
+                torch.nn.utils.clip_grad_norm_(
+                    list(q2_network.parameters()),
                     max_norm=Config.max_grad_norm,
                 )
 
-            q_optim.step()
-
+            # TD3: Delayed Policy Updates
             if step % Config.train_frequency == 0:
                 actor_optim.zero_grad()
                 actions = actor_net(data.observations.to(torch.float32))
-                policy_loss = -q_network(
+                policy_loss = -q1_network(
                     data.observations.to(torch.float32), actions.to(torch.float32)
                 ).mean()
                 policy_loss.backward()
@@ -1218,7 +1324,7 @@ def train_ddpg_cnn(
                 # Apply gradient clipping for actor
                 if Config.max_grad_norm != 0.0:
                     torch.nn.utils.clip_grad_norm_(
-                        list(actor_net.parameters() + q_network.parameters()),
+                        list(actor_net.parameters()),
                         max_norm=Config.max_grad_norm,
                     )
 
@@ -1227,7 +1333,15 @@ def train_ddpg_cnn(
             # Update target networks
             if step % Config.target_network_frequency == 0:
                 for q_params, target_params in zip(
-                    q_network.parameters(), target_q_network.parameters()
+                    q1_network.parameters(), target_q1_network.parameters()
+                ):
+                    target_params.data.copy_(
+                        Config.tau * q_params.data
+                        + (1.0 - Config.tau) * target_params.data
+                    )
+                
+                for q_params, target_params in zip(
+                    q2_network.parameters(), target_q2_network.parameters()
                 ):
                     target_params.data.copy_(
                         Config.tau * q_params.data
@@ -1276,7 +1390,8 @@ def train_ddpg_cnn(
                 if Config.use_wandb:
                     wandb.log(
                         {
-                            "losses/critic_loss": loss.item(),
+                            "losses/q1_loss": loss1.item(),
+                            "losses/q2_loss": loss2.item(),
                             "losses/actor_loss": policy_loss.item()
                             if step % Config.train_frequency == 0
                             else 0.0,
@@ -1287,7 +1402,7 @@ def train_ddpg_cnn(
                         }
                     )
                 print(
-                    f"Step {step}, Critic Loss: {loss.item():.4f}, Actor Loss: {policy_loss.item() if step % Config.train_frequency == 0 else 0.0:.4f}, SPS: {int(step / (time.time() - start_time))}"
+                    f"Step {step}, Q1 Loss: {loss1.item():.4f}, Q2 Loss: {loss2.item():.4f}, Actor Loss: {policy_loss.item() if step % Config.train_frequency == 0 else 0.0:.4f}, SPS: {int(step / (time.time() - start_time))}"
                 )
 
             # Evaluation
@@ -1343,9 +1458,11 @@ def train_ddpg_cnn(
             torch.save(
                 {
                     "actor": actor_net.state_dict(),
-                    "q_network": q_network.state_dict(),
+                    "q1_network": q1_network.state_dict(),
+                    "q2_network": q2_network.state_dict(),
                     "target_actor": target_actor_net.state_dict(),
-                    "target_q_network": target_q_network.state_dict(),
+                    "target_q1_network": target_q1_network.state_dict(),
+                    "target_q2_network": target_q2_network.state_dict(),
                 },
                 model_path,
             )
@@ -1386,4 +1503,4 @@ def train_ddpg_cnn(
 
 # --- Main Execution ---
 if __name__ == "__main__":
-    train_ddpg()
+    train_td3()
