@@ -10,9 +10,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from tqdm import tqdm
-
 import wandb
+from tqdm import tqdm
 
 
 # ===== CONFIGURATION =====
@@ -28,12 +27,14 @@ class Config:
     # A2C & Agent settings
     lr: float = 2e-3  # Learning rate for optimizer
     gamma: float = 0.99  # Discount factor for rewards
-    VALUE_COEFF: float = 0.5  # Value loss coefficient in total loss (not used in pure A2C)
+    VALUE_COEFF: float = (
+        0.5  # Value loss coefficient in total loss (not used in pure A2C)
+    )
     num_eval_episodes: int = 10  # Number of evaluation episodes
     max_grad_norm: float = (
         0.0  # Maximum gradient norm for gradient clipping (0.0 to disable)
     )
-    
+
     # PPO-specific (kept for compatibility but not used in pure A2C)
     n_envs: int = 1  # Number of parallel environments
     update_epochs: int = 1  # Update epochs (A2C uses 1)
@@ -444,7 +445,6 @@ def evaluate(
     return returns, frames
 
 
-
 def train_a2c(
     env_id: Optional[str] = None,
     env: Optional[gym.Env] = Config.env,
@@ -466,7 +466,6 @@ def train_a2c(
     env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = None,
     actor_class: Any = ActorNet,
     critic_class: Any = CriticNet,
-    
     log_gradients: bool = Config.log_gradients,
     num_eval_episodes: int = Config.num_eval_episodes,
     anneal_lr: bool = Config.anneal_lr,
@@ -574,8 +573,6 @@ def train_a2c(
         else envs.single_action_space.shape[0]
     )
 
-    
-
     print(f"Observation Space: {obs_space_shape}, Action Space: {action_space_n}")
 
     # Create actor network
@@ -601,7 +598,6 @@ def train_a2c(
     print("\nCritic Network Architecture:")
     print(critic_network)
 
-
     num_updates = Config.total_timesteps // Config.n_envs
 
     # Separate optimizers for actor and critic (A2C style)
@@ -612,7 +608,7 @@ def train_a2c(
 
     next_obs, _ = envs.reset(seed=Config.seed)
     next_obs = torch.Tensor(next_obs).to(device)
-    
+
     start_time = time.time()
 
     for step in tqdm(range(1, num_updates + 1), desc="Training Updates"):
@@ -625,12 +621,12 @@ def train_a2c(
             critic_optim.param_groups[0]["lr"] = lrnow
 
         # Rollout Phase - Collect full episode
-     
+
         log_probs = []
         rewards = []
         values = []
         entropies = []
-        
+
         while True:
             # Get action and value
             result = actor_network.get_action(next_obs)
@@ -645,11 +641,11 @@ def train_a2c(
                 raise ValueError(
                     f"Error unpacking result from get_action. Expected 2 or 3 values, got {len(result)}"
                 )
-            
+
             # Track entropy if enabled
             if Config.ENTROPY_COEFF > 0.0 and dist is not None:
                 entropies.append(dist.entropy())
-            
+
             value = critic_network(next_obs)
 
             # Log distribution statistics
@@ -667,7 +663,7 @@ def train_a2c(
                     )
 
             values.append(value.flatten())
-      
+
             log_probs.append(logprob)
 
             # Step the environment
@@ -676,19 +672,21 @@ def train_a2c(
             )
             done = np.logical_or(terminated, truncated)
 
-            rewards.append(torch.tensor(reward, dtype=torch.float32).to(device).view(-1))
+            rewards.append(
+                torch.tensor(reward, dtype=torch.float32).to(device).view(-1)
+            )
             next_obs = torch.Tensor(new_obs).to(device)
-           
+
             if np.all(done):
                 break
-        
+
         # Convert lists to tensors
-       
+
         log_probs_tensor = torch.stack(log_probs)
         rewards_tensor = torch.stack(rewards)
-    
+
         values_tensor = torch.stack(values)
-        
+
         # Calculate returns (Monte Carlo)
         num_steps = len(rewards)
         returns = torch.zeros_like(rewards_tensor, dtype=torch.float32).to(device)
@@ -699,7 +697,7 @@ def train_a2c(
 
         # Calculate advantages (no normalization in pure A2C)
         advantages = (returns - values_tensor).detach()
-        
+
         # Flatten for batch processing
         b_logprobs = log_probs_tensor.flatten()
         b_values = values_tensor.flatten()
@@ -709,13 +707,18 @@ def train_a2c(
         # A2C Update - Single pass through data
         # Actor Loss: policy gradient with advantage
         policy_loss = -(b_logprobs * b_advantages).mean()
-        
+
         # Add entropy bonus if enabled
         if Config.ENTROPY_COEFF > 0.0 and entropies:
             entropy_loss = torch.stack(entropies).mean() * Config.ENTROPY_COEFF
             policy_loss = policy_loss - entropy_loss
             if Config.use_wandb:
-                wandb.log({"losses/entropy_loss": entropy_loss.item(), "global_step": global_step})
+                wandb.log(
+                    {
+                        "losses/entropy_loss": entropy_loss.item(),
+                        "global_step": global_step,
+                    }
+                )
 
         # Critic Loss: MSE between value predictions and returns
         critic_loss = F.mse_loss(b_values, b_returns)
@@ -899,8 +902,6 @@ def train_a2c(
     return actor_network
 
 
-
-
 def train_a2c_cnn(
     env_id: str = Config.env_id,
     env: Optional[gym.Env] = None,
@@ -930,7 +931,6 @@ def train_a2c_cnn(
     normalize_reward: bool = Config.normalize_reward,
     device: str = Config.device,
 ) -> nn.Module:
-    
     # Update Config with passed arguments
     Config.env_id = env_id if env is None else env.spec.id
     Config.total_timesteps = total_timesteps
@@ -949,7 +949,6 @@ def train_a2c_cnn(
     Config.eval_every = eval_every
     Config.save_every = save_every
     Config.atari_wrapper = atari_wrapper
-    Config.num_minibatches = num_minibatches
     Config.log_gradients = log_gradients
     Config.num_eval_episodes = num_eval_episodes
     Config.anneal_lr = anneal_lr
@@ -1029,8 +1028,6 @@ def train_a2c_cnn(
         else envs.single_action_space.shape
     )
 
-    
-
     print(f"Observation Space: {obs_space_shape}, Action Space: {action_space_n}")
 
     # Create actor network
@@ -1088,14 +1085,13 @@ def train_a2c_cnn(
             critic_optim.param_groups[0]["lr"] = lrnow
 
         # Rollout Phase - Collect full episode
-     
-   
+
         log_probs = []
         rewards = []
         dones = []
         values = []
         entropies = []
-        
+
         for step in range(0, Config.max_steps):
             global_step = (update - 1) * batch_size + step * Config.n_envs
 
@@ -1114,11 +1110,11 @@ def train_a2c_cnn(
                 raise ValueError(
                     f"Error unpacking result from get_action. Expected 2 or 3 values, got {len(result)}"
                 )
-            
+
             # Track entropy if enabled
             if Config.ENTROPY_COEFF > 0.0 and dist is not None:
                 entropies.append(dist.entropy())
-            
+
             value = critic_network(next_obs)
 
             # Log distribution statistics
@@ -1136,7 +1132,7 @@ def train_a2c_cnn(
                     )
 
             values.append(value.flatten())
-            
+
             log_probs.append(logprob)
 
             # Step the environment
@@ -1145,16 +1141,18 @@ def train_a2c_cnn(
             )
             done = np.logical_or(terminated, truncated)
 
-            rewards.append(torch.tensor(reward, dtype=torch.float32).to(device).view(-1))
+            rewards.append(
+                torch.tensor(reward, dtype=torch.float32).to(device).view(-1)
+            )
             next_obs = torch.Tensor(new_obs).to(device)
             next_done = torch.Tensor(done).to(device)
 
         # Convert lists to tensors
-    
+
         log_probs_tensor = torch.stack(log_probs)
         rewards_tensor = torch.stack(rewards)
         values_tensor = torch.stack(values)
-        
+
         # Calculate returns (Monte Carlo)
         num_steps = len(rewards)
         returns = torch.zeros_like(rewards_tensor, dtype=torch.float32).to(device)
@@ -1174,13 +1172,18 @@ def train_a2c_cnn(
         # A2C Update - Single pass through data
         # Actor Loss: policy gradient with advantage
         policy_loss = -(b_logprobs * advantages).mean()
-        
+
         # Add entropy bonus if enabled
         if Config.ENTROPY_COEFF > 0.0 and entropies:
             entropy_loss = torch.stack(entropies).mean() * Config.ENTROPY_COEFF
             policy_loss = policy_loss - entropy_loss
             if Config.use_wandb:
-                wandb.log({"losses/entropy_loss": entropy_loss.item(), "global_step": global_step})
+                wandb.log(
+                    {
+                        "losses/entropy_loss": entropy_loss.item(),
+                        "global_step": global_step,
+                    }
+                )
 
         # Critic Loss: MSE between value predictions and returns
         critic_loss = F.mse_loss(b_values, b_returns)
@@ -1281,7 +1284,7 @@ def train_a2c_cnn(
                     "losses/policy_loss": policy_loss.item(),
                     "losses/critic_loss": critic_loss.item(),
                     "charts/learning_rate": actor_optim.param_groups[0]["lr"],
-                    "charts/rewards_mean": np.mean(rewards_storage.cpu().numpy()),
+                    "charts/rewards_mean": rewards_tensor.mean().item(),
                     "advantages/advantages_mean": advantages.mean().item(),
                     "advantages/advantages_std": advantages.std().item(),
                     "charts/returns_mean": b_returns.mean().item(),

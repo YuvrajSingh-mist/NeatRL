@@ -14,7 +14,7 @@ def main():
     """Train DDPG on MuJoCo Half Cheetah environment."""
 
     train_ddpg(
-        env_id="HalfCheetah-v5",  
+        env_id="HalfCheetah-v5",
         total_timesteps=1000000,  # MuJoCo environments need more timesteps
         seed=42,
         learning_rate=3e-4,

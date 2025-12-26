@@ -6,7 +6,8 @@ BipedalWalker has continuous action spaces and vector observations, making it pe
 """
 
 from neatrl.ddpg import train_ddpg
-    
+
+
 def train_ddpg_bipedal_walker():
     """Train DDPG on BipedalWalker environment."""
 

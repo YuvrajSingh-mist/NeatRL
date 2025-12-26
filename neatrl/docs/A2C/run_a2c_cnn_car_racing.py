@@ -5,8 +5,6 @@ This example demonstrates how to use A2C with CNN networks for the CarRacing env
 CarRacing has image observations and continuous action spaces, making it perfect for A2C with CNN.
 """
 
-from typing import Union
-
 import cv2
 import gymnasium as gym
 import numpy as np
@@ -46,19 +44,19 @@ class PreprocessAndFrameStack(gym.ObservationWrapper):
     def observation(self, obs):
         # Convert LazyFrames to array if needed
         obs_array = np.array(obs)
-        
+
         frames = []
         for i in range(self.num_stack):
             frame = obs_array[i]
-            
+
             if frame.ndim == 3 and frame.shape[2] == 3:
                 frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-                
+
             frame = cv2.resize(
                 frame, (self.width, self.height), interpolation=cv2.INTER_AREA
             )
             frames.append(frame)
-        
+
         result = np.stack(frames, axis=0)
         return result
 

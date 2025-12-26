@@ -10,6 +10,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import wandb
 from gymnasium.wrappers import (
     AtariPreprocessing,
     FrameStackObservation,
@@ -17,8 +18,6 @@ from gymnasium.wrappers import (
     NormalizeReward,
 )
 from tqdm import tqdm
-
-import wandb
 
 gym.register_envs(ale_py)
 

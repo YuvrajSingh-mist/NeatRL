@@ -5,12 +5,15 @@ This example demonstrates how to use A2C for the Acrobot environment.
 Acrobot has discrete action spaces and vector observations, making it suitable for standard A2C.
 """
 
-from neatrl.a2c import train_a2c
+from typing import Optional, Union
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Union, Optional
-import numpy as np
+
+from neatrl.a2c import train_a2c
+
 
 # --- Networks ---
 def layer_init(
@@ -19,6 +22,7 @@ def layer_init(
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
+
 
 class ActorNet(nn.Module):
     def __init__(
@@ -33,7 +37,7 @@ class ActorNet(nn.Module):
         self.fc3 = layer_init(nn.Linear(128, 64))
         self.mu = layer_init(nn.Linear(64, action_space))
         self.logstd = nn.Parameter(torch.zeros(action_space))
-        
+
     def forward(self, x: torch.Tensor) -> torch.distributions.Distribution:
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
@@ -50,7 +54,7 @@ class ActorNet(nn.Module):
         action: Optional[torch.Tensor] = None,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.distributions.Distribution]:
         dist = self.forward(x)
-        
+
         action = dist.sample()
         log_prob = dist.log_prob(action)
 
@@ -70,7 +74,6 @@ class CriticNet(nn.Module):
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
         return self.value(x)
-
 
 
 def train_run_pendulum():

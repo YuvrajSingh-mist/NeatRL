@@ -5,10 +5,12 @@ This example demonstrates how to use DDPG for the Pendulum environment.
 Pendulum has continuous action spaces and vector observations, making it perfect for standard DDPG.
 """
 
-from neatrl.ddpg import train_ddpg
+from typing import Union
+
 import torch
 import torch.nn as nn
-from typing import Union
+
+from neatrl.ddpg import train_ddpg
 
 
 class ActorNet(nn.Module):
@@ -58,7 +60,8 @@ class QNet(nn.Module):
         x = torch.nn.functional.mish(self.reduce(x))
         x = self.out(x)
         return x
-    
+
+
 def train_ddpg_pendulum():
     """Train DDPG on Pendulum environment."""
 

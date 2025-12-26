@@ -9,10 +9,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import wandb
 from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
-
-import wandb
 
 
 # ===== CONFIGURATION =====
@@ -205,7 +204,7 @@ def make_env(
         else:
             # Create new environment
             env_to_use = gym.make(env_id, render_mode=render_mode)
-        
+
         # Always apply RecordEpisodeStatistics if not already present
         if env is None:
             env_to_use = gym.wrappers.RecordEpisodeStatistics(env_to_use)
@@ -443,9 +442,13 @@ def evaluate(
                 frame = eval_env.render()
                 frames.append(frame)
             with torch.no_grad():
-                obs_tensor = torch.tensor(np.array(obs), device=device, dtype=torch.float32).unsqueeze(0)
+                obs_tensor = torch.tensor(
+                    np.array(obs), device=device, dtype=torch.float32
+                ).unsqueeze(0)
                 action = model(obs_tensor)
-                action = torch.clip(action, Config.low, Config.high)  # Use args low and high
+                action = torch.clip(
+                    action, Config.low, Config.high
+                )  # Use args low and high
                 action = action.cpu().numpy()
                 if isinstance(eval_env.action_space, gym.spaces.Discrete):
                     action = action.item()
@@ -553,7 +556,7 @@ def train_ddpg(
     Config.noise_clip = noise_clip
     Config.low = low
     Config.high = high
-    
+
     # Validate that only one of env_id or env is provided
     if env_id is not None and env is not None:
         raise ValueError(
@@ -742,7 +745,6 @@ def train_ddpg(
             q_optim.step()
 
             if step % Config.train_frequency == 0:
-                
                 actor_optim.zero_grad()
                 actions = actor_net(data.observations.to(torch.float32))
                 policy_loss = -q_network(

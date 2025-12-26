@@ -17,7 +17,6 @@ import torch.nn as nn
 from neatrl.ddpg import train_ddpg_cnn
 
 
-
 def car_racing_wrapper(env):
     return PreprocessAndFrameStack(env, height=84, width=84, num_stack=4)
 
@@ -48,19 +47,19 @@ class PreprocessAndFrameStack(gym.ObservationWrapper):
     def observation(self, obs):
         # Convert LazyFrames to array if needed
         obs_array = np.array(obs)
-        
+
         frames = []
         for i in range(self.num_stack):
             frame = obs_array[i]
-            
+
             if frame.ndim == 3 and frame.shape[2] == 3:
                 frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-                
+
             frame = cv2.resize(
                 frame, (self.width, self.height), interpolation=cv2.INTER_AREA
             )
             frames.append(frame)
-        
+
         result = np.stack(frames, axis=0)
         return result
 
@@ -124,7 +123,7 @@ class ActorNet(nn.Module):
 class QNet(nn.Module):
     def __init__(self, obs_shape: Union[int, tuple[int, ...]], action_space: int):
         super().__init__()
-      
+
         self.network = FeatureExtractor(obs_shape)
 
         self.fc2 = nn.Linear(action_space, 256)
@@ -144,7 +143,7 @@ def main():
     """Train DDPG with CNN on CarRacing environment."""
 
     train_ddpg_cnn(
-        env_id='CarRacing-v3',  # CarRacing environment
+        env_id="CarRacing-v3",  # CarRacing environment
         total_timesteps=1000000,  # CarRacing needs more timesteps
         seed=42,
         learning_rate=3e-4,
