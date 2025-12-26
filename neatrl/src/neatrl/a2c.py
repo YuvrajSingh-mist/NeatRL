@@ -823,7 +823,6 @@ def train_a2c(
                     "advantages/advantages_mean": advantages.mean().item(),
                     "advantages/advantages_std": advantages.std().item(),
                     "charts/returns_mean": b_returns.mean().item(),
-                    "calculated_return": b_returns.mean().item(),
                     "global_step": global_step,
                 }
             )

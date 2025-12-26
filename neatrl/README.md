@@ -35,6 +35,19 @@ NeatRL provides high-quality implementations of popular RL algorithms with a foc
   - Episode-based Monte Carlo returns
   - Variance reduction through baseline subtraction
 
+- **DDPG** (Deep Deterministic Policy Gradient) - Actor-critic method for continuous action spaces
+  - Deterministic policy gradient for continuous control
+  - Experience replay and target networks
+  - Ornstein-Uhlenbeck noise for exploration
+  - Support for continuous action spaces (e.g., robotics, physics simulations)
+
+- **A2C** (Advantage Actor-Critic) - Synchronous actor-critic algorithm
+  - Synchronous version of A3C for stable training
+  - Advantage function for reduced variance
+  - Support for both discrete and continuous action spaces
+  - Parallel environment training with vectorized environments
+  - Monte Carlo returns for value estimation
+
 - **PPO (Proximal Policy Optimization)** - State-of-the-art policy gradient method with GAE
   - Full PPO implementation with Generalized Advantage Estimation (GAE)
   - Support for both discrete and continuous action spaces

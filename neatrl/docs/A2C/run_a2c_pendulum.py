@@ -43,7 +43,7 @@ class ActorNet(nn.Module):
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
 
-        mu = self.mu(x)
+        mu = 2.0 * torch.nn.functional.tanh(self.mu(x))
         std = torch.exp(self.logstd)
         dist = torch.distributions.Normal(mu, std)
         return dist
@@ -94,7 +94,7 @@ def train_run_pendulum():
         device="cpu",  # Use "cuda" if you have GPU
         actor_class=ActorNet,
         critic_class=CriticNet,
-        n_envs=1,  # Use multiple environments for A2C
+        n_envs=4,  # Use multiple environments for A2C
     )
 
 
