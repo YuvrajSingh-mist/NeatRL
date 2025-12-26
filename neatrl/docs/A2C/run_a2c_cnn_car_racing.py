@@ -87,6 +87,8 @@ class FeatureExtractor(nn.Module):
         x = self.relu2(self.conv2(x))
         x = self.relu3(self.conv3(x))
         x = self.flatten(x)
+        
+        
         x = self.relu_fc(self.fc(x))
         return x
 
@@ -97,17 +99,29 @@ class ActorNet(nn.Module):
         self.network = FeatureExtractor(obs_shape)
 
         # CarRacing has 3 continuous actions: steering, gas, brake
-        self.out1 = layer_init(nn.Linear(512, 1))  # Steering
-        self.out2 = layer_init(nn.Linear(512, 1))  # Gas
-        self.out3 = layer_init(nn.Linear(512, 1))  # Brake
+        self.mu = layer_init(nn.Linear(512, action_space))
+        self.sigma = nn.Parameter(torch.zeros(action_space)) 
+        
 
     def forward(self, x):
+        
         x = self.network(x / 255.0)
-        out1 = torch.nn.functional.tanh(self.out1(x))  # Steering: -1 to 1
-        out2 = torch.nn.functional.sigmoid(self.out2(x))  # Gas: 0 to 1
-        out3 = torch.nn.functional.sigmoid(self.out3(x))  # Brake: 0 to 1
-
-        return torch.cat([out1, out2, out3], dim=-1)
+        dist = torch.distributions.Normal(
+            self.mu(x), torch.exp(self.sigma.expand_as(self.mu(x)))
+        ) 
+        
+        return dist
+    
+    def get_action(self, x):
+        dist = self.forward(x)
+        action = dist.sample()
+        out1 = torch.nn.functional.tanh(action[:, 0:1])  # Steering: -1 to 1
+        out2 = torch.nn.functional.sigmoid(action[:, 1:2])  # Gas: 0 to 1
+        out3 = torch.nn.functional.sigmoid(action[:, 2:3])  # Brake: 0 to 1
+        
+        final = torch.cat([out1, out2, out3], dim=-1)
+        logprobs = dist.log_prob(final)
+        return final, logprobs, dist
 
 
 class CriticNet(nn.Module):
@@ -120,22 +134,22 @@ class CriticNet(nn.Module):
         x = self.network(x / 255.0)
         return self.out(x)
 
+# Create the CarRacing environment
+env = gym.make("CarRacing-v3", continuous=False)
 
 def main():
     """Train A2C with CNN on CarRacing environment."""
 
     train_a2c_cnn(
-        env_id="CarRacing-v3",  # CarRacing environment
+        # env_id="CarRacing-v3",  # CarRacing environment
+        env=env,
         total_timesteps=500000,  # Total timesteps for training
         seed=42,
         lr=3e-4,  # Learning rate
         gamma=0.99,  # Discount factor
-        max_steps=2048,  # Max steps per episode rollout
-        update_epochs=1,  # A2C uses 1 epoch per update
-        max_grad_norm=0.5,  # Gradient clipping
         use_wandb=True,  # Set to True to enable logging
         capture_video=True,
-        eval_every=10000,  # Evaluate every 10k steps
+        eval_every=1,  # Evaluate every 10k steps
         save_every=50000,  # Save model every 50k steps
         num_eval_episodes=5,
         device="cpu",  # Use "cuda" if you have GPU

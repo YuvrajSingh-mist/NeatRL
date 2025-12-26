@@ -35,17 +35,14 @@ class ActorNet(nn.Module):
         self.fc1 = layer_init(nn.Linear(state_space, 128))
         self.fc2 = layer_init(nn.Linear(128, 128))
         self.fc3 = layer_init(nn.Linear(128, 64))
-        self.mu = layer_init(nn.Linear(64, action_space))
-        self.logstd = nn.Parameter(torch.zeros(action_space))
+        self.fc4 = layer_init(nn.Linear(64, action_space))
 
     def forward(self, x: torch.Tensor) -> torch.distributions.Distribution:
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
-
-        mu = 2.0 * torch.nn.functional.tanh(self.mu(x))
-        std = torch.exp(self.logstd)
-        dist = torch.distributions.Normal(mu, std)
+        probs = torch.nn.functional.softmax(self.fc4(x), dim=-1)
+        dist = torch.distributions.Categorical(probs)
         return dist
 
     def get_action(
@@ -75,13 +72,13 @@ class CriticNet(nn.Module):
         x = F.relu(self.fc3(x))
         return self.value(x)
 
-env = gym.make("Pendulum-v1")
+env = gym.make("LunarLander-v3", render_mode="rgb_array")
 
-def train_run_pendulum():
-    """Train A2C on Pendulum environment."""
+def train_run_lunarlander():
+    """Train A2C on LunarLander environment."""
 
     train_a2c(
-        env=env,# Pendulum environment
+        env=env,# LunarLander environment
         total_timesteps=1000000,  # Total timesteps for training
         seed=42,
         lr=3e-4,  # Learning rate
@@ -90,14 +87,15 @@ def train_run_pendulum():
         capture_video=True,
         eval_every=1000,  # Evaluate every 1k steps
         save_every=50000,  # Save model every 50k steps
-        num_eval_episodes=2,
+        num_eval_episodes=4,
         normalize_obs=False,  # Pendulum doesn't need normalization
         device="cpu",  # Use "cuda" if you have GPU
         actor_class=ActorNet,
         critic_class=CriticNet,
+        log_gradients=True,
         n_envs=4,  # Use multiple environments for A2C
     )
 
 
 if __name__ == "__main__":
-    train_run_pendulum()
+    train_run_lunarlander()

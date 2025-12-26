@@ -43,7 +43,7 @@ class ActorNet(nn.Module):
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
 
-        mu = 2.0 * torch.nn.functional.tanh(self.mu(x))
+        mu = torch.nn.functional.tanh(self.mu(x))
         std = torch.exp(self.logstd)
         dist = torch.distributions.Normal(mu, std)
         return dist
@@ -75,13 +75,12 @@ class CriticNet(nn.Module):
         x = F.relu(self.fc3(x))
         return self.value(x)
 
-env = gym.make("Pendulum-v1")
 
 def train_run_pendulum():
     """Train A2C on Pendulum environment."""
 
     train_a2c(
-        env=env,# Pendulum environment
+        env_id="Reacher-v5",# Pendulum environment
         total_timesteps=1000000,  # Total timesteps for training
         seed=42,
         lr=3e-4,  # Learning rate
