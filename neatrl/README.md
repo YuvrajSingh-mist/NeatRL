@@ -31,7 +31,6 @@ NeatRL provides high-quality implementations of popular RL algorithms with a foc
   - Atari game support with automatic CNN architecture
   - Parallel environment training (`n_envs` support)
   - Continuous action space support
-  - Per-layer gradient logging
   - Episode-based Monte Carlo returns
   - Variance reduction through baseline subtraction
 
@@ -39,7 +38,7 @@ NeatRL provides high-quality implementations of popular RL algorithms with a foc
   - Deterministic policy gradient for continuous control
   - Experience replay and target networks
   - Ornstein-Uhlenbeck noise for exploration
-  - Support for continuous action spaces (e.g., robotics, physics simulations)
+  - Support for exact continuous action spaces 
 
 - **A2C** (Advantage Actor-Critic) - Synchronous actor-critic algorithm
   - Synchronous version of A3C for stable training
@@ -51,7 +50,7 @@ NeatRL provides high-quality implementations of popular RL algorithms with a foc
 - **PPO (Proximal Policy Optimization)** - State-of-the-art policy gradient method with GAE
   - Full PPO implementation with Generalized Advantage Estimation (GAE)
   - Support for both discrete and continuous action spaces
-  - Atari game support with automatic CNN architecture (`train_ppo_cnn`)
+  - Atari game support with automatic CNN architecture
   - Clipped surrogate objective for stable policy updates
   - Value function clipping and entropy regularization
   - Vectorized environments for parallel training
@@ -143,33 +142,7 @@ cd NeatRL
 pip install -e .[dev]
 ```
 
-## 📋 Changelog
-
-### [0.2.1] - 2025-12-17
-- **Added**: REINFORCE Atari support with automatic CNN architecture
-- **Added**: Parallel environment training (`n_envs` parameter)
-- **Added**: Continuous action space support for REINFORCE
-- **Added**: Advanced gradient logging (per-layer norms, clip ratios)
-- **Changed**: REINFORCE parameter `episodes` → `total_steps`
-- **Fixed**: Multi-environment action handling for vectorized training
-
-### [0.2.0] - 2025-12-14
-- **Added**: Grid environment support with automatic one-hot encoding
-- **Changed**: Renamed `record` to `capture_video` for consistency
-
-### [0.1.4] - 2025-12-13
-- **Added**: Custom agent support for DQN training
-- **Added**: Network architecture display using torchinfo
-- **Improved**: Error handling for custom agent constructors
-- **Changed**: Agent parameter now accepts nn.Module subclasses
-
-### [0.1.3] - 2025-12-01
-- Initial release with DQN implementation
-- Weights & Biases integration
-- Video recording capabilities
-- Comprehensive documentation
-
-For the complete changelog, see [CHANGELOG.md](CHANGELOG.md).
+For the complete changelog, see [CHANGELOG.md](https://github.com/YuvrajSingh-mist/NeatRL/tree/master/neatrl/CHANGELOG.md).
 
 ## 📄 License
 

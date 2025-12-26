@@ -11,6 +11,22 @@ All notable changes to this project will be documented in this file.
   - **GAE Support**: Generalized Advantage Estimation with configurable lambda parameter for improved advantage estimation
   - **Vectorized Environments**: Support for parallel environments (`n_envs` parameter)
 
+### Added - DDPG Algorithm Implementation
+- **DDPG (Deep Deterministic Policy Gradient)**: Full implementation of actor-critic method for continuous action spaces
+  - **Deterministic Policy Gradient**: Optimized for continuous control tasks with deterministic policies
+  - **Experience Replay**: Experience replay buffer for stable learning and reduced correlation
+  - **Target Networks**: Separate target networks for actor and critic with soft updates
+  - **Exploration Noise**: Ornstein-Uhlenbeck process for action exploration in continuous spaces
+  - **Continuous Action Support**: Designed for environments like robotics and physics simulations
+
+### Added - A2C Algorithm Implementation
+- **A2C (Advantage Actor-Critic)**: Synchronous actor-critic algorithm implementation
+  - **Advantage Function**: Uses advantage estimation for reduced variance in policy gradients
+  - **Synchronous Training**: Single-threaded implementation for stable and reproducible training
+  - **Monte Carlo Returns**: Episode-based value estimation using full trajectory returns
+  - **Parallel Environments**: Vectorized environment support for efficient data collection
+  - **Flexible Action Spaces**: Support for both discrete and continuous action spaces
+
 
 ## [0.3.0] - 2025-12-22
 
