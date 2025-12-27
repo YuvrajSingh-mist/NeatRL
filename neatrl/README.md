@@ -72,7 +72,14 @@ NeatRL provides high-quality implementations of popular RL algorithms with a foc
 python -m venv neatrl-env
 source neatrl-env/bin/activate 
 
-pip install neatrl"[classic,box2d,atari]"
+pip install neatrl
+
+# Install extras based on environments you want to use
+pip install neatrl[atari]      # For CarRacing
+pip install neatrl[box2d]      # For BipedalWalker
+pip install neatrl[classic]    # For Pendulum
+pip install neatrl[mujoco]     # For HalfCheetah
+
 ```
 
 ## 🚀 Quick Start

@@ -17,36 +17,37 @@ import wandb
 
 # ===== CONFIGURATION =====
 class Config:
-    """Configuration class for TD3 training."""
+    """Configuration class for SAC training."""
 
     # Experiment settings
-    exp_name: str = "TD3-Experiment"
+    exp_name: str = "SAC-Experiment"
     seed: int = 42
     env_id: Optional[str] = "HalfCheetah-v5"
 
     low: float = -1.0
-    noise_clip: float = 0.5
-    high: float = 1.0  # Action space limits for BipedalWalker
-    policy_noise: float = 0.2  # Noise added to target policy during critic update (for smoothing)
+    high: float = 1.0  # Action space limits
     # Training parameters
     total_timesteps: int = 1000000
     learning_rate: float = 3e-4
-    buffer_size: int = 100000
+    buffer_size: int = 1000000
     gamma: float = 0.99
     tau: float = 0.005  # Soft update parameter for target networks
-    target_network_frequency: int = 1  # How often to update target networks (TD3 uses 1)
     batch_size: int = 256
-
-    exploration_fraction: float = 0.1
-    learning_starts: int = 25000
-    train_frequency: int = 2  # Delayed policy updates (update actor every N critic updates)
+    
+    # SAC-specific parameters
+    alpha: float = 0.2  # Entropy regularization coefficient
+    autotune_alpha: bool = True  # Whether to automatically tune alpha
+    target_entropy_scale: float = -1.0  # Target entropy = target_entropy_scale * action_dim
+    
+    learning_starts: int = 5000
+    policy_frequency: int = 1  # How often to update the policy (1 = every step)
 
     # Logging & Saving
     capture_video: bool = True  # Whether to capture evaluation videos
     use_wandb: bool = True  # Whether to use Weights & Biases for logging
     wandb_project: str = "cleanRL"  # W&B project name
     wandb_entity: str = ""  # Your WandB username/team
-    eval_every: int = 500  # Frequency of evaluation during training (in steps)
+    eval_every: int = 5000  # Frequency of evaluation during training (in steps)
     save_every: int = 10000  # Frequency of saving the model (in steps)
     num_eval_episodes: int = 10  # Number of evaluation episodes
     normalize_reward: bool = False  # Whether to normalize rewards
@@ -64,7 +65,12 @@ class Config:
     device: str = "cpu"  # Device for training: "auto", "cpu", "cuda", or "cuda:0" etc.
 
 
+LOG_STD_MAX = 2
+LOG_STD_MIN = -20
+
+
 class ActorNet(nn.Module):
+    """Stochastic actor network for SAC that outputs mean and log_std of Gaussian policy."""
     def __init__(
         self,
         state_space: Union[int, tuple[int, ...]],
@@ -73,24 +79,40 @@ class ActorNet(nn.Module):
         super().__init__()
         # Handle state_space as tuple or int
         state_dim = state_space[0] if isinstance(state_space, tuple) else state_space
-
+        self.action_dim = action_space
+        
         self.fc1 = nn.Linear(state_dim, 256)
         self.fc2 = nn.Linear(256, 256)
-        self.out = nn.Linear(256, action_space)
+        self.mean = nn.Linear(256, action_space)
+        self.log_std = nn.Linear(256, action_space)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = torch.tanh(
-            self.out(
-                torch.nn.functional.mish(
-                    self.fc2(torch.nn.functional.mish(self.fc1(x)))
-                )
-            )
-        )
-        x = x * 1.0  # Scale to action limits
-        return x
-
-    def get_action(self, x: torch.Tensor) -> torch.Tensor:
-        return self.forward(x)
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        x = torch.nn.functional.relu(self.fc1(x))
+        x = torch.nn.functional.relu(self.fc2(x))
+        mean = self.mean(x)
+        log_std = self.log_std(x)
+        log_std = torch.clamp(log_std, LOG_STD_MIN, LOG_STD_MAX)
+        return mean, log_std
+    
+    def get_action(self, x: torch.Tensor, deterministic: bool = False) -> tuple[torch.Tensor, torch.Tensor]:
+        """Get action from the policy with reparameterization trick."""
+        mean, log_std = self.forward(x)
+        std = log_std.exp()
+        
+        if deterministic:
+            action = torch.tanh(mean)
+            log_prob = None
+        else:
+            normal = torch.distributions.Normal(mean, std)
+            x_t = normal.rsample()  # Reparameterization trick
+            action = torch.tanh(x_t)
+            
+            # Compute log probability with correction for tanh squashing
+            log_prob = normal.log_prob(x_t)
+            log_prob -= torch.log(1 - action.pow(2) + 1e-6)
+            log_prob = log_prob.sum(1, keepdim=True)
+        
+        return action, log_prob
 
 
 class QNet(nn.Module):
@@ -133,14 +155,10 @@ class ActorNetCNN(nn.Module):
         x = torch.nn.functional.relu(self.conv3(x))
         x = x.view(x.size(0), -1)  # Flatten
         x = torch.nn.functional.relu(self.fc1(x))
-        
-        return x
-
-    def get_action(self, x):
-        x = self.forward(x)
-        x = torch.tanh(x)  # Output between -1 and 1
+        x = torch.tanh(self.out(x))  # Output between -1 and 1
         x = x * 1.0  # Scale to action limits
         return x
+
 
 class QNetCNN(nn.Module):
     def __init__(self, obs_shape, action_space):
@@ -453,10 +471,8 @@ def evaluate(
                 obs_tensor = torch.tensor(
                     np.array(obs), device=device, dtype=torch.float32
                 ).unsqueeze(0)
-                action = model.get_action(obs_tensor)
-                action = torch.clip(
-                    action, Config.low, Config.high
-                )  # Use args low and high
+                # For SAC, use deterministic action during evaluation
+                action, _ = model.get_action(obs_tensor, deterministic=True)
                 action = action.cpu().numpy()
                 if isinstance(eval_env.action_space, gym.spaces.Discrete):
                     action = action.item()
@@ -492,7 +508,7 @@ def evaluate(
     return returns, frames
 
 
-def train_td3(
+def train_sac(
     env_id: Optional[str] = None,
     env: Optional[gym.Env] = None,
     total_timesteps: int = Config.total_timesteps,
@@ -501,11 +517,12 @@ def train_td3(
     buffer_size: int = Config.buffer_size,
     gamma: float = Config.gamma,
     tau: float = Config.tau,
-    target_network_frequency: int = Config.target_network_frequency,
     batch_size: int = Config.batch_size,
-    exploration_fraction: float = Config.exploration_fraction,
+    alpha: float = Config.alpha,
+    autotune_alpha: bool = Config.autotune_alpha,
+    target_entropy_scale: float = Config.target_entropy_scale,
     learning_starts: int = Config.learning_starts,
-    train_frequency: int = Config.train_frequency,
+    policy_frequency: int = Config.policy_frequency,
     capture_video: bool = Config.capture_video,
     use_wandb: bool = Config.use_wandb,
     wandb_project: str = Config.wandb_project,
@@ -525,9 +542,6 @@ def train_td3(
     normalize_reward: bool = Config.normalize_reward,
     actor_class: Any = ActorNet,
     q_network_class: Any = QNet,
-    exploration_noise: float = Config.exploration_fraction,
-    noise_clip: float = Config.noise_clip,
-    policy_noise: float = Config.policy_noise,
     low: float = Config.low,
     high: float = Config.high,
 ) -> nn.Module:
@@ -539,11 +553,12 @@ def train_td3(
     Config.buffer_size = buffer_size
     Config.gamma = gamma
     Config.tau = tau
-    Config.target_network_frequency = target_network_frequency
     Config.batch_size = batch_size
-    Config.exploration_fraction = exploration_fraction
+    Config.alpha = alpha
+    Config.autotune_alpha = autotune_alpha
+    Config.target_entropy_scale = target_entropy_scale
     Config.learning_starts = learning_starts
-    Config.train_frequency = train_frequency
+    Config.policy_frequency = policy_frequency
     Config.capture_video = capture_video
     Config.use_wandb = use_wandb
     Config.wandb_project = wandb_project
@@ -561,9 +576,6 @@ def train_td3(
     Config.env_wrapper = env_wrapper
     Config.normalize_obs = normalize_obs
     Config.normalize_reward = normalize_reward
-    Config.exploration_fraction = exploration_noise
-    Config.noise_clip = noise_clip
-    Config.policy_noise = policy_noise
     Config.low = low
     Config.high = high
 
@@ -601,26 +613,43 @@ def train_td3(
     torch.manual_seed(Config.seed)
     device = torch.device(Config.device)
 
-    # Create environment(s)
-    if Config.n_envs > 1:
-        # Create vectorized environments for parallel execution
-        env_thunks = [
-            make_env(Config.env_id if env is None else "", Config.seed, i, render_mode="rgb_array", env_wrapper=Config.env_wrapper, env=env)
-            for i in range(Config.n_envs)
-        ]
-        env = gym.vector.SyncVectorEnv(env_thunks)
-        is_discrete_obs = isinstance(env.single_observation_space, gym.spaces.Discrete)
-        obs_space = env.single_observation_space
-        obs_shape = obs_space.n if is_discrete_obs else obs_space.shape[0]
-        action_shape = env.single_action_space.n if isinstance(env.single_action_space, gym.spaces.Discrete) else env.single_action_space.shape[0]
+    # Create environment
+    if env is not None:
+        env_thunk = make_env(
+            "",
+            Config.seed,
+            idx=0,
+            render_mode="rgb_array",
+            env_wrapper=Config.env_wrapper,
+            env=env,
+        )
     else:
-        # Single environment
-        env_thunk = make_env(Config.env_id if env is None else "", Config.seed, idx=0, render_mode="rgb_array", env_wrapper=Config.env_wrapper, env=env)
-        env = env_thunk()
-        is_discrete_obs = isinstance(env.observation_space, gym.spaces.Discrete)
-        obs_space = env.observation_space
-        obs_shape = obs_space.n if is_discrete_obs else obs_space.shape[0]
-        action_shape = env.action_space.n if isinstance(env.action_space, gym.spaces.Discrete) else env.action_space.shape[0]
+        env_thunk = make_env(
+            Config.env_id,
+            Config.seed,
+            idx=0,
+            render_mode="rgb_array",
+            env_wrapper=Config.env_wrapper,
+        )
+
+    env = env_thunk()
+
+    # Determine if we're dealing with discrete observation spaces
+    is_discrete_obs = isinstance(env.observation_space, gym.spaces.Discrete)
+    obs_space = env.observation_space
+
+    # Compute observation dimensions
+    if is_discrete_obs:
+        obs_shape = obs_space.n
+    else:
+        obs_shape = obs_space.shape[0]
+
+    # Compute action dimensions
+    action_shape = (
+        env.action_space.n
+        if isinstance(env.action_space, gym.spaces.Discrete)
+        else env.action_space.shape[0]
+    )
 
     # Create actor network
     if isinstance(actor_class, nn.Module):
@@ -631,25 +660,23 @@ def train_td3(
         # Use actor class
         actor_net = actor_class(obs_shape, action_shape).to(device)
 
-    # Create twin critic networks (TD3 uses two Q-networks)
+    # Create twin critic networks (SAC uses two Q-networks)
     if isinstance(q_network_class, nn.Module):
         # Use custom critic instance
         validate_critic_network_dimensions(q_network_class, obs_shape, action_shape)
         q1_network = q_network_class.to(device)
+        q2_network = q_network_class.to(device)
     else:
         # Use critic class
         q1_network = q_network_class(obs_shape, action_shape).to(device)
-    
-    q2_network = q_network_class(obs_shape, action_shape).to(device)
+        q2_network = q_network_class(obs_shape, action_shape).to(device)
 
-    # Create target networks
-    target_actor_net = actor_class(obs_shape, action_shape).to(device)
+    # Create target Q-networks
     target_q1_network = q_network_class(obs_shape, action_shape).to(device)
     target_q2_network = q_network_class(obs_shape, action_shape).to(device)
 
     target_q1_network.load_state_dict(q1_network.state_dict())
     target_q2_network.load_state_dict(q2_network.state_dict())
-    target_actor_net.load_state_dict(actor_net.state_dict())
 
     # Print network architecture
     print("Actor Network Architecture:")
@@ -663,6 +690,15 @@ def train_td3(
     actor_optim = optim.Adam(actor_net.parameters(), lr=Config.learning_rate)
     q1_optim = optim.Adam(q1_network.parameters(), lr=Config.learning_rate)
     q2_optim = optim.Adam(q2_network.parameters(), lr=Config.learning_rate)
+    
+    # Automatic entropy tuning
+    if Config.autotune_alpha:
+        target_entropy = Config.target_entropy_scale * action_shape
+        log_alpha = torch.zeros(1, requires_grad=True, device=device)
+        alpha = log_alpha.exp().item()
+        alpha_optim = optim.Adam([log_alpha], lr=Config.learning_rate)
+    else:
+        alpha = Config.alpha
 
     # Set networks to training mode
     q1_network.train()
@@ -670,13 +706,10 @@ def train_td3(
     actor_net.train()
 
     # Replay buffer
-    obs_space_obj = env.single_observation_space if Config.n_envs > 1 else env.observation_space
-    action_space_obj = env.single_action_space if Config.n_envs > 1 else env.action_space
-
     replay_buffer = ReplayBuffer(
         Config.buffer_size,
-        obs_space_obj,
-        action_space_obj,
+        env.observation_space,
+        env.action_space,
         device=device,
         handle_timeout_termination=False,
         n_envs=Config.n_envs,
@@ -684,77 +717,85 @@ def train_td3(
 
     obs, _ = env.reset()
     start_time = time.time()
-    updates = Config.total_timesteps // Config.n_envs
-    
-    for step in tqdm(range(updates), desc="Training"):
-        # Get action from actor network with exploration noise
+
+    for step in tqdm(range(Config.total_timesteps)):
+        # Sample action from stochastic policy
         with torch.no_grad():
-            action = actor_net.get_action(
-                torch.tensor(obs, device=device, dtype=torch.float32)
+            action, _ = actor_net.get_action(
+                torch.tensor(obs, device=device, dtype=torch.float32).unsqueeze(0)
             )
-            action = action + torch.clip(
-                torch.randn_like(action) * Config.exploration_fraction,
-                -Config.noise_clip,
-                Config.noise_clip,
-            )
-            action = torch.clip(action, Config.low, Config.high)
-            
-            if isinstance(env.action_space, gym.spaces.Discrete):
-                action = action[0]
-            else:
-                action = action.cpu().numpy()
-    
-        new_obs, reward, terminated, truncated, info = env.step(action)
+
+        action_np = action.cpu().numpy().flatten()
+
+        new_obs, reward, terminated, truncated, info = env.step(action_np)
         done = np.logical_or(terminated, truncated)
         replay_buffer.add(
-            obs, new_obs, action, np.array(reward), np.array(done), [info]
+            obs, new_obs, action_np, np.array(reward), np.array(done), [info]
         )
 
         # Training step
         if step > Config.learning_starts:
             data = replay_buffer.sample(Config.batch_size)
             
-            # TD3: Target Policy Smoothing - add noise to target actions
+            # Update Q-networks
             with torch.no_grad():
-                next_actions = target_actor_net.get_action(
+                next_actions, next_log_probs = actor_net.get_action(
                     data.next_observations.to(torch.float32)
                 )
-                noise = torch.clip(
-                    torch.randn_like(next_actions) * Config.policy_noise,
-                    -Config.noise_clip,
-                    Config.noise_clip
-                )
-                next_actions = next_actions + noise
-                next_actions = torch.clip(next_actions, Config.low, Config.high)
-                
-                # TD3: Clipped Double Q-learning - use min of two Q-networks
                 target_q1 = target_q1_network(
                     data.next_observations.to(torch.float32), next_actions
                 )
                 target_q2 = target_q2_network(
                     data.next_observations.to(torch.float32), next_actions
                 )
-                target_max = torch.min(target_q1, target_q2)
-                td_target = (data.rewards + Config.gamma * target_max * (1 - data.dones)).detach()
+                min_target_q = torch.min(target_q1, target_q2)
+                td_target = data.rewards + Config.gamma * (min_target_q - alpha * next_log_probs) * (1 - data.dones)
 
-            # Update both Q-networks
             # Update Q1
             q1_optim.zero_grad()
-            old_val1 = q1_network(
+            current_q1 = q1_network(
                 data.observations.to(torch.float32), data.actions.to(torch.float32)
             )
-            loss1 = nn.functional.mse_loss(old_val1, td_target)
-            loss1.backward()
+            q1_loss = nn.functional.mse_loss(current_q1, td_target)
+            q1_loss.backward()
             q1_optim.step()
             
             # Update Q2
             q2_optim.zero_grad()
-            old_val2 = q2_network(
+            current_q2 = q2_network(
                 data.observations.to(torch.float32), data.actions.to(torch.float32)
             )
-            loss2 = nn.functional.mse_loss(old_val2, td_target)
-            loss2.backward()
+            q2_loss = nn.functional.mse_loss(current_q2, td_target)
+            q2_loss.backward()
             q2_optim.step()
+
+            # Update policy
+            if step % Config.policy_frequency == 0:
+                actor_optim.zero_grad()
+                new_actions, log_probs = actor_net.get_action(
+                    data.observations.to(torch.float32)
+                )
+                q1_new = q1_network(data.observations.to(torch.float32), new_actions)
+                q2_new = q2_network(data.observations.to(torch.float32), new_actions)
+                min_q_new = torch.min(q1_new, q2_new)
+                
+                actor_loss = (alpha * log_probs - min_q_new).mean()
+                actor_loss.backward()
+                actor_optim.step()
+                
+                # Update alpha (temperature parameter)
+                if Config.autotune_alpha:
+                    alpha_optim.zero_grad()
+                    alpha_loss = (-log_alpha.exp() * (log_probs + target_entropy).detach()).mean()
+                    alpha_loss.backward()
+                    alpha_optim.step()
+                    alpha = log_alpha.exp().item()
+
+            # Soft update target networks
+            for param, target_param in zip(q1_network.parameters(), target_q1_network.parameters()):
+                target_param.data.copy_(Config.tau * param.data + (1 - Config.tau) * target_param.data)
+            for param, target_param in zip(q2_network.parameters(), target_q2_network.parameters()):
+                target_param.data.copy_(Config.tau * param.data + (1 - Config.tau) * target_param.data)
 
             # Log gradient norm per layer for critics
             if Config.use_wandb and Config.log_gradients:
@@ -776,61 +817,22 @@ def train_td3(
                                 "global_step": step,
                             }
                         )
+                        
+            # Log training metrics
+            if Config.use_wandb and step % 100 == 0:
+                wandb.log({
+                    "losses/q1_loss": q1_loss.item(),
+                    "losses/q2_loss": q2_loss.item(),
+                    "losses/actor_loss": actor_loss.item() if step % Config.policy_frequency == 0 else 0,
+                    "alpha": alpha,
+                    "global_step": step,
+                })
 
-            # Apply gradient clipping for critics
-            if Config.max_grad_norm != 0.0:
-                torch.nn.utils.clip_grad_norm_(
-                    list(q1_network.parameters()),
-                    max_norm=Config.max_grad_norm,
-                )
-                torch.nn.utils.clip_grad_norm_(
-                    list(q2_network.parameters()),
-                    max_norm=Config.max_grad_norm,
-                )
 
-            # TD3: Delayed Policy Updates - update actor less frequently than critics
-            if step % Config.train_frequency == 0:
-                actor_optim.zero_grad()
-                actions = actor_net.get_action(data.observations.to(torch.float32))
-                # Only use Q1 for policy gradient (standard practice in TD3)
-                policy_loss = -q1_network(
-                    data.observations.to(torch.float32), actions.to(torch.float32)
-                ).mean()
-                policy_loss.backward()
-
-                # Log gradient norm per layer for actor
-                if Config.use_wandb and Config.log_gradients:
-                    for name, param in actor_net.named_parameters():
-                        if param.grad is not None:
-                            grad_norm = torch.norm(param.grad.detach(), 2).item()
-                            wandb.log(
-                                {
-                                    f"gradients/actor_layer_{name}": grad_norm,
-                                    "global_step": step,
-                                }
-                            )
-
-                # Apply gradient clipping for actor
-                if Config.max_grad_norm != 0.0:
-                    torch.nn.utils.clip_grad_norm_(
-                        list(actor_net.parameters()),
-                        max_norm=Config.max_grad_norm,
-                    )
-
-                actor_optim.step()
-
-            # Update target networks (soft update for both Q-networks and actor)
+            # Update target networks
             if step % Config.target_network_frequency == 0:
                 for q_params, target_params in zip(
-                    q1_network.parameters(), target_q1_network.parameters()
-                ):
-                    target_params.data.copy_(
-                        Config.tau * q_params.data
-                        + (1.0 - Config.tau) * target_params.data
-                    )
-                
-                for q_params, target_params in zip(
-                    q2_network.parameters(), target_q2_network.parameters()
+                    q_network.parameters(), target_q_network.parameters()
                 ):
                     target_params.data.copy_(
                         Config.tau * q_params.data
@@ -876,22 +878,9 @@ def train_td3(
 
             # Log losses and metrics
             if step % 1000 == 0 and step > Config.learning_starts:
-                if Config.use_wandb:
-                    wandb.log(
-                        {
-                            "losses/q1_loss": loss1.item(),
-                            "losses/q2_loss": loss2.item(),
-                            "losses/actor_loss": policy_loss.item()
-                            if step % Config.train_frequency == 0
-                            else 0.0,
-                            "charts/learning_rate": actor_optim.param_groups[0]["lr"],
-                            "rewards/rewards_mean": data.rewards.mean().item(),
-                            "rewards/rewards_std": data.rewards.std().item(),
-                            "global_step": step,
-                        }
-                    )
+                sps = int(step / (time.time() - start_time))
                 print(
-                    f"Step {step}, Q1 Loss: {loss1.item():.4f}, Q2 Loss: {loss2.item():.4f}, Actor Loss: {policy_loss.item() if step % Config.train_frequency == 0 else 0.0:.4f}, SPS: {int(step / (time.time() - start_time))}"
+                    f"Step {step}, Q1 Loss: {q1_loss.item():.4f}, Q2 Loss: {q2_loss.item():.4f}, Alpha: {alpha:.4f}, SPS: {sps}"
                 )
 
             # Evaluation
@@ -947,11 +936,9 @@ def train_td3(
             torch.save(
                 {
                     "actor": actor_net.state_dict(),
-                    "q1_network": q1_network.state_dict(),
-                    "q2_network": q2_network.state_dict(),
+                    "q_network": q_network.state_dict(),
                     "target_actor": target_actor_net.state_dict(),
-                    "target_q1_network": target_q1_network.state_dict(),
-                    "target_q2_network": target_q2_network.state_dict(),
+                    "target_q_network": target_q_network.state_dict(),
                 },
                 model_path,
             )
@@ -990,7 +977,7 @@ def train_td3(
     return actor_net
 
 
-def train_td3_cnn(
+def train_ddpg_cnn(
     env_id: Optional[str] = None,
     env: Optional[gym.Env] = None,
     total_timesteps: int = Config.total_timesteps,
@@ -1006,7 +993,6 @@ def train_td3_cnn(
     train_frequency: int = Config.train_frequency,
     exploration_noise: float = Config.exploration_fraction,
     noise_clip: float = Config.noise_clip,
-    policy_noise: float = Config.policy_noise,
     low: float = Config.low,
     high: float = Config.high,
     capture_video: bool = Config.capture_video,
@@ -1058,10 +1044,9 @@ def train_td3_cnn(
     Config.env_wrapper = env_wrapper
     Config.exploration_fraction = exploration_noise
     Config.noise_clip = noise_clip
-    Config.policy_noise = policy_noise
     Config.low = low
     Config.high = high
-    Config.normalize_obs = False  # Not supported for CNN-based TD3
+    Config.normalize_obs = False  # Not supported for CNN-based DDPG
     Config.normalize_reward = normalize_reward
 
     # Validate that only one of env_id or env is provided
@@ -1098,26 +1083,43 @@ def train_td3_cnn(
     torch.manual_seed(Config.seed)
     device = torch.device(Config.device)
 
-    # Create environment(s)
-    if Config.n_envs > 1:
-        # Create vectorized environments for parallel execution
-        env_thunks = [
-            make_env(Config.env_id if env is None else "", Config.seed, i, render_mode="rgb_array", env_wrapper=Config.env_wrapper, env=env)
-            for i in range(Config.n_envs)
-        ]
-        env = gym.vector.SyncVectorEnv(env_thunks)
-        is_discrete_obs = isinstance(env.single_observation_space, gym.spaces.Discrete)
-        obs_space = env.single_observation_space
-        obs_shape = obs_space.n if is_discrete_obs else obs_space.shape
-        action_shape = env.single_action_space.n if isinstance(env.single_action_space, gym.spaces.Discrete) else env.single_action_space.shape[0]
+    # Create environment
+    if env is not None:
+        env_thunk = make_env(
+            "",
+            Config.seed,
+            idx=0,
+            render_mode="rgb_array",
+            env_wrapper=Config.env_wrapper,
+            env=env,
+        )
     else:
-        # Single environment
-        env_thunk = make_env(Config.env_id if env is None else "", Config.seed, idx=0, render_mode="rgb_array", env_wrapper=Config.env_wrapper, env=env)
-        env = env_thunk()
-        is_discrete_obs = isinstance(env.observation_space, gym.spaces.Discrete)
-        obs_space = env.observation_space
-        obs_shape = obs_space.n if is_discrete_obs else obs_space.shape
-        action_shape = env.action_space.n if isinstance(env.action_space, gym.spaces.Discrete) else env.action_space.shape[0]
+        env_thunk = make_env(
+            Config.env_id,
+            Config.seed,
+            idx=0,
+            render_mode="rgb_array",
+            env_wrapper=Config.env_wrapper,
+        )
+
+    env = env_thunk()
+
+    # Determine if we're dealing with discrete observation spaces
+    is_discrete_obs = isinstance(env.observation_space, gym.spaces.Discrete)
+    obs_space = env.observation_space
+
+    # Compute observation dimensions
+    if is_discrete_obs:
+        obs_shape = obs_space.n
+    else:
+        obs_shape = obs_space.shape
+
+    # Compute action dimensions
+    action_shape = (
+        env.action_space.n
+        if isinstance(env.action_space, gym.spaces.Discrete)
+        else env.action_space.shape[0]
+    )
 
     # Create actor network
     if isinstance(actor_class, nn.Module):
@@ -1132,50 +1134,41 @@ def train_td3_cnn(
     if isinstance(q_network_class, nn.Module):
         # Use custom critic instance
         validate_critic_network_dimensions(q_network_class, obs_shape, action_shape)
-        q_network_class = q_network_class.to(device)
+        q_network = q_network_class.to(device)
     else:
         # Use critic class
-        q_network_class = q_network_class(obs_shape, action_shape).to(device)
+        q_network = q_network_class(obs_shape, action_shape).to(device)
 
     actor_net = actor_class(obs_shape, action_shape).to(device)
-    q1_network = q_network_class.to(device)
-    q2_network = q_network_class.to(device)
+    q_network = q_network_class(obs_shape, action_shape).to(device)
 
     # Create target networks
     target_actor_net = actor_class(obs_shape, action_shape).to(device)
-    target_q1_network = q_network_class.to(device)
-    target_q2_network = q_network_class.to(device)
+    target_q_network = q_network_class(obs_shape, action_shape).to(device)
 
-    target_q1_network.load_state_dict(q1_network.state_dict())
-    target_q2_network.load_state_dict(q2_network.state_dict())
+    target_q_network.load_state_dict(q_network.state_dict())
     target_actor_net.load_state_dict(actor_net.state_dict())
 
     # Print network architecture
     print("Actor Network Architecture:")
     print(actor_net)
-    print("\nQ1 Network Architecture:")
-    print(q1_network)
-    print("\nQ2 Network Architecture:")
-    print(q2_network)
+    print("\nCritic Network Architecture:")
+    print(q_network)
 
     # Optimizers
     actor_optim = optim.Adam(actor_net.parameters(), lr=Config.learning_rate)
-    q1_optim = optim.Adam(q1_network.parameters(), lr=Config.learning_rate)
-    q2_optim = optim.Adam(q2_network.parameters(), lr=Config.learning_rate)
+    q_optim = optim.Adam(q_network.parameters(), lr=Config.learning_rate)
 
     # Set networks to training mode
-    q1_network.train()
-    q2_network.train()
+    q_network.train()
     actor_net.train()
 
     # Replay buffer
-    obs_space_obj = env.single_observation_space if Config.n_envs > 1 else env.observation_space
-    action_space_obj = env.single_action_space if Config.n_envs > 1 else env.action_space
 
     replay_buffer = ReplayBuffer(
         Config.buffer_size,
-        obs_space_obj,
-        action_space_obj,
+        env.observation_space,
+        env.action_space,
         device=device,
         handle_timeout_termination=False,
         n_envs=Config.n_envs,
@@ -1184,13 +1177,10 @@ def train_td3_cnn(
     obs, _ = env.reset()
     start_time = time.time()
 
-    # Enable anomaly detection for debugging inplace operations
-    torch.autograd.set_detect_anomaly(True)
-    
     for step in tqdm(range(Config.total_timesteps)):
         # Get action from actor network with exploration noise
         with torch.no_grad():
-            action = actor_net.get_action(
+            action = actor_net(
                 torch.tensor(obs, device=device, dtype=torch.float32).unsqueeze(0)
             )
             action = action + torch.clip(
@@ -1210,105 +1200,77 @@ def train_td3_cnn(
         # Training step
         if step > Config.learning_starts:
             data = replay_buffer.sample(Config.batch_size)
-            
-            # Clone data to avoid inplace operation issues with gradients
-            obs = data.observations.to(torch.float32).clone()
-            next_obs = data.next_observations.to(torch.float32).clone()
-            actions_data = data.actions.to(torch.float32).clone()
-            rewards = data.rewards.clone()
-            dones = data.dones.clone()
-            
-            # TD3: Target Policy Smoothing
             with torch.no_grad():
-                next_actions = target_actor_net.get_action(next_obs)
-                noise = torch.clip(
-                    torch.randn_like(next_actions) * Config.policy_noise,
-                    -Config.noise_clip,
-                    Config.noise_clip
+                next_actions = target_actor_net(
+                    data.next_observations.to(torch.float32)
                 )
-                next_actions = next_actions + noise
-                next_actions = torch.clip(next_actions, Config.low, Config.high)
-                
-                # TD3: Clipped Double Q-learning
-                target_q1 = target_q1_network(next_obs, next_actions)
-                target_q2 = target_q2_network(next_obs, next_actions)
-                target_max = torch.min(target_q1, target_q2)
-                td_target = (rewards + Config.gamma * target_max * (1 - dones)).detach()
+                target_max = target_q_network(
+                    data.next_observations.to(torch.float32), next_actions
+                )
+                td_target = data.rewards + Config.gamma * target_max * (1 - data.dones)
 
-            # Update both Q-networks
-            # Update Q1
-            q1_optim.zero_grad()
-            old_val1 = q1_network(obs, actions_data)
-            loss1 = nn.functional.mse_loss(old_val1, td_target)
-            loss1.backward()
-            # Apply gradient clipping for q1
-            if Config.max_grad_norm != 0.0:
-                torch.nn.utils.clip_grad_norm_(
-                    list(q1_network.parameters()),
-                    max_norm=Config.max_grad_norm,
-                )
-            q1_optim.step()
-            
-            # Update Q2
-            q2_optim.zero_grad()
-            old_val2 = q2_network(obs, actions_data)
-            loss2 = nn.functional.mse_loss(old_val2, td_target)
-            loss2.backward()
-            # Apply gradient clipping for q2
-            if Config.max_grad_norm != 0.0:
-                torch.nn.utils.clip_grad_norm_(
-                    list(q2_network.parameters()),
-                    max_norm=Config.max_grad_norm,
-                )
-            q2_optim.step()
+            old_val = q_network(
+                data.observations.to(torch.float32), data.actions.to(torch.float32)
+            )
 
-            # Log gradient norm per layer for critics
+            q_optim.zero_grad()
+            loss = nn.functional.mse_loss(old_val, td_target)
+            loss.backward()
+
+            # Log gradient norm per layer for critic
             if Config.use_wandb and Config.log_gradients:
-                for name, param in q1_network.named_parameters():
+                for name, param in q_network.named_parameters():
                     if param.grad is not None:
                         grad_norm = torch.norm(param.grad.detach(), 2).item()
                         wandb.log(
                             {
-                                f"gradients/q1_layer_{name}": grad_norm,
-                                "global_step": step,
-                            }
-                        )
-                for name, param in q2_network.named_parameters():
-                    if param.grad is not None:
-                        grad_norm = torch.norm(param.grad.detach(), 2).item()
-                        wandb.log(
-                            {
-                                f"gradients/q2_layer_{name}": grad_norm,
+                                f"gradients/critic_layer_{name}": grad_norm,
                                 "global_step": step,
                             }
                         )
 
-            # TD3: Delayed Policy Updates
+            # Apply gradient clipping for critic
+            if Config.max_grad_norm != 0.0:
+                torch.nn.utils.clip_grad_norm_(
+                    list(q_network.parameters()),
+                    max_norm=Config.max_grad_norm,
+                )
+
+            q_optim.step()
+
             if step % Config.train_frequency == 0:
                 actor_optim.zero_grad()
-                actions = actor_net.get_action(obs)
-                policy_loss = -q1_network(obs, actions).mean()
+                actions = actor_net(data.observations.to(torch.float32))
+                policy_loss = -q_network(
+                    data.observations.to(torch.float32), actions.to(torch.float32)
+                ).mean()
                 policy_loss.backward()
+
+                # Log gradient norm per layer for actor
+                if Config.use_wandb and Config.log_gradients:
+                    for name, param in actor_net.named_parameters():
+                        if param.grad is not None:
+                            grad_norm = torch.norm(param.grad.detach(), 2).item()
+                            wandb.log(
+                                {
+                                    f"gradients/actor_layer_{name}": grad_norm,
+                                    "global_step": step,
+                                }
+                            )
+
                 # Apply gradient clipping for actor
                 if Config.max_grad_norm != 0.0:
                     torch.nn.utils.clip_grad_norm_(
-                        list(actor_net.parameters()),
+                        list(actor_net.parameters() + q_network.parameters()),
                         max_norm=Config.max_grad_norm,
                     )
+
                 actor_optim.step()
 
             # Update target networks
             if step % Config.target_network_frequency == 0:
                 for q_params, target_params in zip(
-                    q1_network.parameters(), target_q1_network.parameters()
-                ):
-                    target_params.data.copy_(
-                        Config.tau * q_params.data
-                        + (1.0 - Config.tau) * target_params.data
-                    )
-                
-                for q_params, target_params in zip(
-                    q2_network.parameters(), target_q2_network.parameters()
+                    q_network.parameters(), target_q_network.parameters()
                 ):
                     target_params.data.copy_(
                         Config.tau * q_params.data
@@ -1357,8 +1319,7 @@ def train_td3_cnn(
                 if Config.use_wandb:
                     wandb.log(
                         {
-                            "losses/q1_loss": loss1.item(),
-                            "losses/q2_loss": loss2.item(),
+                            "losses/critic_loss": loss.item(),
                             "losses/actor_loss": policy_loss.item()
                             if step % Config.train_frequency == 0
                             else 0.0,
@@ -1369,7 +1330,7 @@ def train_td3_cnn(
                         }
                     )
                 print(
-                    f"Step {step}, Q1 Loss: {loss1.item():.4f}, Q2 Loss: {loss2.item():.4f}, Actor Loss: {policy_loss.item() if step % Config.train_frequency == 0 else 0.0:.4f}, SPS: {int(step / (time.time() - start_time))}"
+                    f"Step {step}, Critic Loss: {loss.item():.4f}, Actor Loss: {policy_loss.item() if step % Config.train_frequency == 0 else 0.0:.4f}, SPS: {int(step / (time.time() - start_time))}"
                 )
 
             # Evaluation
@@ -1425,11 +1386,9 @@ def train_td3_cnn(
             torch.save(
                 {
                     "actor": actor_net.state_dict(),
-                    "q1_network": q1_network.state_dict(),
-                    "q2_network": q2_network.state_dict(),
+                    "q_network": q_network.state_dict(),
                     "target_actor": target_actor_net.state_dict(),
-                    "target_q1_network": target_q1_network.state_dict(),
-                    "target_q2_network": target_q2_network.state_dict(),
+                    "target_q_network": target_q_network.state_dict(),
                 },
                 model_path,
             )
@@ -1470,4 +1429,4 @@ def train_td3_cnn(
 
 # --- Main Execution ---
 if __name__ == "__main__":
-    train_td3()
+    train_sac()

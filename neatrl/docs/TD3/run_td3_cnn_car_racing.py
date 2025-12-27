@@ -16,7 +16,6 @@ import cv2
 def car_racing_wrapper(env):
     return PreprocessAndFrameStack(env, height=84, width=84, num_stack=4)
 
-torch.autograd.set_detect_anomaly(True)
 
 class PreprocessAndFrameStack(gym.ObservationWrapper):
     """
@@ -73,24 +72,17 @@ class FeatureExtractor(nn.Module):
         super().__init__()
 
         self.conv1 = layer_init(nn.Conv2d(obs_shape[0], 32, kernel_size=8, stride=4))
-        self.relu1 = nn.ReLU()
         self.conv2 = layer_init(nn.Conv2d(32, 64, kernel_size=4, stride=2))
-        self.relu2 = nn.ReLU()
         self.conv3 = layer_init(nn.Conv2d(64, 64, kernel_size=3, stride=1))
-        self.relu3 = nn.ReLU()
         self.flatten = nn.Flatten()
         self.fc = layer_init(nn.Linear(64 * 7 * 7, 512))
-        self.relu_fc = nn.ReLU()
 
     def forward(self, x):
-        
-        x = self.relu1(self.conv1(x))
-        x = self.relu2(self.conv2(x))
-        x = self.relu3(self.conv3(x))
+        x = torch.nn.functional.relu(self.conv1(x))
+        x = torch.nn.functional.relu(self.conv2(x))
+        x = torch.nn.functional.relu(self.conv3(x))
         x = self.flatten(x)
-        
-        
-        x = self.relu_fc(self.fc(x))
+        x = torch.nn.functional.relu(self.fc(x))
         return x
 
 
@@ -115,10 +107,15 @@ class ActorNet(nn.Module):
         return x
     def get_action(self, state: torch.Tensor) -> torch.Tensor:
         x = self.forward(state)
-        out1 = torch.tanh(x[:, 0:1])
-        out2 = torch.sigmoid(x[:, 1:2])
-        out3 = torch.sigmoid(x[:, 2:3])
+        action1 = x[:, 0:1]
+        action2 = x[:, 1:2]
+        action3 = x[:, 2:3]
+        
+        out1 = torch.tanh(action1)
+        out2 = torch.sigmoid(action2)
+        out3 = torch.sigmoid(action3)
         out = torch.cat([out1, out2, out3], dim=1)
+        
         return out
 
 
@@ -134,13 +131,13 @@ class QNet(nn.Module):
         self.out = nn.Linear(256, 1)
 
     def forward(self, state, act):
-        st = self.feature_extractor(state)
-        st = torch.nn.functional.mish(self.fc1(st))
+        features = self.feature_extractor(state)
+        st = torch.nn.functional.mish(self.fc1(features))
         action = torch.nn.functional.mish(self.fc2(act))
-        temp = torch.cat((st, action), dim=1)
-        x = torch.nn.functional.mish(self.fc3(temp))
-        x = torch.nn.functional.mish(self.reduce(x))
-        x = self.out(x)
+        combined = torch.cat((st, action), dim=1)
+        combined_features = torch.nn.functional.mish(self.fc3(combined))
+        out = torch.nn.functional.mish(self.reduce(combined_features))
+        x = self.out(out)
         return x
     
 env = gym.make("CarRacing-v3")
@@ -156,7 +153,7 @@ if __name__ == "__main__":
         gamma=0.99,
         tau=0.005,
         batch_size=128,
-        learning_starts=25000,
+        learning_starts=2500,
         train_frequency=4,  # Delayed policy updates
         target_network_frequency=10,
         policy_noise=0.2,  # Target policy smoothing
