@@ -88,7 +88,7 @@ def train_run_pendulum():
         gamma=0.99,  # Discount factor
         use_wandb=True,  # Set to True to enable logging
         capture_video=True,
-        eval_every=1000,  # Evaluate every 1k steps
+        eval_every=10000,  # Evaluate every 1k steps
         save_every=50000,  # Save model every 50k steps
         num_eval_episodes=2,
         normalize_obs=False,  # Pendulum doesn't need normalization

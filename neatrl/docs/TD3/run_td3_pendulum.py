@@ -29,13 +29,15 @@ class ActorNet(nn.Module):
         self.out = nn.Linear(256, action_space)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = torch.tanh(
-            self.out(
+        res = self.out(
                 torch.nn.functional.mish(
                     self.fc2(torch.nn.functional.mish(self.fc1(x)))
                 )
             )
-        )
+        return res
+        
+    def get_action(self, state: torch.Tensor) -> torch.Tensor:
+        x = torch.nn.functional.tanh(self.forward(state))
         x = x * 2.0  # Scale to action limits for Pendulum
         return x
 
@@ -66,13 +68,13 @@ if __name__ == "__main__":
     # Train TD3 on Pendulum
     train_td3(
         env_id="Pendulum-v1",
-        total_timesteps=200000,
+        total_timesteps=1000000,
         learning_rate=3e-4,
         buffer_size=100000,
         gamma=0.99,
         tau=0.005,
         batch_size=256,
-        learning_starts=10000,
+        learning_starts=25000,
         train_frequency=2,  # Delayed policy updates
         policy_noise=0.2,  # Target policy smoothing
         exploration_noise=0.1,  # Exploration noise
@@ -82,8 +84,8 @@ if __name__ == "__main__":
         use_wandb=True,
         wandb_project="TD3-Pendulum",
         exp_name="td3_pendulum_baseline",
-        eval_every=5000,
-        num_eval_episodes=10,
+        eval_every=10000,
+        num_eval_episodes=4,
         capture_video=True,
         actor_class=ActorNet,
         q_network_class=QNet,

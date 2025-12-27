@@ -28,13 +28,14 @@ class ActorNet(nn.Module):
         self.out = nn.Linear(256, action_space)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = torch.tanh(
-            self.out(
+        x = self.out(
                 torch.nn.functional.mish(
                     self.fc2(torch.nn.functional.mish(self.fc1(x)))
                 )
             )
-        )
+        return x
+    def get_action(self, state: torch.Tensor) -> torch.Tensor:
+        x = torch.nn.functional.tanh(self.forward(state))
         x = x * 1.0  # Scale to action limits
         return x
 
@@ -87,5 +88,6 @@ if __name__ == "__main__":
         capture_video=True,
         actor_class=ActorNet,
         q_network_class=QNet,
-        device="cuda",  # Use GPU if available
+        device="cpu",  # Use GPU if available
+        n_envs=4
     )
