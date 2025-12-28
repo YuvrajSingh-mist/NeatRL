@@ -11,6 +11,23 @@ All notable changes to this project will be documented in this file.
   - **GAE Support**: Generalized Advantage Estimation with configurable lambda parameter for improved advantage estimation
   - **Vectorized Environments**: Support for parallel environments (`n_envs` parameter)
 
+### Added - TD3 Algorithm Implementation
+- **TD3 (Twin Delayed DDPG)**: Advanced actor-critic method for continuous action spaces with improved stability
+  - **Twin Q-Networks**: Uses two Q-networks to reduce overestimation bias
+  - **Delayed Policy Updates**: Updates policy less frequently than Q-networks for stability
+  - **Target Policy Smoothing**: Adds noise to target actions to improve exploration
+  - **Experience Replay**: Experience replay buffer for stable learning
+  - **CNN Support**: `train_td3_cnn()` function for image-based environments like CarRacing
+
+### Added - SAC Algorithm Implementation
+- **SAC (Soft Actor-Critic)**: State-of-the-art maximum entropy RL algorithm
+  - **Stochastic Policy**: Uses Gaussian policies with reparameterization trick
+  - **Twin Q-Networks**: Two Q-networks to reduce overestimation bias
+  - **Automatic Entropy Tuning**: Adaptive temperature parameter (alpha) for entropy regularization
+  - **Maximum Entropy**: Balances exploration and exploitation through entropy maximization
+  - **CNN Support**: `train_sac_cnn()` function for image-based environments
+  - **Comprehensive Logging**: WandB integration with entropy metrics (alpha, entropy, target_entropy)
+
 ### Added - DDPG Algorithm Implementation
 - **DDPG (Deep Deterministic Policy Gradient)**: Full implementation of actor-critic method for continuous action spaces
   - **Deterministic Policy Gradient**: Optimized for continuous control tasks with deterministic policies

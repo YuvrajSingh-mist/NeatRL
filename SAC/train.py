@@ -166,19 +166,10 @@ def evaluate(model, device, run_name, num_eval_eps = 10, record = False):
 
           
         returns.append(episode_reward)
-        # if eps == 0:  # Save frames only for the first episode (optional)
-        #     frames = episode_frames.copy()  # Avoid memory issues
+
 
     eval_env.close()
-    
-    # # Save video
-    # if frames:
-    #     os.makedirs(f"videos/{run_name}/eval", exist_ok=True)
-    #     imageio.mimsave(
-    #         f"videos/{run_name}/eval/eval_video.mp4",
-    #         frames,
-    #         fps=30
-    #     )
+
     
     return returns, frames
 
@@ -246,18 +237,10 @@ start_time = time.time()
 
 
 for step in tqdm(range(args.total_timesteps)):
-    
-    # eps = eps_decay(step, args.exploration_fraction)
-    # rnd = random.random()
-    # if rnd < eps:
-    #     action = env.action_space.sample()
-    # else:
+
     # Get action from actor network
     with torch.no_grad():  # No need to track gradients for environment interactions
-        action, _, entropy = actor_net.get_action(torch.tensor(obs, device=device).unsqueeze(0))
-        # noise = torch.clip(torch.randn_like(action) * args.exploration_fraction, -args.clip, args.clip) # Add some noise for exploration
-        # action += entropy
-        # action = torch.clip(action, args.low, args.high)
+       
     # Convert to numpy for environment step (no gradients needed here)
     action = action.cpu().numpy().flatten()  # Convert to numpy array and flatten
     new_obs, reward, terminated, truncated, info = env.step(action)
@@ -279,32 +262,7 @@ for step in tqdm(range(args.total_timesteps)):
     if step > args.learning_starts:
         data = replay_buffer.sample(args.batch_size)
 
-        # Q(s t ​ ,a t ​ )←Q(s t ​ ,a t ​ )+α ​ TD target r t ​ +γ a ′ max ​ Q(s t+1 ​ ,a ′ ) ​ ​ −Q(s t ​ ,a t ​ ) ​
-        # with torch.no_grad():
-        
-        # returns = []
-        
-        # bootstrap = 0
-        
-        # if data.dones.flatten().tolist()[-1] == 0:
-            
-        #     bootstrap = target_q_network(data.next_observations).max(1)[0]  # dim=1
-            
-        # gt_next_state = bootstrap
-        # for reward_at_t, done_at_t in zip(reversed(data.rewards.flatten().tolist()), reversed(data.dones.flatten().tolist())):
-        #     if done_at_t:
-        #         gt_next_state = 0.0
-        #     rt = reward_at_t + args.gamma * gt_next_state
-        #     returns.insert(0, rt)
-        #     gt_next_state = rt
-
-        # actor_optim.zero_grad()
-        # returns = torch.tensor(returns, device=device, dtype=torch.float32)
-        # actions = actor_net(data.observations)
-        # action_values = -q1_network(data.observations, actions).mean()  # Maximize Q-value for next actions
-        # action_values.backward()
-        # actor_optim.step()
-
+       
         #why min of target q nets? well bruh thats cus the max op is being on them (kinda)! so we have to lower the overestimation of them!!
         with torch.no_grad():
             next_actions, log_pr, entropy = actor_net.get_action(data.next_observations)
@@ -356,28 +314,6 @@ for step in tqdm(range(args.total_timesteps)):
                 })
         
         
-    # if args.capture_video:
-    #     frame = env.render()                     # Render as RGB array
-      # If the episode ended this step
-        # if done :
-        #     cv2.putText(frame, f"Episode Done!", (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 
-        #                 1, (0, 0, 255), 2, cv2.LINE_AA)
-        #     if reward > 200:
-        #         cv2.putText(frame, "SUCCESS!", (10, 110), cv2.FONT_HERSHEY_SIMPLEX, 
-        #                     1, (0, 255, 0), 2, cv2.LINE_AA)
-        #     else:
-        #         cv2.putText(frame, "FAILED!", (10, 110), cv2.FONT_HERSHEY_SIMPLEX, 
-        #                     1, (0, 0, 255), 2, cv2.LINE_AA)
-
-        # # Overlay step count
-        # cv2.putText(frame, f"Step: {step}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 
-        #             1, (255, 255, 255), 2, cv2.LINE_AA)
-
-        # # Display the window
-        # cv2.imshow("CartPole Training", frame)
-        # cv2.waitKey(1)
-            
-       
         # Update target network
             
         if step % args.target_network_frequency == 0:

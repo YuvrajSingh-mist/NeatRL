@@ -14,13 +14,7 @@ import wandb
 import cv2
 import ale_py
 import imageio
-from stable_baselines3.common.atari_wrappers import (
-    ClipRewardEnv,
-    EpisodicLifeEnv,
-    FireResetEnv,
-    MaxAndSkipEnv,
-    NoopResetEnv,
-)
+
 
 gym.register_envs(ale_py)
 # ===== CONFIGURATION =====
@@ -162,41 +156,10 @@ def make_env(env_id, seed, idx, run_name, eval_mode=False):
         # Force RGB24 format for ViZDoom to avoid CRCGCB warning
         env = gym.make(env_id, render_mode=render_mode, continuous=False)
         env = gym.wrappers.RecordEpisodeStatistics(env)
-        # env = gym.wrappers.AtariPreprocessing(env,
-        #     frame_skip=4,  # Standard frame skip for Atari
-        #     grayscale_obs=True,  # Add channel dimension for grayscale
-        #     scale_obs=True,  # Scale observations to [0, 1]
-        #     screen_size=(TARGET_HEIGHT, TARGET_WIDTH),  # Resize to target dimensions
-        # )
+       
         # # Use our custom wrapper for all preprocessing
         env = PreprocessAndFrameStack(env, height=84, width=84, num_stack=4)
-        # env = gym.wrappers.FrameStackObservation(env, 4)
         
-        # env = gym.wrappers.RecordEpisodeStatistics(env)
-        # env = NoopResetEnv(env, noop_max=30)
-        # env = MaxAndSkipEnv(env, skip=4)
-        # env = EpisodicLifeEnv(env)  
-        # # print(env.unwrapped.get_action_meanings())
-        # if "FIRE" in env.unwrapped.get_action_meanings():
-        #     env = FireResetEnv(env)
-        # env = ClipRewardEnv(env)
-        # env = gym.wrappers.ResizeObservation(env, (84, 84))
-        # env = gym.wrappers.GrayscaleObservation(env)
-        # env = gym.wrappers.FrameStackObservation(env, 4)
-         # Use the all-in-one, official Atari wrapper
-        # env = gym.wrappers.AtariPreprocessing(
-        #     env,
-        #     noop_max=30,
-        #     frame_skip=4,
-        #     screen_size=84, # It assumes square images
-        #     terminal_on_life_loss=True, # Standard for training
-        #     grayscale_obs=True,
-        #     scale_obs=True # We want uint8 [0, 255] for storage
-        # )
-        
-        # Now, stack the preprocessed frames
-        # env = ClipRewardEnv(env)  # Clip rewards to [-1, 1]
-        # env = gym.wrappers.FrameStackObservation(env, 4)
         env.action_space.seed(seed + idx)
         env.observation_space.seed(seed + idx)
         return env
@@ -244,14 +207,6 @@ def evaluate(model, device, run_name, num_eval_eps = 10, record = False):
 
     eval_env.close()
     
-    # # Save video
-    # if frames:
-    #     os.makedirs(f"videos/{run_name}/eval", exist_ok=True)
-    #     imageio.mimsave(
-    #         f"videos/{run_name}/eval/eval_video.mp4",
-    #         frames,
-    #         fps=30
-    #     )
     
     return returns, frames
 
@@ -360,7 +315,7 @@ for step in tqdm(range(args.total_timesteps)):
             target_q1_selected = target_q1_vals.gather(1, next_actions.unsqueeze(1))
             target_q2_selected = target_q2_vals.gather(1, next_actions.unsqueeze(1)) 
             target_max = torch.min(target_q1_selected, target_q2_selected)
-            soft_target = target_max - args.alpha * log_pr.unsqueeze(1) #Why no entropy/? cus dawg we using mc sampling and it is for  a SINGLE action not the whole dist
+            soft_target = target_max - args.alpha * log_pr.unsqueeze(1) #Why no entropy? cus dawg we using mc sampling and it is for  a SINGLE action not the whole dist
             td_target = data.rewards + args.gamma * soft_target * (1 - data.dones)
 
         # print(f"Actions shape: {data.actions.shape}, Observations shape: {data.observations.shape}, TD target shape: {td_target.shape}")
@@ -373,9 +328,7 @@ for step in tqdm(range(args.total_timesteps)):
         loss = loss1 + loss2
         q_optim.zero_grad()
         loss.backward()
-        # q1_optim.step()
-        # q2_optim.zero_grad()
-        # loss2.backward()
+        
         q_optim.step()
         
         
@@ -409,9 +362,6 @@ for step in tqdm(range(args.total_timesteps)):
             for q_params, target_params  in zip(q1_network.parameters(), target_q1_network.parameters()):
                 target_params.data.copy_(args.tau * q_params.data + (1.0 - args.tau) * target_params.data)
 
-            # for actor_params, target_actor_params in zip(actor_net.parameters(), target_actor_net.parameters()):
-                # target_actor_params.data.copy_(args.tau * actor_params.data + (1.0 - args.tau) * target_actor_params.data)
-
             for q_params, target_params in zip(q2_network.parameters(), target_q2_network.parameters()):
                 target_params.data.copy_(args.tau * q_params.data + (1.0 - args.tau) * target_params.data)
                 
@@ -431,29 +381,17 @@ for step in tqdm(range(args.total_timesteps)):
                     "val_avg_return": avg_return,
                     "val_step": step
                 })
-        # print(f"Evaluation returns: {episodic_returns}")
-        # Log evaluation video to WandB
-        # if args.use_wandb and eval_frames:
-        #     val_video_path = f"videos/{run_name}/eval/rl-video-episode-{step}.mp4"
-            
-        #     imageio.mimsave(val_video_path, eval_frames, fps=30)
-            
-        #     eval_frames = np.array(eval_frames).transpose(0, 3, 1, 2)
-        #     wandb.log({"eval_video": wandb.Video(eval_frames, fps=30)})
-        
+       
         
     # Update observations
     obs = new_obs
         
-# envs.close()
-# writer.close()
 
 # Save final video to WandB
 if args.use_wandb:
     train_video_path = f"videos/SAC_{args.env_id}.mp4"
     returns, frames = evaluate(actor_net, device, run_name, record=True)
-    # if os.path.exists(train_video_path) and os.listdir(train_video_path):
-        # wandb.log({"train_video": wandb.Video(f"{train_video_path}/rl-video-episode-0.mp4")})
+    
     imageio.mimsave(train_video_path, frames, fps=30, codec='libx264')
     print(f"Final training video saved to {train_video_path}")
     wandb.finish()

@@ -47,6 +47,21 @@ NeatRL provides high-quality implementations of popular RL algorithms with a foc
   - Parallel environment training with vectorized environments
   - Monte Carlo returns for value estimation
 
+- **TD3** (Twin Delayed DDPG) - Advanced actor-critic method for continuous control
+  - Twin Q-networks to reduce overestimation bias
+  - Delayed policy updates for improved stability
+  - Target policy smoothing with noise
+  - Experience replay and target networks
+  - CNN support for image-based environments
+
+- **SAC** (Soft Actor-Critic) - Maximum entropy reinforcement learning
+  - Stochastic Gaussian policies with entropy regularization
+  - Twin Q-networks for stable learning
+  - Automatic entropy tuning (alpha parameter)
+  - Balances exploration and exploitation
+  - Comprehensive WandB logging with entropy metrics
+  - CNN support for complex environments
+
 - **PPO (Proximal Policy Optimization)** - State-of-the-art policy gradient method with GAE
   - Full PPO implementation with Generalized Advantage Estimation (GAE)
   - Support for both discrete and continuous action spaces
