@@ -127,15 +127,31 @@ model = train_ppo(
 )
 ```
 
-### Train PPO on Atari
+### Train SAC on Continuous Control
 
 ```python
-from neatrl import train_ppo_cnn
+from neatrl import train_sac
 
-model = train_ppo_cnn(
+model = train_sac(
+    env_id="Pendulum-v1",
+    total_timesteps=50000,
+    alpha=0.2,          # Entropy regularization coefficient
+    autotune_alpha=True, # Automatically tune alpha
+    use_wandb=True,     # Track with WandB
+    seed=42
+)
+```
+
+### Train SAC on Atari
+
+```python
+from neatrl import train_sac_cnn
+
+model = train_sac_cnn(
     env_id="BreakoutNoFrameskip-v4",
     total_timesteps=100000,
-    n_envs=8,           # More parallel environments for Atari
+    alpha=0.2,
+    autotune_alpha=True,
     atari_wrapper=True, # Automatic Atari preprocessing
     use_wandb=True,     # Track with WandB
     seed=42
