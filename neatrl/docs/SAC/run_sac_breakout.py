@@ -5,10 +5,10 @@ This example demonstrates how to use SAC with CNN networks for the Breakout envi
 Breakout has image observations and discrete actions, adapted for SAC.
 """
 
-from neatrl.sac import train_sac_cnn
-
 import torch
 import torch.nn as nn
+
+from neatrl.sac import train_sac_cnn
 
 
 class ActorNetCNN(nn.Module):
@@ -23,7 +23,6 @@ class ActorNetCNN(nn.Module):
         self.out = nn.Linear(512, action_space)
 
     def forward(self, x):
-        
         # x = x.permute(0, 3, 1, 2)
         # x shape: (batch, channels, height, width)
         x = torch.nn.functional.relu(self.conv1(x))
@@ -33,7 +32,7 @@ class ActorNetCNN(nn.Module):
         x = torch.nn.functional.relu(self.fc1(x))
         res = self.out(x)  # Output between -1 and 1
         return res
-    
+
     def get_action(self, state: torch.Tensor) -> torch.Tensor:
         logits = self.forward(state)
         out = torch.nn.functional.softmax(logits, dim=-1)
@@ -72,9 +71,11 @@ class QNetCNN(nn.Module):
         state_features = torch.nn.functional.relu(self.state_fc(x))
 
         # Process action - one-hot encode discrete action
-        action_onehot = torch.nn.functional.one_hot(action.long(), num_classes=self.action_space).float()
+        action_onehot = torch.nn.functional.one_hot(
+            action.long(), num_classes=self.action_space
+        ).float()
         action_features = torch.nn.functional.relu(self.action_fc(action_onehot))
-        
+
         # Combine state and action features
         combined = torch.cat([state_features, action_features], dim=-1)
         x = torch.nn.functional.relu(self.combined_fc(combined))
@@ -108,7 +109,7 @@ def test_breakout():
         log_gradients=True,
         actor_class=ActorNetCNN,
         q_network_class=QNetCNN,
-        n_envs=4
+        n_envs=4,
     )
 
 

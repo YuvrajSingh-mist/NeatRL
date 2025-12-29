@@ -6,12 +6,15 @@ Uses the CarRacing-v2 environment with frame stacking.
 """
 
 from typing import Union
+
+import cv2
 import gymnasium as gym
+import numpy as np
 import torch
 import torch.nn as nn
+
 from neatrl.td3 import train_td3_cnn
-import numpy as np
-import cv2
+
 
 def car_racing_wrapper(env):
     return PreprocessAndFrameStack(env, height=84, width=84, num_stack=4)
@@ -92,37 +95,36 @@ class ActorNet(nn.Module):
         self.network = FeatureExtractor(obs_shape)
         state_dim = obs_shape[0] if isinstance(obs_shape, tuple) else obs_shape
         print(f"State dim: {state_dim}, Action dim: {action_space}")
-         
+
         self.fc1 = nn.Linear(512, 256)
         self.fc2 = nn.Linear(256, 256)
         self.out = nn.Linear(256, action_space)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x= self.network(x)
+        x = self.network(x)
         x = self.out(
-                torch.nn.functional.mish(
-                    self.fc2(torch.nn.functional.mish(self.fc1(x)))
-                )
-            )
+            torch.nn.functional.mish(self.fc2(torch.nn.functional.mish(self.fc1(x))))
+        )
         return x
+
     def get_action(self, state: torch.Tensor) -> torch.Tensor:
         x = self.forward(state)
         action1 = x[:, 0:1]
         action2 = x[:, 1:2]
         action3 = x[:, 2:3]
-        
+
         out1 = torch.tanh(action1)
         out2 = torch.sigmoid(action2)
         out3 = torch.sigmoid(action3)
         out = torch.cat([out1, out2, out3], dim=1)
-        
+
         return out
 
 
 class QNet(nn.Module):
     def __init__(self, state_space: Union[int, tuple[int, ...]], action_space: int):
         super().__init__()
-       
+
         self.feature_extractor = FeatureExtractor(state_space)
         self.fc1 = nn.Linear(512, 256)
         self.fc2 = nn.Linear(action_space, 256)
@@ -139,7 +141,8 @@ class QNet(nn.Module):
         out = torch.nn.functional.mish(self.reduce(combined_features))
         x = self.out(out)
         return x
-    
+
+
 env = gym.make("CarRacing-v3")
 
 if __name__ == "__main__":

@@ -5,13 +5,15 @@ This example demonstrates how to use SAC with CNN networks for the CarRacing env
 CarRacing has image observations and continuous actions, requiring CNN-based networks.
 """
 
-from neatrl.sac import train_sac_cnn
+from typing import Union
+
+import cv2
+import gymnasium as gym
+import numpy as np
 import torch
 import torch.nn as nn
-import gymnasium as gym
-from typing import Union
-import numpy as np
-import cv2
+
+from neatrl.sac import train_sac_cnn
 
 LOG_STD_MIN = -20
 LOG_STD_MAX = 2
@@ -97,7 +99,7 @@ class ActorNet(nn.Module):
         state_dim = obs_shape[0] if isinstance(obs_shape, tuple) else obs_shape
         print(f"State dim: {state_dim}, Action dim: {action_space}")
         self.action_dim = action_space
-        
+
         self.fc1 = nn.Linear(512, 256)
         self.fc2 = nn.Linear(256, 256)
         self.mean = nn.Linear(256, action_space)
@@ -112,19 +114,19 @@ class ActorNet(nn.Module):
         log_std = self.log_std(x)
         log_std = torch.clamp(log_std, LOG_STD_MIN, LOG_STD_MAX)
         return mean, log_std
-    
+
     def get_action(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Get action from the policy with reparameterization trick."""
         mean, log_std = self.forward(x)
         std = log_std.exp()
-        
+
         normal = torch.distributions.Normal(mean, std)
         x_t = normal.rsample()  # Reparameterization trick
         action1 = torch.tanh(x_t[:, 0:1])
         action2 = torch.sigmoid(x_t[:, 1:2])
         action3 = torch.sigmoid(x_t[:, 2:3])
         action = torch.cat([action1, action2, action3], dim=1)
-        
+
         # Compute log probability with correction for tanh squashing
         log_prob = normal.log_prob(x_t)
         log_prob -= torch.log(1 - action.pow(2) + 1e-6)
@@ -134,7 +136,7 @@ class ActorNet(nn.Module):
 class QNet(nn.Module):
     def __init__(self, state_space: Union[int, tuple[int, ...]], action_space: int):
         super().__init__()
-       
+
         self.feature_extractor = FeatureExtractor(state_space)
         self.fc1 = nn.Linear(512, 256)
         self.fc2 = nn.Linear(action_space, 256)
@@ -151,8 +153,10 @@ class QNet(nn.Module):
         out = torch.nn.functional.mish(self.reduce(combined_features))
         x = self.out(out)
         return x
-    
+
+
 env = gym.make("CarRacing-v3", continuous=True)
+
 
 def test_car_racing():
     """Train SAC CNN on CarRacing environment."""
@@ -182,7 +186,7 @@ def test_car_racing():
         env_wrapper=car_racing_wrapper,
         log_gradients=True,
         actor_class=ActorNet,
-        q_network_class=QNet
+        q_network_class=QNet,
     )
 
 

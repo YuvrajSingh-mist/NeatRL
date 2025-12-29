@@ -97,7 +97,6 @@ class ActorNet(nn.Module):
     def get_action(
         self,
         x: torch.Tensor,
-       
     ) -> tuple[torch.Tensor, torch.Tensor, torch.distributions.Distribution]:
         dist = self.forward(x)
         action = dist.sample()
@@ -384,7 +383,7 @@ def evaluate(
                     action = action.item()
                 else:
                     action = action.squeeze(0)
-                    
+
             obs, rewards_curr, terminated, truncated, info = eval_env.step(action)
             done = terminated or truncated
             rewards += rewards_curr
@@ -465,7 +464,7 @@ def train_a2c(
     Config.normalize_reward = normalize_reward
     Config.device = device
 
-    if Config.env is not None and Config.env_id != '':
+    if Config.env is not None and Config.env_id != "":
         raise ValueError(
             "Cannot provide both env_id and env. Use env_id for default environments or env for custom environments."
         )
@@ -1056,7 +1055,7 @@ def train_a2c_cnn(
         rewards = []
         values = []
         entropies = []
-        
+
         while True:
             global_step += Config.n_envs
 
@@ -1073,11 +1072,11 @@ def train_a2c_cnn(
                 raise ValueError(
                     f"Error unpacking result from get_action. Expected 2 or 3 values, got {len(result)}"
                 )
-            
+
             # Track entropy if enabled
             if Config.ENTROPY_COEFF > 0.0 and dist is not None:
                 entropies.append(dist.entropy())
-            
+
             value = critic_network(next_obs)
 
             # Log distribution statistics
@@ -1106,17 +1105,17 @@ def train_a2c_cnn(
 
             rewards.append(torch.tensor(reward).to(device).view(-1))
             next_obs = torch.Tensor(new_obs).to(device)
-        
+
             if np.all(done):
                 break
-        
+
         # Convert lists to tensors
-    
+
         log_probs_tensor = torch.stack(log_probs)
         rewards_tensor = torch.stack(rewards)
 
         values_tensor = torch.stack(values)
-        
+
         # Calculate returns (Monte Carlo)
         num_steps = len(rewards)
         returns = torch.zeros_like(rewards_tensor, dtype=torch.float32).to(device)
@@ -1127,7 +1126,7 @@ def train_a2c_cnn(
 
         # Calculate advantages (no normalization in pure A2C)
         advantages = (returns - values_tensor).detach()
-        
+
         # Flatten for batch processing
         b_logprobs = log_probs_tensor.flatten()
         b_values = values_tensor.flatten()
@@ -1137,7 +1136,7 @@ def train_a2c_cnn(
         # A2C Update - Single pass through data
         # Actor Loss: policy gradient with advantage
         policy_loss = -(b_logprobs * b_advantages).mean()
-        
+
         # Add entropy bonus if enabled
         if Config.ENTROPY_COEFF > 0.0 and entropies:
             entropy_loss = torch.stack(entropies).mean() * Config.ENTROPY_COEFF

@@ -5,13 +5,14 @@ This example demonstrates how to use A2C for the Acrobot environment.
 Acrobot has discrete action spaces and vector observations, making it suitable for standard A2C.
 """
 
-from typing import Optional, Union
+from typing import Union
 
+import gymnasium as gym
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import gymnasium as gym
+
 from neatrl.a2c import train_a2c
 
 
@@ -71,13 +72,15 @@ class CriticNet(nn.Module):
         x = F.relu(self.fc3(x))
         return self.value(x)
 
+
 env = gym.make("LunarLander-v3", render_mode="rgb_array")
+
 
 def train_run_lunarlander():
     """Train A2C on LunarLander environment."""
 
     train_a2c(
-        env=env,# LunarLander environment
+        env=env,  # LunarLander environment
         total_timesteps=1000000,  # Total timesteps for training
         seed=42,
         lr=3e-4,  # Learning rate

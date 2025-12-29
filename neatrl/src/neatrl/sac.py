@@ -14,10 +14,8 @@ from tqdm import tqdm
 
 import wandb
 
-
 LOG_STD_MAX = 2
 LOG_STD_MIN = -20
-
 
 
 # ===== CONFIGURATION =====
@@ -37,12 +35,14 @@ class Config:
     tau: float = 0.005  # Soft update parameter for target networks
     target_network_frequency: int = 1  # How often to update target networks
     batch_size: int = 256
-    
+
     # SAC-specific parameters
     alpha: float = 0.2  # Entropy regularization coefficient
     autotune_alpha: bool = True  # Whether to automatically tune alpha
-    target_entropy_scale: float = -1.0  # Target entropy = target_entropy_scale * action_dim
-    
+    target_entropy_scale: float = (
+        -1.0
+    )  # Target entropy = target_entropy_scale * action_dim
+
     learning_starts: int = 5000
     policy_frequency: int = 1  # How often to update the policy (1 = every step)
 
@@ -69,11 +69,9 @@ class Config:
     device: str = "cpu"  # Device for training: "auto", "cpu", "cuda", or "cuda:0" etc.
 
 
-
-
-
 class ActorNet(nn.Module):
     """Stochastic actor network for SAC that outputs mean and log_std of Gaussian policy."""
+
     def __init__(
         self,
         state_space: Union[int, tuple[int, ...]],
@@ -82,35 +80,33 @@ class ActorNet(nn.Module):
         super().__init__()
         # Handle state_space as tuple or int
         state_dim = state_space[0] if isinstance(state_space, tuple) else state_space
-      
-   
+
         self.fc1 = nn.Linear(state_dim, 256)
         self.fc2 = nn.Linear(256, 256)
         self.mean = nn.Linear(256, action_space)
         self.log_std = nn.Linear(256, action_space)
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-
         x = torch.nn.functional.relu(self.fc1(x))
         x = torch.nn.functional.relu(self.fc2(x))
         mean = self.mean(x)
         log_std = self.log_std(x)
         log_std = torch.clamp(log_std, LOG_STD_MIN, LOG_STD_MAX)
         return mean, log_std
-    
+
     def get_action(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Get action from the policy with reparameterization trick."""
         mean, log_std = self.forward(x)
         std = log_std.exp()
-        
+
         normal = torch.distributions.Normal(mean, std)
         x_t = normal.rsample()  # Reparameterization trick
         action = torch.tanh(x_t)
-        
+
         # Compute log probability with correction for tanh squashing
         log_prob = normal.log_prob(x_t)
         log_prob -= torch.log(1 - action.pow(2) + 1e-6)
-        
+
         return action, log_prob
 
 
@@ -127,7 +123,6 @@ class QNet(nn.Module):
         self.out = nn.Linear(256, 1)
 
     def forward(self, state, act):
-        
         st = torch.nn.functional.mish(self.fc1(state))
         action = torch.nn.functional.mish(self.fc2(act))
         temp = torch.cat((st, action), dim=-1)  # Concatenate state and action
@@ -161,21 +156,20 @@ class ActorNetCNN(nn.Module):
         log_std = self.log_std(x)
         log_std = torch.clamp(log_std, LOG_STD_MIN, LOG_STD_MAX)
         return mean, log_std
-    
+
     def get_action(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Get action from the policy with reparameterization trick."""
         mean, log_std = self.forward(x)
         std = log_std.exp()
-        
+
         normal = torch.distributions.Normal(mean, std)
         x_t = normal.rsample()  # Reparameterization trick
         action = torch.tanh(x_t)
-        
+
         # Compute log probability with correction for tanh squashing
         log_prob = normal.log_prob(x_t)
         log_prob -= torch.log(1 - action.pow(2) + 1e-6)
-     
-        
+
         return action, log_prob
 
 
@@ -199,7 +193,9 @@ class QNetCNN(nn.Module):
 
     def forward(self, state, action):
         # Process state through conv layers
-        state = state.permute(0, 3, 1, 2)  # (batch, height, width, channels) -> (batch, channels, height, width)
+        state = state.permute(
+            0, 3, 1, 2
+        )  # (batch, height, width, channels) -> (batch, channels, height, width)
         x = torch.nn.functional.relu(self.conv1(state))
         x = torch.nn.functional.relu(self.conv2(x))
         x = torch.nn.functional.relu(self.conv3(x))
@@ -265,13 +261,13 @@ def make_env(
 
         if Config.normalize_obs and not atari_wrapper:
             env_to_use = gym.wrappers.NormalizeObservation(env_to_use)
-            
+
         if atari_wrapper:
             env_to_use = gym.wrappers.AtariPreprocessing(
                 env_to_use, grayscale_obs=True, scale_obs=True
             )
             env_to_use = gym.wrappers.FrameStackObservation(env_to_use, stack_size=4)
-            
+
         if env_wrapper:
             env_to_use = env_wrapper(env_to_use)
         env_to_use.action_space.seed(seed + idx)
@@ -692,11 +688,13 @@ def train_sac(
         # Use actor class
         actor_net = actor_class(obs_space_shape, action_space_n)
         actor_net = actor_net.to(device)
-        
+
     # Create twin critic networks (SAC uses two Q-networks)
     if isinstance(q_network_class, nn.Module):
         # Use custom critic instance
-        validate_critic_network_dimensions(q_network_class, obs_space_shape, action_space_n)
+        validate_critic_network_dimensions(
+            q_network_class, obs_space_shape, action_space_n
+        )
         q1_network = q_network_class.to(device)
         q2_network = q_network_class.to(device)
     else:
@@ -722,10 +720,9 @@ def train_sac(
     actor_optim = optim.Adam(actor_net.parameters(), lr=Config.learning_rate)
     q1_optim = optim.Adam(q1_network.parameters(), lr=Config.learning_rate)
     q2_optim = optim.Adam(q2_network.parameters(), lr=Config.learning_rate)
-    
+
     # Automatic entropy tuning
     if Config.autotune_alpha:
-        
         target_entropy = Config.target_entropy_scale * action_space_n
         log_alpha = torch.zeros(1, requires_grad=True, device=device)
         alpha = log_alpha.exp().item()
@@ -768,15 +765,19 @@ def train_sac(
         # Training step
         if step > Config.learning_starts:
             data = replay_buffer.sample(Config.batch_size)
-      
+
             # Update Q-networks
             with torch.no_grad():
                 next_actions, next_log_probs = actor_net.get_action(
                     data.next_observations.to(torch.float32)
                 )
-                
-                next_log_probs = next_log_probs.sum(dim=-1, keepdim=True) if len(next_log_probs.shape) > 1 else next_log_probs
-                
+
+                next_log_probs = (
+                    next_log_probs.sum(dim=-1, keepdim=True)
+                    if len(next_log_probs.shape) > 1
+                    else next_log_probs
+                )
+
                 target_q1 = target_q1_network(
                     data.next_observations.to(torch.float32), next_actions
                 )
@@ -784,18 +785,20 @@ def train_sac(
                     data.next_observations.to(torch.float32), next_actions
                 )
                 min_target_q = torch.min(target_q1, target_q2)
-                td_target = data.rewards + Config.gamma * (min_target_q - alpha * next_log_probs) * (1 - data.dones)
+                td_target = data.rewards + Config.gamma * (
+                    min_target_q - alpha * next_log_probs
+                ) * (1 - data.dones)
 
             # Update Q1
             q1_optim.zero_grad()
             current_q1 = q1_network(
                 data.observations.to(torch.float32), data.actions.to(torch.float32)
             )
-            
+
             q1_loss = nn.functional.mse_loss(current_q1, td_target)
             q1_loss.backward()
             q1_optim.step()
-            
+
             # Update Q2
             q2_optim.zero_grad()
             current_q2 = q2_network(
@@ -814,31 +817,40 @@ def train_sac(
                 q1_new = q1_network(data.observations.to(torch.float32), new_actions)
                 q2_new = q2_network(data.observations.to(torch.float32), new_actions)
                 min_q_new = torch.min(q1_new, q2_new)
-                
+
                 actor_loss = (alpha * log_probs - min_q_new).mean()
                 actor_loss.backward()
                 actor_optim.step()
-                
+
                 # Calculate entropy for logging
                 entropy = -log_probs.mean().item()
-                
+
                 # Update alpha (temperature parameter)
                 alpha_loss_value = None
                 if Config.autotune_alpha:
                     alpha_optim.zero_grad()
-                    alpha_loss = (-log_alpha.exp() * (log_probs + target_entropy).detach()).mean()
+                    alpha_loss = (
+                        -log_alpha.exp() * (log_probs + target_entropy).detach()
+                    ).mean()
                     alpha_loss_value = alpha_loss.item()
                     alpha_loss.backward()
                     alpha_optim.step()
                     alpha = log_alpha.exp().item()
 
             if step % Config.target_network_frequency == 0:
-                
                 # Soft update target networks
-                for param, target_param in zip(q1_network.parameters(), target_q1_network.parameters()):
-                    target_param.data.copy_(Config.tau * param.data + (1 - Config.tau) * target_param.data)
-                for param, target_param in zip(q2_network.parameters(), target_q2_network.parameters()):
-                    target_param.data.copy_(Config.tau * param.data + (1 - Config.tau) * target_param.data)
+                for param, target_param in zip(
+                    q1_network.parameters(), target_q1_network.parameters()
+                ):
+                    target_param.data.copy_(
+                        Config.tau * param.data + (1 - Config.tau) * target_param.data
+                    )
+                for param, target_param in zip(
+                    q2_network.parameters(), target_q2_network.parameters()
+                ):
+                    target_param.data.copy_(
+                        Config.tau * param.data + (1 - Config.tau) * target_param.data
+                    )
 
             # Log gradient norm per layer for critics
             if Config.use_wandb and Config.log_gradients:
@@ -860,7 +872,7 @@ def train_sac(
                                 "global_step": step,
                             }
                         )
-                        
+
             # Log training metrics
             if Config.use_wandb and step % 100 == 0:
                 log_dict = {
@@ -869,7 +881,7 @@ def train_sac(
                     "entropy/alpha": alpha,
                     "global_step": step,
                 }
-                
+
                 # Log actor loss and entropy when policy is updated
                 if step % Config.policy_frequency == 0:
                     log_dict["losses/actor_loss"] = actor_loss.item()
@@ -877,7 +889,7 @@ def train_sac(
                     if Config.autotune_alpha and alpha_loss_value is not None:
                         log_dict["losses/alpha_loss"] = alpha_loss_value
                         log_dict["entropy/target_entropy"] = target_entropy
-                
+
                 wandb.log(log_dict)
 
             # Log episode returns
@@ -971,7 +983,6 @@ def train_sac(
                     "actor": actor_net.state_dict(),
                     "q1_network": q1_network.state_dict(),
                     "q2_network": q2_network.state_dict(),
-                    "actor": actor_net.state_dict(),
                     "target_q1_network": target_q1_network.state_dict(),
                     "target_q2_network": target_q2_network.state_dict(),
                 },
@@ -1152,7 +1163,9 @@ def train_sac_cnn(
     action_space_n = (
         envs.single_action_space.n
         if isinstance(envs.single_action_space, gym.spaces.Discrete)
-        else envs.single_action_space.shape[0] if isinstance(envs.single_action_space, gym.spaces.Box) else envs.single_action_space.shape
+        else envs.single_action_space.shape[0]
+        if isinstance(envs.single_action_space, gym.spaces.Box)
+        else envs.single_action_space.shape
     )
 
     action_shape = (
@@ -1162,7 +1175,6 @@ def train_sac_cnn(
     )
 
     print(f"Observation Space: {obs_space_shape}, Action Space: {action_space_n}")
-
 
     # Create actor network
     if isinstance(actor_class, nn.Module):
@@ -1175,7 +1187,9 @@ def train_sac_cnn(
     # Create twin critic networks (SAC uses two Q-networks)
     if isinstance(q_network_class, nn.Module):
         # Use custom critic instance
-        validate_critic_network_dimensions(q_network_class, obs_space_shape, action_space_n)
+        validate_critic_network_dimensions(
+            q_network_class, obs_space_shape, action_space_n
+        )
         q1_network = q_network_class.to(device)
         q2_network = q_network_class.to(device)
     else:
@@ -1202,10 +1216,9 @@ def train_sac_cnn(
     actor_optim = optim.Adam(actor_net.parameters(), lr=Config.learning_rate)
     q1_optim = optim.Adam(q1_network.parameters(), lr=Config.learning_rate)
     q2_optim = optim.Adam(q2_network.parameters(), lr=Config.learning_rate)
-    
+
     # Automatic entropy tuning
     if Config.autotune_alpha:
-        
         target_entropy = Config.target_entropy_scale * action_space_n
         log_alpha = torch.zeros(1, requires_grad=True, device=device)
         alpha = log_alpha.exp().item()
@@ -1239,7 +1252,7 @@ def train_sac_cnn(
                 torch.tensor(obs, device=device, dtype=torch.float32)
             )
         action_np = action.cpu().numpy()
-      
+
         new_obs, reward, terminated, truncated, info = envs.step(action_np)
         done = np.logical_or(terminated, truncated)
         replay_buffer.add(
@@ -1249,38 +1262,46 @@ def train_sac_cnn(
         # Training step
         if step > Config.learning_starts:
             data = replay_buffer.sample(Config.batch_size)
-            actions = data.actions.squeeze(-1)  # Squeeze to (batch_size,) for discrete actions
-            
-           
+            actions = data.actions.squeeze(
+                -1
+            )  # Squeeze to (batch_size,) for discrete actions
+
             # Update Q-networks
             with torch.no_grad():
                 next_actions, next_log_probs = actor_net.get_action(
                     data.next_observations.to(torch.float32)
                 )
-                next_log_probs = next_log_probs.sum(dim=-1, keepdim=True) if len(next_log_probs.shape) > 1 else next_log_probs
-                
-               
+                next_log_probs = (
+                    next_log_probs.sum(dim=-1, keepdim=True)
+                    if len(next_log_probs.shape) > 1
+                    else next_log_probs
+                )
+
                 target_q1 = target_q1_network(
-                    data.next_observations.to(torch.float32), next_actions.to(torch.float32)
+                    data.next_observations.to(torch.float32),
+                    next_actions.to(torch.float32),
                 )
                 target_q2 = target_q2_network(
-                    data.next_observations.to(torch.float32), next_actions.to(torch.float32)
+                    data.next_observations.to(torch.float32),
+                    next_actions.to(torch.float32),
                 )
-             
+
                 min_target_q = torch.min(target_q1, target_q2)
-               
-                td_target = data.rewards + Config.gamma * (min_target_q - alpha * next_log_probs) * (1 - data.dones)
-               
+
+                td_target = data.rewards + Config.gamma * (
+                    min_target_q - alpha * next_log_probs
+                ) * (1 - data.dones)
+
             # Update Q1
             q1_optim.zero_grad()
             current_q1 = q1_network(
                 data.observations.to(torch.float32), actions.to(torch.float32)
             )
-           
+
             q1_loss = nn.functional.mse_loss(current_q1, td_target)
             q1_loss.backward()
             q1_optim.step()
-            
+
             # Update Q2
             q2_optim.zero_grad()
             current_q2 = q2_network(
@@ -1299,19 +1320,21 @@ def train_sac_cnn(
                 q1_new = q1_network(data.observations.to(torch.float32), new_actions)
                 q2_new = q2_network(data.observations.to(torch.float32), new_actions)
                 min_q_new = torch.min(q1_new, q2_new)
-                
+
                 actor_loss = (alpha * log_probs - min_q_new).mean()
                 actor_loss.backward()
                 actor_optim.step()
-                
+
                 # Calculate entropy for logging
                 entropy = -log_probs.mean().item()
-                
+
                 # Update alpha (temperature parameter)
                 alpha_loss_value = None
                 if Config.autotune_alpha:
                     alpha_optim.zero_grad()
-                    alpha_loss = (-log_alpha.exp() * (log_probs + target_entropy).detach()).mean()
+                    alpha_loss = (
+                        -log_alpha.exp() * (log_probs + target_entropy).detach()
+                    ).mean()
                     alpha_loss_value = alpha_loss.item()
                     alpha_loss.backward()
                     alpha_optim.step()
@@ -1319,10 +1342,18 @@ def train_sac_cnn(
 
             # Soft update target networks
             if step % Config.target_network_frequency == 0:
-                for param, target_param in zip(q1_network.parameters(), target_q1_network.parameters()):
-                    target_param.data.copy_(Config.tau * param.data + (1 - Config.tau) * target_param.data)
-                for param, target_param in zip(q2_network.parameters(), target_q2_network.parameters()):
-                    target_param.data.copy_(Config.tau * param.data + (1 - Config.tau) * target_param.data)
+                for param, target_param in zip(
+                    q1_network.parameters(), target_q1_network.parameters()
+                ):
+                    target_param.data.copy_(
+                        Config.tau * param.data + (1 - Config.tau) * target_param.data
+                    )
+                for param, target_param in zip(
+                    q2_network.parameters(), target_q2_network.parameters()
+                ):
+                    target_param.data.copy_(
+                        Config.tau * param.data + (1 - Config.tau) * target_param.data
+                    )
 
             # Log gradient norm per layer for critics
             if Config.use_wandb and Config.log_gradients:
@@ -1344,7 +1375,7 @@ def train_sac_cnn(
                                 "global_step": step,
                             }
                         )
-                        
+
             # Log training metrics
             if Config.use_wandb and step % 100 == 0:
                 log_dict = {
@@ -1353,7 +1384,7 @@ def train_sac_cnn(
                     "entropy/alpha": alpha,
                     "global_step": step,
                 }
-                
+
                 # Log actor loss and entropy when policy is updated
                 if step % Config.policy_frequency == 0:
                     log_dict["losses/actor_loss"] = actor_loss.item()
@@ -1361,7 +1392,7 @@ def train_sac_cnn(
                     if Config.autotune_alpha and alpha_loss_value is not None:
                         log_dict["losses/alpha_loss"] = alpha_loss_value
                         log_dict["entropy/target_entropy"] = target_entropy
-                
+
                 wandb.log(log_dict)
 
             # Log episode returns
@@ -1455,7 +1486,6 @@ def train_sac_cnn(
                     "actor": actor_net.state_dict(),
                     "q1_network": q1_network.state_dict(),
                     "q2_network": q2_network.state_dict(),
-                    "actor": actor_net.state_dict(),
                     "target_q1_network": target_q1_network.state_dict(),
                     "target_q2_network": target_q2_network.state_dict(),
                 },

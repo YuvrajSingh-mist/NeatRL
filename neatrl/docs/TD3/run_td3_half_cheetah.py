@@ -22,18 +22,17 @@ class ActorNet(nn.Module):
         super().__init__()
         state_dim = state_space[0] if isinstance(state_space, tuple) else state_space
         print(f"State dim: {state_dim}, Action dim: {action_space}")
-        
+
         self.fc1 = nn.Linear(state_dim, 256)
         self.fc2 = nn.Linear(256, 256)
         self.out = nn.Linear(256, action_space)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.out(
-                torch.nn.functional.mish(
-                    self.fc2(torch.nn.functional.mish(self.fc1(x)))
-                )
-            )
+            torch.nn.functional.mish(self.fc2(torch.nn.functional.mish(self.fc1(x))))
+        )
         return x
+
     def get_action(self, state: torch.Tensor) -> torch.Tensor:
         x = torch.nn.functional.tanh(self.forward(state))
         x = x * 1.0  # Scale to action limits
@@ -89,5 +88,5 @@ if __name__ == "__main__":
         actor_class=ActorNet,
         q_network_class=QNet,
         device="cpu",  # Use GPU if available
-        n_envs=4
+        n_envs=4,
     )

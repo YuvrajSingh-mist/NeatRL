@@ -27,19 +27,25 @@ class Config:
     low: float = -1.0
     noise_clip: float = 0.5
     high: float = 1.0  # Action space limits for BipedalWalker
-    policy_noise: float = 0.2  # Noise added to target policy during critic update (for smoothing)
+    policy_noise: float = (
+        0.2  # Noise added to target policy during critic update (for smoothing)
+    )
     # Training parameters
     total_timesteps: int = 1000000
     learning_rate: float = 3e-4
     buffer_size: int = 100000
     gamma: float = 0.99
     tau: float = 0.005  # Soft update parameter for target networks
-    target_network_frequency: int = 1  # How often to update target networks (TD3 uses 1)
+    target_network_frequency: int = (
+        1  # How often to update target networks (TD3 uses 1)
+    )
     batch_size: int = 256
 
     exploration_fraction: float = 0.1
     learning_starts: int = 25000
-    train_frequency: int = 2  # Delayed policy updates (update actor every N critic updates)
+    train_frequency: int = (
+        2  # Delayed policy updates (update actor every N critic updates)
+    )
 
     # Logging & Saving
     capture_video: bool = True  # Whether to capture evaluation videos
@@ -133,7 +139,7 @@ class ActorNetCNN(nn.Module):
         x = torch.nn.functional.relu(self.conv3(x))
         x = x.view(x.size(0), -1)  # Flatten
         x = torch.nn.functional.relu(self.fc1(x))
-        
+
         return x
 
     def get_action(self, x):
@@ -141,6 +147,7 @@ class ActorNetCNN(nn.Module):
         x = torch.tanh(x)  # Output between -1 and 1
         x = x * 1.0  # Scale to action limits
         return x
+
 
 class QNetCNN(nn.Module):
     def __init__(self, obs_shape, action_space):
@@ -605,22 +612,44 @@ def train_td3(
     if Config.n_envs > 1:
         # Create vectorized environments for parallel execution
         env_thunks = [
-            make_env(Config.env_id if env is None else "", Config.seed, i, render_mode="rgb_array", env_wrapper=Config.env_wrapper, env=env)
+            make_env(
+                Config.env_id if env is None else "",
+                Config.seed,
+                i,
+                render_mode="rgb_array",
+                env_wrapper=Config.env_wrapper,
+                env=env,
+            )
             for i in range(Config.n_envs)
         ]
         env = gym.vector.SyncVectorEnv(env_thunks)
         is_discrete_obs = isinstance(env.single_observation_space, gym.spaces.Discrete)
         obs_space = env.single_observation_space
         obs_shape = obs_space.n if is_discrete_obs else obs_space.shape[0]
-        action_shape = env.single_action_space.n if isinstance(env.single_action_space, gym.spaces.Discrete) else env.single_action_space.shape[0]
+        action_shape = (
+            env.single_action_space.n
+            if isinstance(env.single_action_space, gym.spaces.Discrete)
+            else env.single_action_space.shape[0]
+        )
     else:
         # Single environment
-        env_thunk = make_env(Config.env_id if env is None else "", Config.seed, idx=0, render_mode="rgb_array", env_wrapper=Config.env_wrapper, env=env)
+        env_thunk = make_env(
+            Config.env_id if env is None else "",
+            Config.seed,
+            idx=0,
+            render_mode="rgb_array",
+            env_wrapper=Config.env_wrapper,
+            env=env,
+        )
         env = env_thunk()
         is_discrete_obs = isinstance(env.observation_space, gym.spaces.Discrete)
         obs_space = env.observation_space
         obs_shape = obs_space.n if is_discrete_obs else obs_space.shape[0]
-        action_shape = env.action_space.n if isinstance(env.action_space, gym.spaces.Discrete) else env.action_space.shape[0]
+        action_shape = (
+            env.action_space.n
+            if isinstance(env.action_space, gym.spaces.Discrete)
+            else env.action_space.shape[0]
+        )
 
     # Create actor network
     if isinstance(actor_class, nn.Module):
@@ -639,7 +668,7 @@ def train_td3(
     else:
         # Use critic class
         q1_network = q_network_class(obs_shape, action_shape).to(device)
-    
+
     q2_network = q_network_class(obs_shape, action_shape).to(device)
 
     # Create target networks
@@ -670,8 +699,12 @@ def train_td3(
     actor_net.train()
 
     # Replay buffer
-    obs_space_obj = env.single_observation_space if Config.n_envs > 1 else env.observation_space
-    action_space_obj = env.single_action_space if Config.n_envs > 1 else env.action_space
+    obs_space_obj = (
+        env.single_observation_space if Config.n_envs > 1 else env.observation_space
+    )
+    action_space_obj = (
+        env.single_action_space if Config.n_envs > 1 else env.action_space
+    )
 
     replay_buffer = ReplayBuffer(
         Config.buffer_size,
@@ -685,7 +718,7 @@ def train_td3(
     obs, _ = env.reset()
     start_time = time.time()
     updates = Config.total_timesteps // Config.n_envs
-    
+
     for step in tqdm(range(updates), desc="Training"):
         # Get action from actor network with exploration noise
         with torch.no_grad():
@@ -698,12 +731,12 @@ def train_td3(
                 Config.noise_clip,
             )
             action = torch.clip(action, Config.low, Config.high)
-            
+
             if isinstance(env.action_space, gym.spaces.Discrete):
                 action = action[0]
             else:
                 action = action.cpu().numpy()
-    
+
         new_obs, reward, terminated, truncated, info = env.step(action)
         done = np.logical_or(terminated, truncated)
         replay_buffer.add(
@@ -713,7 +746,7 @@ def train_td3(
         # Training step
         if step > Config.learning_starts:
             data = replay_buffer.sample(Config.batch_size)
-            
+
             # TD3: Target Policy Smoothing - add noise to target actions
             with torch.no_grad():
                 next_actions = target_actor_net.get_action(
@@ -722,11 +755,11 @@ def train_td3(
                 noise = torch.clip(
                     torch.randn_like(next_actions) * Config.policy_noise,
                     -Config.noise_clip,
-                    Config.noise_clip
+                    Config.noise_clip,
                 )
                 next_actions = next_actions + noise
                 next_actions = torch.clip(next_actions, Config.low, Config.high)
-                
+
                 # TD3: Clipped Double Q-learning - use min of two Q-networks
                 target_q1 = target_q1_network(
                     data.next_observations.to(torch.float32), next_actions
@@ -735,7 +768,9 @@ def train_td3(
                     data.next_observations.to(torch.float32), next_actions
                 )
                 target_max = torch.min(target_q1, target_q2)
-                td_target = (data.rewards + Config.gamma * target_max * (1 - data.dones)).detach()
+                td_target = (
+                    data.rewards + Config.gamma * target_max * (1 - data.dones)
+                ).detach()
 
             # Update both Q-networks
             # Update Q1
@@ -746,7 +781,7 @@ def train_td3(
             loss1 = nn.functional.mse_loss(old_val1, td_target)
             loss1.backward()
             q1_optim.step()
-            
+
             # Update Q2
             q2_optim.zero_grad()
             old_val2 = q2_network(
@@ -828,7 +863,7 @@ def train_td3(
                         Config.tau * q_params.data
                         + (1.0 - Config.tau) * target_params.data
                     )
-                
+
                 for q_params, target_params in zip(
                     q2_network.parameters(), target_q2_network.parameters()
                 ):
@@ -1102,22 +1137,44 @@ def train_td3_cnn(
     if Config.n_envs > 1:
         # Create vectorized environments for parallel execution
         env_thunks = [
-            make_env(Config.env_id if env is None else "", Config.seed, i, render_mode="rgb_array", env_wrapper=Config.env_wrapper, env=env)
+            make_env(
+                Config.env_id if env is None else "",
+                Config.seed,
+                i,
+                render_mode="rgb_array",
+                env_wrapper=Config.env_wrapper,
+                env=env,
+            )
             for i in range(Config.n_envs)
         ]
         env = gym.vector.SyncVectorEnv(env_thunks)
         is_discrete_obs = isinstance(env.single_observation_space, gym.spaces.Discrete)
         obs_space = env.single_observation_space
         obs_shape = obs_space.n if is_discrete_obs else obs_space.shape
-        action_shape = env.single_action_space.n if isinstance(env.single_action_space, gym.spaces.Discrete) else env.single_action_space.shape[0]
+        action_shape = (
+            env.single_action_space.n
+            if isinstance(env.single_action_space, gym.spaces.Discrete)
+            else env.single_action_space.shape[0]
+        )
     else:
         # Single environment
-        env_thunk = make_env(Config.env_id if env is None else "", Config.seed, idx=0, render_mode="rgb_array", env_wrapper=Config.env_wrapper, env=env)
+        env_thunk = make_env(
+            Config.env_id if env is None else "",
+            Config.seed,
+            idx=0,
+            render_mode="rgb_array",
+            env_wrapper=Config.env_wrapper,
+            env=env,
+        )
         env = env_thunk()
         is_discrete_obs = isinstance(env.observation_space, gym.spaces.Discrete)
         obs_space = env.observation_space
         obs_shape = obs_space.n if is_discrete_obs else obs_space.shape
-        action_shape = env.action_space.n if isinstance(env.action_space, gym.spaces.Discrete) else env.action_space.shape[0]
+        action_shape = (
+            env.action_space.n
+            if isinstance(env.action_space, gym.spaces.Discrete)
+            else env.action_space.shape[0]
+        )
 
     # Create actor network
     if isinstance(actor_class, nn.Module):
@@ -1169,8 +1226,12 @@ def train_td3_cnn(
     actor_net.train()
 
     # Replay buffer
-    obs_space_obj = env.single_observation_space if Config.n_envs > 1 else env.observation_space
-    action_space_obj = env.single_action_space if Config.n_envs > 1 else env.action_space
+    obs_space_obj = (
+        env.single_observation_space if Config.n_envs > 1 else env.observation_space
+    )
+    action_space_obj = (
+        env.single_action_space if Config.n_envs > 1 else env.action_space
+    )
 
     replay_buffer = ReplayBuffer(
         Config.buffer_size,
@@ -1186,7 +1247,7 @@ def train_td3_cnn(
 
     # Enable anomaly detection for debugging inplace operations
     torch.autograd.set_detect_anomaly(True)
-    
+
     for step in tqdm(range(Config.total_timesteps)):
         # Get action from actor network with exploration noise
         with torch.no_grad():
@@ -1210,25 +1271,25 @@ def train_td3_cnn(
         # Training step
         if step > Config.learning_starts:
             data = replay_buffer.sample(Config.batch_size)
-            
+
             # Clone data to avoid inplace operation issues with gradients
             obs = data.observations.to(torch.float32).clone()
             next_obs = data.next_observations.to(torch.float32).clone()
             actions_data = data.actions.to(torch.float32).clone()
             rewards = data.rewards.clone()
             dones = data.dones.clone()
-            
+
             # TD3: Target Policy Smoothing
             with torch.no_grad():
                 next_actions = target_actor_net.get_action(next_obs)
                 noise = torch.clip(
                     torch.randn_like(next_actions) * Config.policy_noise,
                     -Config.noise_clip,
-                    Config.noise_clip
+                    Config.noise_clip,
                 )
                 next_actions = next_actions + noise
                 next_actions = torch.clip(next_actions, Config.low, Config.high)
-                
+
                 # TD3: Clipped Double Q-learning
                 target_q1 = target_q1_network(next_obs, next_actions)
                 target_q2 = target_q2_network(next_obs, next_actions)
@@ -1248,7 +1309,7 @@ def train_td3_cnn(
                     max_norm=Config.max_grad_norm,
                 )
             q1_optim.step()
-            
+
             # Update Q2
             q2_optim.zero_grad()
             old_val2 = q2_network(obs, actions_data)
@@ -1306,7 +1367,7 @@ def train_td3_cnn(
                         Config.tau * q_params.data
                         + (1.0 - Config.tau) * target_params.data
                     )
-                
+
                 for q_params, target_params in zip(
                     q2_network.parameters(), target_q2_network.parameters()
                 ):

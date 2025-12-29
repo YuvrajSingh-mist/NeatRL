@@ -26,7 +26,7 @@ All notable changes to this project will be documented in this file.
   - **Automatic Entropy Tuning**: Adaptive temperature parameter (alpha) for entropy regularization
   - **Maximum Entropy**: Balances exploration and exploitation through entropy maximization
   - **CNN Support**: `train_sac_cnn()` function for image-based environments
-  - **Comprehensive Logging**: WandB integration with entropy metrics (alpha, entropy, target_entropy)
+
 
 ### Added - DDPG Algorithm Implementation
 - **DDPG (Deep Deterministic Policy Gradient)**: Full implementation of actor-critic method for continuous action spaces

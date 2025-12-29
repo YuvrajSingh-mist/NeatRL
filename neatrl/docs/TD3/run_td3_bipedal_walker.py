@@ -22,7 +22,7 @@ class ActorNet(nn.Module):
         super().__init__()
         state_dim = state_space[0] if isinstance(state_space, tuple) else state_space
         print(f"State dim: {state_dim}, Action dim: {action_space}")
-        
+
         # Larger network for more complex environment
         self.fc1 = nn.Linear(state_dim, 400)
         self.fc2 = nn.Linear(400, 300)
@@ -33,7 +33,7 @@ class ActorNet(nn.Module):
         x = torch.relu(self.fc2(x))
         x = self.out(x)
         return x
-    
+
     def get_action(self, state: torch.Tensor) -> torch.Tensor:
         x = torch.nn.functional.tanh(self.forward(state))
         x = x * 1.0  # Scale to action limits
@@ -86,5 +86,5 @@ if __name__ == "__main__":
         capture_video=True,
         actor_class=ActorNet,
         q_network_class=QNet,
-        n_envs=4
+        n_envs=4,
     )

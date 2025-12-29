@@ -6,9 +6,11 @@ Pendulum has continuous action spaces and vector observations, making it suitabl
 """
 
 import gymnasium as gym
+
 from neatrl.sac import train_sac
 
 env = gym.make("Pendulum-v1")
+
 
 def test_pendulum():
     """Train SAC on Pendulum environment."""
@@ -37,7 +39,7 @@ def test_pendulum():
         normalize_reward=False,  # Pendulum rewards are already scaled
         device="cpu",  # Use "cuda" if you have GPU
         log_gradients=True,
-        n_envs=4
+        n_envs=4,
     )
 
 

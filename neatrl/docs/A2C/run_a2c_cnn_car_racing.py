@@ -87,8 +87,7 @@ class FeatureExtractor(nn.Module):
         x = self.relu2(self.conv2(x))
         x = self.relu3(self.conv3(x))
         x = self.flatten(x)
-        
-        
+
         x = self.relu_fc(self.fc(x))
         return x
 
@@ -100,25 +99,23 @@ class ActorNet(nn.Module):
 
         # CarRacing has 3 continuous actions: steering, gas, brake
         self.mu = layer_init(nn.Linear(512, action_space))
-        self.sigma = nn.Parameter(torch.zeros(action_space)) 
-        
+        self.sigma = nn.Parameter(torch.zeros(action_space))
 
     def forward(self, x):
-        
         x = self.network(x / 255.0)
         dist = torch.distributions.Normal(
             self.mu(x), torch.exp(self.sigma.expand_as(self.mu(x)))
-        ) 
-        
+        )
+
         return dist
-    
+
     def get_action(self, x):
         dist = self.forward(x)
         action = dist.sample()
         out1 = torch.nn.functional.tanh(action[:, 0:1])  # Steering: -1 to 1
         out2 = torch.nn.functional.sigmoid(action[:, 1:2])  # Gas: 0 to 1
         out3 = torch.nn.functional.sigmoid(action[:, 2:3])  # Brake: 0 to 1
-        
+
         final = torch.cat([out1, out2, out3], dim=-1)
         logprobs = dist.log_prob(final)
         return final, logprobs, dist
@@ -134,8 +131,10 @@ class CriticNet(nn.Module):
         x = self.network(x / 255.0)
         return self.out(x)
 
+
 # Create the CarRacing environment
 env = gym.make("CarRacing-v3", continuous=False)
+
 
 def main():
     """Train A2C with CNN on CarRacing environment."""

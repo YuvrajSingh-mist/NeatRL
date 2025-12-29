@@ -2,14 +2,12 @@
 script for RND-PPO training on CarRacing using neatrl library.
 """
 
-import cv2
 import gymnasium as gym
 import numpy as np
 import torch
 import torch.nn as nn
 
 from neatrl.rnd import train_ppo_rnd_cnn
-
 
 
 # --- Networks ---

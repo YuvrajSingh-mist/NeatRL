@@ -5,13 +5,13 @@ This example demonstrates how to use A2C for the Acrobot environment.
 Acrobot has discrete action spaces and vector observations, making it suitable for standard A2C.
 """
 
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import gymnasium as gym
+
 from neatrl.a2c import train_a2c
 
 
@@ -51,7 +51,6 @@ class ActorNet(nn.Module):
     def get_action(
         self,
         x: torch.Tensor,
-       
     ) -> tuple[torch.Tensor, torch.Tensor, torch.distributions.Distribution]:
         dist = self.forward(x)
 
@@ -75,13 +74,14 @@ class CriticNet(nn.Module):
         x = F.relu(self.fc3(x))
         return self.value(x)
 
+
 # env = gym.make("Pendulum-v1")
+
 
 def train_run_pendulum():
     """Train A2C on Pendulum environment."""
 
     train_a2c(
-        
         env_id="Pendulum-v1",  # Pendulum environment
         total_timesteps=1000000,  # Total timesteps for training
         seed=42,

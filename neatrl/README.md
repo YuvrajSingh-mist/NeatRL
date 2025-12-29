@@ -59,7 +59,6 @@ NeatRL provides high-quality implementations of popular RL algorithms with a foc
   - Twin Q-networks for stable learning
   - Automatic entropy tuning (alpha parameter)
   - Balances exploration and exploitation
-  - Comprehensive WandB logging with entropy metrics
   - CNN support for complex environments
 
 - **PPO (Proximal Policy Optimization)** - State-of-the-art policy gradient method with GAE

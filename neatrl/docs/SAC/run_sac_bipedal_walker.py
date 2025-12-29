@@ -5,7 +5,6 @@ This example demonstrates how to use SAC for the BipedalWalker continuous contro
 BipedalWalker has continuous action spaces and vector observations, making it suitable for standard SAC.
 """
 
-import gymnasium as gym
 from neatrl.sac import train_sac
 
 
