@@ -128,8 +128,6 @@ class ActorNet(nn.Module):
         # Compute log probability with correction for tanh squashing
         log_prob = normal.log_prob(x_t)
         log_prob -= torch.log(1 - action.pow(2) + 1e-6)
-        log_prob = log_prob.sum(1, keepdim=True)
-        
         return action, log_prob
 
 
@@ -156,7 +154,7 @@ class QNet(nn.Module):
     
 env = gym.make("CarRacing-v3", continuous=True)
 
-def train_run_car_racing():
+def test_car_racing():
     """Train SAC CNN on CarRacing environment."""
 
     train_sac_cnn(
@@ -171,7 +169,7 @@ def train_run_car_racing():
         gamma=0.99,  # Discount factor
         tau=0.005,  # Soft update parameter
         batch_size=256,  # Batch size
-        learning_starts=5,  # Steps before training starts
+        learning_starts=2500,  # Steps before training starts
         policy_frequency=4,  # Update policy every step
         use_wandb=True,  # Set to True to enable logging
         target_network_frequency=50,
@@ -179,6 +177,7 @@ def train_run_car_racing():
         eval_every=5000,  # Evaluate every 5k steps
         save_every=50000,  # Save model every 50k steps
         num_eval_episodes=5,
+        # n_envs=4,
         device="cpu",  # Use "cuda" if you have GPU
         env_wrapper=car_racing_wrapper,
         log_gradients=True,
@@ -188,4 +187,4 @@ def train_run_car_racing():
 
 
 if __name__ == "__main__":
-    train_run_car_racing()
+    test_car_racing()

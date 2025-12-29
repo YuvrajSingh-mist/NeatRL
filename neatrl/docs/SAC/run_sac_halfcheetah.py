@@ -5,11 +5,10 @@ This example demonstrates how to use SAC for the HalfCheetah continuous control 
 HalfCheetah has continuous action spaces and vector observations, making it suitable for standard SAC.
 """
 
-import gymnasium as gym
 from neatrl.sac import train_sac
 
 
-def train_run_halfcheetah():
+def test_halfcheetah():
     """Train SAC on HalfCheetah environment."""
 
     train_sac(
@@ -39,4 +38,4 @@ def train_run_halfcheetah():
 
 
 if __name__ == "__main__":
-    train_run_halfcheetah()
+    test_halfcheetah()

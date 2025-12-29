@@ -9,7 +9,7 @@ import gymnasium as gym
 from neatrl.sac import train_sac
 
 
-def train_run_bipedal_walker():
+def test_bipedal_walker():
     """Train SAC on BipedalWalker environment."""
 
     train_sac(
@@ -39,4 +39,4 @@ def train_run_bipedal_walker():
 
 
 if __name__ == "__main__":
-    train_run_bipedal_walker()
+    test_bipedal_walker()

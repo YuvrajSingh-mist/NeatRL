@@ -48,7 +48,6 @@ class ActorNet(nn.Module):
     def get_action(
         self,
         x: torch.Tensor,
-        action: Optional[torch.Tensor] = None,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.distributions.Distribution]:
         dist = self.forward(x)
 

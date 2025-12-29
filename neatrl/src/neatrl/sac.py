@@ -82,14 +82,15 @@ class ActorNet(nn.Module):
         super().__init__()
         # Handle state_space as tuple or int
         state_dim = state_space[0] if isinstance(state_space, tuple) else state_space
-        self.action_dim = action_space
-        
+      
+   
         self.fc1 = nn.Linear(state_dim, 256)
         self.fc2 = nn.Linear(256, 256)
         self.mean = nn.Linear(256, action_space)
         self.log_std = nn.Linear(256, action_space)
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+
         x = torch.nn.functional.relu(self.fc1(x))
         x = torch.nn.functional.relu(self.fc2(x))
         mean = self.mean(x)
@@ -109,7 +110,6 @@ class ActorNet(nn.Module):
         # Compute log probability with correction for tanh squashing
         log_prob = normal.log_prob(x_t)
         log_prob -= torch.log(1 - action.pow(2) + 1e-6)
-        log_prob = log_prob.sum(1, keepdim=True)
         
         return action, log_prob
 
@@ -127,9 +127,10 @@ class QNet(nn.Module):
         self.out = nn.Linear(256, 1)
 
     def forward(self, state, act):
+        
         st = torch.nn.functional.mish(self.fc1(state))
         action = torch.nn.functional.mish(self.fc2(act))
-        temp = torch.cat((st, action), dim=1)  # Concatenate state and action
+        temp = torch.cat((st, action), dim=-1)  # Concatenate state and action
         x = torch.nn.functional.mish(self.fc3(temp))
         x = torch.nn.functional.mish(self.reduce(x))
         x = self.out(x)
@@ -145,18 +146,37 @@ class ActorNetCNN(nn.Module):
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
 
         self.fc1 = nn.Linear(64 * 7 * 7, 512)
-        self.out = nn.Linear(512, action_space)
+        self.mean = nn.Linear(512, action_space)
+        self.log_std = nn.Linear(512, action_space)
 
     def forward(self, x):
-        # x shape: (batch, channels, height, width)
+        # x shape: (batch, height, width, channels) -> permute to (batch, channels, height, width)
+        # x = x.permute(0, 3, 1, 2)
         x = torch.nn.functional.relu(self.conv1(x))
         x = torch.nn.functional.relu(self.conv2(x))
         x = torch.nn.functional.relu(self.conv3(x))
-        x = x.view(x.size(0), -1)  # Flatten
+        x = x.reshape(x.size(0), -1)  # Flatten
         x = torch.nn.functional.relu(self.fc1(x))
-        x = torch.tanh(self.out(x))  # Output between -1 and 1
-        x = x * 1.0  # Scale to action limits
-        return x
+        mean = self.mean(x)
+        log_std = self.log_std(x)
+        log_std = torch.clamp(log_std, LOG_STD_MIN, LOG_STD_MAX)
+        return mean, log_std
+    
+    def get_action(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """Get action from the policy with reparameterization trick."""
+        mean, log_std = self.forward(x)
+        std = log_std.exp()
+        
+        normal = torch.distributions.Normal(mean, std)
+        x_t = normal.rsample()  # Reparameterization trick
+        action = torch.tanh(x_t)
+        
+        # Compute log probability with correction for tanh squashing
+        log_prob = normal.log_prob(x_t)
+        log_prob -= torch.log(1 - action.pow(2) + 1e-6)
+     
+        
+        return action, log_prob
 
 
 class QNetCNN(nn.Module):
@@ -179,10 +199,11 @@ class QNetCNN(nn.Module):
 
     def forward(self, state, action):
         # Process state through conv layers
+        state = state.permute(0, 3, 1, 2)  # (batch, height, width, channels) -> (batch, channels, height, width)
         x = torch.nn.functional.relu(self.conv1(state))
         x = torch.nn.functional.relu(self.conv2(x))
         x = torch.nn.functional.relu(self.conv3(x))
-        x = x.view(x.size(0), -1)  # Flatten
+        x = x.reshape(x.size(0), -1)  # Flatten
         state_features = torch.nn.functional.relu(self.state_fc(x))
 
         # Process action
@@ -244,11 +265,13 @@ def make_env(
 
         if Config.normalize_obs and not atari_wrapper:
             env_to_use = gym.wrappers.NormalizeObservation(env_to_use)
+            
         if atari_wrapper:
             env_to_use = gym.wrappers.AtariPreprocessing(
                 env_to_use, grayscale_obs=True, scale_obs=True
             )
             env_to_use = gym.wrappers.FrameStackObservation(env_to_use, stack_size=4)
+            
         if env_wrapper:
             env_to_use = env_wrapper(env_to_use)
         env_to_use.action_space.seed(seed + idx)
@@ -610,73 +633,80 @@ def train_sac(
     torch.manual_seed(Config.seed)
     device = torch.device(Config.device)
 
-    # Create environment(s)
-    if Config.n_envs > 1:
-        # Create vectorized environments for parallel execution
+    # Create environments - check for pre-created env first, then default
+    if env is not None:
         env_thunks = [
             make_env(
-                Config.env_id if env is None else "",
+                "",
                 Config.seed,
                 i,
-                render_mode="rgb_array",
-                env_wrapper=Config.env_wrapper,
+                grid_env=Config.grid_env,
+                atari_wrapper=Config.atari_wrapper,
+                env_wrapper=env_wrapper,
                 env=env,
+                render_mode="rgb_array",
             )
             for i in range(Config.n_envs)
         ]
-        env = gym.vector.SyncVectorEnv(env_thunks)
-        is_discrete_obs = isinstance(env.single_observation_space, gym.spaces.Discrete)
-        obs_space = env.single_observation_space
-        obs_shape = obs_space.n if is_discrete_obs else obs_space.shape[0]
-        action_shape = (
-            env.single_action_space.n
-            if isinstance(env.single_action_space, gym.spaces.Discrete)
-            else env.single_action_space.shape[0]
-        )
     else:
-        # Single environment
-        env_thunk = make_env(
-            Config.env_id if env is None else "",
-            Config.seed,
-            idx=0,
-            render_mode="rgb_array",
-            env_wrapper=Config.env_wrapper,
-            env=env,
-        )
-        env = env_thunk()
-        is_discrete_obs = isinstance(env.observation_space, gym.spaces.Discrete)
-        obs_space = env.observation_space
-        obs_shape = obs_space.n if is_discrete_obs else obs_space.shape[0]
-        action_shape = (
-            env.action_space.n
-            if isinstance(env.action_space, gym.spaces.Discrete)
-            else env.action_space.shape[0]
-        )
+        # Use default environment creation
+        env_thunks = [
+            make_env(
+                Config.env_id,
+                Config.seed,
+                i,
+                grid_env=Config.grid_env,
+                atari_wrapper=Config.atari_wrapper,
+                env_wrapper=env_wrapper,
+                render_mode="rgb_array",
+            )
+            for i in range(Config.n_envs)
+        ]
+
+    envs = gym.vector.SyncVectorEnv(env_thunks)
+    if isinstance(envs.single_observation_space, gym.spaces.Discrete):
+        obs_space_shape = (envs.single_observation_space.n,)
+    else:
+        obs_space_shape = envs.single_observation_space.shape
+
+    action_space_n = (
+        envs.single_action_space.n
+        if isinstance(envs.single_action_space, gym.spaces.Discrete)
+        else envs.single_action_space.shape[0]
+    )
+
+    action_shape = (
+        ()
+        if isinstance(envs.single_action_space, gym.spaces.Discrete)
+        else (action_space_n,)
+    )
+
+    print(f"Observation Space: {obs_space_shape}, Action Space: {action_space_n}")
 
     # Create actor network
     if isinstance(actor_class, nn.Module):
         # Use custom actor instance
-        validate_policy_network_dimensions(actor_class, obs_shape, action_shape)
+        validate_policy_network_dimensions(actor_class, obs_space_shape, action_shape)
         actor_net = actor_class.to(device)
     else:
         # Use actor class
-        actor_net = actor_class(obs_shape, action_shape).to(device)
-
+        actor_net = actor_class(obs_space_shape, action_space_n)
+        actor_net = actor_net.to(device)
+        
     # Create twin critic networks (SAC uses two Q-networks)
     if isinstance(q_network_class, nn.Module):
         # Use custom critic instance
-        validate_critic_network_dimensions(q_network_class, obs_shape, action_shape)
+        validate_critic_network_dimensions(q_network_class, obs_space_shape, action_space_n)
         q1_network = q_network_class.to(device)
         q2_network = q_network_class.to(device)
     else:
         # Use critic class
-        q1_network = q_network_class(obs_shape, action_shape).to(device)
-        q2_network = q_network_class(obs_shape, action_shape).to(device)
+        q1_network = q_network_class(obs_space_shape, action_space_n).to(device)
+        q2_network = q_network_class(obs_space_shape, action_space_n).to(device)
 
     # Create target Q-networks
-    target_q1_network = q_network_class(obs_shape, action_shape).to(device)
-    target_q2_network = q_network_class(obs_shape, action_shape).to(device)
-
+    target_q1_network = q_network_class(obs_space_shape, action_space_n).to(device)
+    target_q2_network = q_network_class(obs_space_shape, action_space_n).to(device)
     target_q1_network.load_state_dict(q1_network.state_dict())
     target_q2_network.load_state_dict(q2_network.state_dict())
 
@@ -695,7 +725,8 @@ def train_sac(
     
     # Automatic entropy tuning
     if Config.autotune_alpha:
-        target_entropy = Config.target_entropy_scale * action_shape
+        
+        target_entropy = Config.target_entropy_scale * action_space_n
         log_alpha = torch.zeros(1, requires_grad=True, device=device)
         alpha = log_alpha.exp().item()
         alpha_optim = optim.Adam([log_alpha], lr=Config.learning_rate)
@@ -710,14 +741,14 @@ def train_sac(
     # Replay buffer
     replay_buffer = ReplayBuffer(
         Config.buffer_size,
-        env.single_observation_space,
-        env.single_action_space,
+        envs.single_observation_space,
+        envs.single_action_space,
         device=device,
         handle_timeout_termination=False,
         n_envs=Config.n_envs,
     )
 
-    obs, _ = env.reset()
+    obs, _ = envs.reset()
     start_time = time.time()
 
     for step in tqdm(range(Config.total_timesteps)):
@@ -728,7 +759,7 @@ def train_sac(
             )
 
         action_np = action.cpu().numpy()
-        new_obs, reward, terminated, truncated, info = env.step(action_np)
+        new_obs, reward, terminated, truncated, info = envs.step(action_np)
         done = np.logical_or(terminated, truncated)
         replay_buffer.add(
             obs, new_obs, action_np, np.array(reward), np.array(done), [info]
@@ -737,12 +768,15 @@ def train_sac(
         # Training step
         if step > Config.learning_starts:
             data = replay_buffer.sample(Config.batch_size)
-            
+      
             # Update Q-networks
             with torch.no_grad():
                 next_actions, next_log_probs = actor_net.get_action(
                     data.next_observations.to(torch.float32)
                 )
+                
+                next_log_probs = next_log_probs.sum(dim=-1, keepdim=True) if len(next_log_probs.shape) > 1 else next_log_probs
+                
                 target_q1 = target_q1_network(
                     data.next_observations.to(torch.float32), next_actions
                 )
@@ -757,6 +791,7 @@ def train_sac(
             current_q1 = q1_network(
                 data.observations.to(torch.float32), data.actions.to(torch.float32)
             )
+            
             q1_loss = nn.functional.mse_loss(current_q1, td_target)
             q1_loss.backward()
             q1_optim.step()
@@ -945,7 +980,7 @@ def train_sac(
             print(f"Model saved at step {step} to {model_path}")
 
         if done.all():
-            obs, _ = env.reset()
+            obs, _ = envs.reset()
         else:
             obs = new_obs
 
@@ -973,7 +1008,7 @@ def train_sac(
             print(f"Final training video saved to {train_video_path}")
             wandb.finish()
 
-    env.close()
+    envs.close()
     return actor_net
 
 
@@ -1078,72 +1113,79 @@ def train_sac_cnn(
     torch.manual_seed(Config.seed)
     device = torch.device(Config.device)
 
-    # Create environment(s)
-    if Config.n_envs > 1:
-        # Create vectorized environments for parallel execution
+    # Create environments - check for pre-created env first, then default
+    if env is not None:
         env_thunks = [
             make_env(
-                Config.env_id if env is None else "",
+                "",
                 Config.seed,
                 i,
-                render_mode="rgb_array",
-                env_wrapper=Config.env_wrapper,
+                grid_env=Config.grid_env,
+                atari_wrapper=Config.atari_wrapper,
+                env_wrapper=env_wrapper,
                 env=env,
+                render_mode="rgb_array",
             )
             for i in range(Config.n_envs)
         ]
-        env = gym.vector.SyncVectorEnv(env_thunks)
-        is_discrete_obs = isinstance(env.single_observation_space, gym.spaces.Discrete)
-        obs_space = env.single_observation_space
-        obs_shape = obs_space.n if is_discrete_obs else obs_space.shape
-        action_shape = (
-            env.single_action_space.n
-            if isinstance(env.single_action_space, gym.spaces.Discrete)
-            else env.single_action_space.shape[0]
-        )
     else:
-        # Single environment
-        env_thunk = make_env(
-            Config.env_id if env is None else "",
-            Config.seed,
-            idx=0,
-            render_mode="rgb_array",
-            env_wrapper=Config.env_wrapper,
-            env=env,
-        )
-        env = env_thunk()
-        is_discrete_obs = isinstance(env.observation_space, gym.spaces.Discrete)
-        obs_space = env.observation_space
-        obs_shape = obs_space.n if is_discrete_obs else obs_space.shape
-        action_shape = (
-            env.action_space.n
-            if isinstance(env.action_space, gym.spaces.Discrete)
-            else env.action_space.shape[0]
-        )
+        # Use default environment creation
+        env_thunks = [
+            make_env(
+                Config.env_id,
+                Config.seed,
+                i,
+                grid_env=Config.grid_env,
+                atari_wrapper=Config.atari_wrapper,
+                env_wrapper=env_wrapper,
+                render_mode="rgb_array",
+            )
+            for i in range(Config.n_envs)
+        ]
+
+    envs = gym.vector.SyncVectorEnv(env_thunks)
+    if isinstance(envs.single_observation_space, gym.spaces.Discrete):
+        obs_space_shape = (envs.single_observation_space.n,)
+    else:
+        obs_space_shape = envs.single_observation_space.shape
+
+    action_space_n = (
+        envs.single_action_space.n
+        if isinstance(envs.single_action_space, gym.spaces.Discrete)
+        else envs.single_action_space.shape[0] if isinstance(envs.single_action_space, gym.spaces.Box) else envs.single_action_space.shape
+    )
+
+    action_shape = (
+        ()
+        if isinstance(envs.single_action_space, gym.spaces.Discrete)
+        else (action_space_n,)
+    )
+
+    print(f"Observation Space: {obs_space_shape}, Action Space: {action_space_n}")
+
 
     # Create actor network
     if isinstance(actor_class, nn.Module):
         # Use custom actor instance
-        validate_policy_network_dimensions(actor_class, obs_shape, action_shape)
+        validate_policy_network_dimensions(actor_class, obs_space_shape, action_shape)
         actor_net = actor_class.to(device)
     else:
         # Use actor class
-        actor_net = actor_class(obs_shape, action_shape).to(device)
-
+        actor_net = actor_class(obs_space_shape, action_space_n).to(device)
     # Create twin critic networks (SAC uses two Q-networks)
     if isinstance(q_network_class, nn.Module):
         # Use custom critic instance
-        validate_critic_network_dimensions(q_network_class, obs_shape, action_shape)
+        validate_critic_network_dimensions(q_network_class, obs_space_shape, action_space_n)
         q1_network = q_network_class.to(device)
         q2_network = q_network_class.to(device)
     else:
         # Use critic class
-        q1_network = q_network_class(obs_shape, action_shape).to(device)
-        q2_network = q_network_class(obs_shape, action_shape).to(device)
+        q1_network = q_network_class(obs_space_shape, action_space_n).to(device)
+        q2_network = q_network_class(obs_space_shape, action_space_n).to(device)
 
     # Create target Q-networks
-    target_q1_network = q_network_class(obs_shape, action_shape).to(device)
-    target_q2_network = q_network_class(obs_shape, action_shape).to(device)
+    target_q1_network = q_network_class(obs_space_shape, action_space_n).to(device)
+    target_q2_network = q_network_class(obs_space_shape, action_space_n).to(device)
 
     target_q1_network.load_state_dict(q1_network.state_dict())
     target_q2_network.load_state_dict(q2_network.state_dict())
@@ -1163,7 +1205,8 @@ def train_sac_cnn(
     
     # Automatic entropy tuning
     if Config.autotune_alpha:
-        target_entropy = Config.target_entropy_scale * action_shape
+        
+        target_entropy = Config.target_entropy_scale * action_space_n
         log_alpha = torch.zeros(1, requires_grad=True, device=device)
         alpha = log_alpha.exp().item()
         alpha_optim = optim.Adam([log_alpha], lr=Config.learning_rate)
@@ -1179,26 +1222,25 @@ def train_sac_cnn(
 
     replay_buffer = ReplayBuffer(
         Config.buffer_size,
-        env.observation_space if Config.n_envs == 1 else env.single_observation_space,
-        env.action_space if Config.n_envs == 1 else env.single_action_space,
+        envs.single_observation_space,
+        envs.single_action_space,
         device=device,
         handle_timeout_termination=False,
         n_envs=Config.n_envs,
     )
 
-    obs, _ = env.reset()
+    obs, _ = envs.reset()
     start_time = time.time()
 
     for step in tqdm(range(Config.total_timesteps)):
         # Sample action from stochastic policy
         with torch.no_grad():
-            action, _ = actor_net.get_action(
-                torch.tensor(obs, device=device, dtype=torch.float32).unsqueeze(0)
+            action, log_probs = actor_net.get_action(
+                torch.tensor(obs, device=device, dtype=torch.float32)
             )
-
-        action_np = action.cpu().numpy().flatten()
-
-        new_obs, reward, terminated, truncated, info = env.step(action_np)
+        action_np = action.cpu().numpy()
+      
+        new_obs, reward, terminated, truncated, info = envs.step(action_np)
         done = np.logical_or(terminated, truncated)
         replay_buffer.add(
             obs, new_obs, action_np, np.array(reward), np.array(done), [info]
@@ -1207,26 +1249,34 @@ def train_sac_cnn(
         # Training step
         if step > Config.learning_starts:
             data = replay_buffer.sample(Config.batch_size)
+            actions = data.actions.squeeze(-1)  # Squeeze to (batch_size,) for discrete actions
             
+           
             # Update Q-networks
             with torch.no_grad():
                 next_actions, next_log_probs = actor_net.get_action(
                     data.next_observations.to(torch.float32)
                 )
+                next_log_probs = next_log_probs.sum(dim=-1, keepdim=True) if len(next_log_probs.shape) > 1 else next_log_probs
+                
+               
                 target_q1 = target_q1_network(
-                    data.next_observations.to(torch.float32), next_actions
+                    data.next_observations.to(torch.float32), next_actions.to(torch.float32)
                 )
                 target_q2 = target_q2_network(
-                    data.next_observations.to(torch.float32), next_actions
+                    data.next_observations.to(torch.float32), next_actions.to(torch.float32)
                 )
+             
                 min_target_q = torch.min(target_q1, target_q2)
+               
                 td_target = data.rewards + Config.gamma * (min_target_q - alpha * next_log_probs) * (1 - data.dones)
-
+               
             # Update Q1
             q1_optim.zero_grad()
             current_q1 = q1_network(
-                data.observations.to(torch.float32), data.actions.to(torch.float32)
+                data.observations.to(torch.float32), actions.to(torch.float32)
             )
+           
             q1_loss = nn.functional.mse_loss(current_q1, td_target)
             q1_loss.backward()
             q1_optim.step()
@@ -1234,7 +1284,7 @@ def train_sac_cnn(
             # Update Q2
             q2_optim.zero_grad()
             current_q2 = q2_network(
-                data.observations.to(torch.float32), data.actions.to(torch.float32)
+                data.observations.to(torch.float32), actions.to(torch.float32)
             )
             q2_loss = nn.functional.mse_loss(current_q2, td_target)
             q2_loss.backward()
@@ -1414,7 +1464,7 @@ def train_sac_cnn(
             print(f"Model saved at step {step} to {model_path}")
 
         if done.all():
-            obs, _ = env.reset()
+            obs, _ = envs.reset()
         else:
             obs = new_obs
 

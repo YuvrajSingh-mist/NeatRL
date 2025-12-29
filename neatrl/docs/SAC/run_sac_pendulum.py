@@ -9,7 +9,8 @@ import gymnasium as gym
 from neatrl.sac import train_sac
 
 env = gym.make("Pendulum-v1")
-def train_run_pendulum():
+
+def test_pendulum():
     """Train SAC on Pendulum environment."""
 
     train_sac(
@@ -41,4 +42,4 @@ def train_run_pendulum():
 
 
 if __name__ == "__main__":
-    train_run_pendulum()
+    test_pendulum()

@@ -99,11 +99,11 @@ class ActorNet(nn.Module):
     def get_action(
         self,
         x: torch.Tensor,
-        action: Optional[torch.Tensor] = None,
+        
     ) -> tuple[torch.Tensor, torch.Tensor, torch.distributions.Distribution]:
         dist = self.forward(x)
-        if action is None:
-            action = dist.sample()
+        
+        action = dist.sample()
 
         log_prob = dist.log_prob(action)
 
