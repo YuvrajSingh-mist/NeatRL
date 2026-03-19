@@ -4,18 +4,18 @@
 
 NeatRL provides high-quality implementations of popular RL algorithms with a focus on simplicity, performance, and ease of use. Built with PyTorch and designed for both research and production use.
 
-## ✨ Features
+## Features
 
-- 📊 **Experiment Tracking**: Built-in support for Weights & Biases logging
-- 🎮 **Gymnasium Compatible**: Works with Gymnasium environments and adding many more!
-- 🎯 **Atari Support**: Full support for Atari games with automatic CNN architectures
-- ⚡ **Parallel Training**: Vectorized environments for faster data collection
-- 🔧 **Easy to Extend**: Modular design for adding new algorithms
-- 📈 **State-of-the-Art**: Implements modern RL techniques and best practices
-- 🎥 **Video Recording**: Automatic video capture and WandB integration
-- 📉 **Advanced Logging**: Per-layer gradient monitoring and comprehensive metrics
+- **Experiment Tracking**: Built-in support for Weights & Biases logging
+- **Gymnasium Compatible**: Works with Gymnasium environments and adding many more!
+- **Atari Support**: Full support for Atari games with automatic CNN architectures
+- **Parallel Training**: Vectorized environments for faster data collection
+- **Easy to Extend**: Modular design for adding new algorithms
+- **State-of-the-Art**: Implements modern RL techniques and best practices
+- **Video Recording**: Automatic video capture and WandB integration
+- **Advanced Logging**: Per-layer gradient monitoring and comprehensive metrics
 
-## 🏗️ Supported Algorithms
+## Supported Algorithms
 
 ### Current Implementations
 - **DQN** (Deep Q-Network) - Classic value-based RL algorithm
@@ -80,7 +80,7 @@ NeatRL provides high-quality implementations of popular RL algorithms with a foc
   
 - *More algorithms coming soon...*
 
-## 📦 Installation
+## Installation
 
 ```bash
 python -m venv neatrl-env
@@ -96,7 +96,7 @@ pip install neatrl[mujoco]     # For HalfCheetah
 
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Train DQN on CartPole
 
@@ -157,7 +157,7 @@ model = train_sac_cnn(
 )
 ```
 
-## 📚 Documentation
+## Documentation
 
 📖 **[Complete Documentation](https://github.com/YuvrajSingh-mist/NeatRL/tree/master/neatrl/docs)**
 
@@ -168,7 +168,7 @@ The docs include:
 - Experiment tracking setup
 - Troubleshooting tips
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
