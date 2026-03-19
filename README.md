@@ -3,7 +3,7 @@
 This repository contains various ONE-FILE implementations of deep reinforcement learning algorithms.
 
 
-## 🚀 Primary Use: Training with NeatRL Library
+## Primary Use: Training with NeatRL Library
 
 **NeatRL** is the main training library in this repository. It provides high-quality implementations of popular RL algorithms with a focus on simplicity, performance, and ease of use.
 
