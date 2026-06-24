@@ -1,29 +1,22 @@
-# 🎯 NeatRL Documentation - PPO (Proximal Policy Optimization)
+# NeatRL Documentation - PPO (Proximal Policy Optimization)
 
-Welcome to the NeatRL documentation for PPO (Proximal Policy Optimization)! This guide shows you how to use NeatRL's PPO implementation for reinforcement learning across various environments.
+This guide shows you how to use NeatRL's PPO implementation for reinforcement learning across various environments.
 
-## 🚀 Quick Start with PPO
+## Quick Start with PPO
 
 ### Basic Training
-
-Train a PPO agent on Lunar Lander in just a few lines:
 
 ```python
 from neatrl.ppo import train_ppo
 
-# Train PPO on Lunar Lander
 model = train_ppo(
     env_id="LunarLander-v2",
     total_timesteps=10000,
     seed=42
 )
-
-print("Training completed! 🎉")
 ```
 
 ### Training with Experiment Tracking
-
-Enable Weights & Biases for experiment tracking and video recording:
 
 ```python
 from neatrl.ppo import train_ppo
@@ -32,8 +25,8 @@ model = train_ppo(
     env_id="LunarLander-v2",
     total_timesteps=50000,
     seed=42,
-    capture_video=True,        # Record training videos
-    use_wandb=True,           # Enable W&B logging
+    capture_video=True,
+    use_wandb=True,
     wandb_project="my-rl-experiments",
     exp_name="ppo-lunar-lander"
 )
@@ -41,12 +34,9 @@ model = train_ppo(
 
 ### PPO for Discrete Action Spaces
 
-Train a PPO agent on Taxi environment:
-
 ```python
 from neatrl.ppo import train_ppo
 
-# Train PPO on Taxi
 model = train_ppo(
     env_id="Taxi-v3",
     total_timesteps=100000,
@@ -61,12 +51,9 @@ model = train_ppo(
 
 ### PPO for Continuous Action Spaces
 
-Train a PPO agent on Bipedal Walker:
-
 ```python
 from neatrl.ppo import train_ppo
 
-# Train PPO on Bipedal Walker
 model = train_ppo(
     env_id="BipedalWalker-v3",
     total_timesteps=1000000,
@@ -81,12 +68,9 @@ model = train_ppo(
 
 ### PPO for Atari Environments
 
-Train a PPO agent on Breakout:
-
 ```python
 from neatrl.ppo import train_ppo
 
-# Train PPO on Breakout
 model = train_ppo(
     env_id="BreakoutNoFrameskip-v4",
     total_timesteps=10000000,
@@ -100,7 +84,7 @@ model = train_ppo(
 )
 ```
 
-## 📋 Function Parameters
+## Function Parameters
 
 ### `train_ppo()` Parameters
 
@@ -139,7 +123,7 @@ model = train_ppo(
 | `normalize_reward` | bool | False | Normalize rewards |
 | `device` | str | "cpu" | Training device ("cpu", "cuda", etc.) |
 
-## 🎮 Environment-Specific Examples
+## Environment-Specific Examples
 
 ### Lunar Lander (Discrete Actions)
 
@@ -206,7 +190,7 @@ model = train_ppo(
 )
 ```
 
-## 📊 Monitoring Training
+## Monitoring Training
 
 ### Weights & Biases Integration
 
@@ -226,7 +210,7 @@ When `use_wandb=True`, PPO logs:
 - Training SPS (steps per second)
 - Learning rate annealing progress
 
-## 🔧 Advanced Usage
+## Advanced Usage
 
 ### Custom Environment Wrappers
 
@@ -247,22 +231,18 @@ model = train_ppo(
 
 ### Grid Environments
 
-For grid-based environments like CliffWalking:
-
 ```python
 from neatrl.ppo import train_ppo
 
 model = train_ppo(
     env_id="CliffWalking-v0",
     total_timesteps=50000,
-    grid_env=True,  # Enable grid environment wrapper
+    grid_env=True,
     use_wandb=True
 )
 ```
 
 ### Value Function Clipping
-
-Enable value function clipping for more stable training:
 
 ```python
 from neatrl.ppo import train_ppo
@@ -270,49 +250,38 @@ from neatrl.ppo import train_ppo
 model = train_ppo(
     env_id="LunarLander-v2",
     total_timesteps=200000,
-    value_clip=True,  # Enable value function clipping
-    clip_value=0.2,   # Same clipping value used for policy
+    value_clip=True,
+    clip_value=0.2,
     use_wandb=True
 )
 ```
 
-Value clipping helps reduce variance in the value function updates, similar to how policy clipping stabilizes policy updates.
-
-## 📁 Example Scripts
-
-Check out the example scripts in this directory:
+## Example Scripts
 
 - `run_ppo_lunar_lander.py` - Lunar Lander training
-- `run_ppo_taxi.py` - Taxi environment training  
+- `run_ppo_taxi.py` - Taxi environment training
 - `run_ppo_breakout.py` - Breakout Atari training
 - `run_ppo_bipedal_walker.py` - Bipedal Walker training
 
-## 🎯 Tips for Success
+## Tips
 
-1. **Environment Selection**: Start with simpler environments like Lunar Lander
-2. **Hyperparameter Tuning**: Adjust `clip_value`, `VALUE_COEFF`, and `ENTROPY_COEFF` based on your environment
-3. **Value Clipping**: Try `value_clip=True` for more stable value function learning
-4. **Gradient Clipping**: Use `max_grad_norm=0.5` to prevent gradient explosions
-5. **Parallelization**: Use more `n_envs` for faster training on vectorized environments
-6. **Evaluation**: Monitor evaluation returns to avoid overfitting
-7. **Learning Rate**: Enable `anneal_lr` for stable training over long horizons
+1. Start with simpler environments like Lunar Lander before scaling up
+2. Adjust `clip_value`, `VALUE_COEFF`, and `ENTROPY_COEFF` based on your environment
+3. Try `value_clip=True` for more stable value function learning
+4. Use `max_grad_norm=0.5` to prevent gradient explosions
+5. More `n_envs` means faster wall-clock training on vectorized environments
+6. Enable `anneal_lr` for stable training over long horizons
 
 ## Installation
 
 ```bash
-# Install base package
 pip install neatrl
 
-# Install extras based on environments you want to use
 pip install neatrl[atari]      # For Breakout
 pip install neatrl[box2d]      # For LunarLander, BipedalWalker
 pip install neatrl[classic]    # For Taxi
-
-# Or install all extras at once
-pip install neatrl[atari,box2d,classic]
 ```
 
 ## PyPI
 
 For installation and more information, visit [NeatRL on PyPI](https://pypi.org/project/neatrl/)
-

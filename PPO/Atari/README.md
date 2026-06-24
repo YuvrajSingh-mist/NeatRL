@@ -9,18 +9,18 @@ This implementation features vectorized PPO training on Atari environments with 
 ### 🏓 Trained Agents in Action
 
 #### Pong
-![Pong Agent](images/pong.gif)
+![Pong Agent](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/PPO/Atari/images/pong.gif)
 
 *PPO agent playing Pong after 10M training steps - achieving consistent wins against the built-in AI opponent*
 
 #### Bowling
-![Bowling Agent](images/bowling.gif)
+![Bowling Agent](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/PPO/Atari/images/bowling.gif)
 
 *PPO agent playing Bowling after 10M training steps - demonstrating learned bowling strategies and consistent scoring*
 
 
 #### Boxing
-![Boxing Agent](images/boxing.gif)
+![Boxing Agent](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/PPO/Atari/images/boxing.gif)
 
 *PPO agent playing Boxing after 10M training steps - showing aggressive fighting strategies and effective combat techniques*
 
@@ -119,9 +119,9 @@ Edit the `Config` class in each file to modify hyperparameters:
 
 ### Training Videos
 Training videos are saved in the `images/` directory:
-- `pong.mp4` - Trained Pong agent gameplay
-- `boxing.mp4` - Trained Boxing agent gameplay
-- `bowling.mp4` - Trained Bowling agent gameplay
+- [`pong.mp4`](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/PPO/Atari/pong.mp4) - Trained Pong agent gameplay
+- [`boxing.mp4`](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/PPO/Atari/boxing.mp4) - Trained Boxing agent gameplay
+- [`bowling.mp4`](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/PPO/Atari/bowling.mp4) - Trained Bowling agent gameplay
 
 ### Detailed Training Reports
 📈 **[PPO Atari Pong - Training Report](https://wandb.ai/rentio/cleanRL/reports/PPO-Atari-Pong--VmlldzoxMzY0NzA5NA?accessToken=0f5b8n8lprxffdwlhij5n9sfjlg077uqesbtv5g3wo28pla2gakfgre0t9j5ud4a)**

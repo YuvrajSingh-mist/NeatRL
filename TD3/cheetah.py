@@ -268,32 +268,6 @@ for step in tqdm(range(args.total_timesteps)):
     if step > args.learning_starts:
         data = replay_buffer.sample(args.batch_size)
 
-        # Q(s t ​ ,a t ​ )←Q(s t ​ ,a t ​ )+α ​ TD target r t ​ +γ a ′ max ​ Q(s t+1 ​ ,a ′ ) ​ ​ −Q(s t ​ ,a t ​ ) ​
-        # with torch.no_grad():
-        
-        # returns = []
-        
-        # bootstrap = 0
-        
-        # if data.dones.flatten().tolist()[-1] == 0:
-            
-        #     bootstrap = target_q_network(data.next_observations).max(1)[0]  # dim=1
-            
-        # gt_next_state = bootstrap
-        # for reward_at_t, done_at_t in zip(reversed(data.rewards.flatten().tolist()), reversed(data.dones.flatten().tolist())):
-        #     if done_at_t:
-        #         gt_next_state = 0.0
-        #     rt = reward_at_t + args.gamma * gt_next_state
-        #     returns.insert(0, rt)
-        #     gt_next_state = rt
-
-        # actor_optim.zero_grad()
-        # returns = torch.tensor(returns, device=device, dtype=torch.float32)
-        # actions = actor_net(data.observations)
-        # action_values = -q1_network(data.observations, actions).mean()  # Maximize Q-value for next actions
-        # action_values.backward()
-        # actor_optim.step()
-
         #why min of target q nets? well bruh thats cus the max op is being on them (kinda)! so we have to lower the overestimation of them!!
         with torch.no_grad():
             next_actions = target_actor_net(data.next_observations.to(torch.float32))
@@ -339,28 +313,7 @@ for step in tqdm(range(args.total_timesteps)):
                     # "step": step
                 })
         
-        
-    # if args.capture_video:
-    #     frame = env.render()                     # Render as RGB array
-      # If the episode ended this step
-        # if done :
-        #     cv2.putText(frame, f"Episode Done!", (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 
-        #                 1, (0, 0, 255), 2, cv2.LINE_AA)
-        #     if reward > 200:
-        #         cv2.putText(frame, "SUCCESS!", (10, 110), cv2.FONT_HERSHEY_SIMPLEX, 
-        #                     1, (0, 255, 0), 2, cv2.LINE_AA)
-        #     else:
-        #         cv2.putText(frame, "FAILED!", (10, 110), cv2.FONT_HERSHEY_SIMPLEX, 
-        #                     1, (0, 0, 255), 2, cv2.LINE_AA)
-
-        # # Overlay step count
-        # cv2.putText(frame, f"Step: {step}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 
-        #             1, (255, 255, 255), 2, cv2.LINE_AA)
-
-        # # Display the window
-        # cv2.imshow("CartPole Training", frame)
-        # cv2.waitKey(1)
-            
+   
        
         # Update target network
             
@@ -376,18 +329,11 @@ for step in tqdm(range(args.total_timesteps)):
                 
             # ===== MODEL EVALUATION & SAVING =====
     if step % 500 == 0:
-        # Save model
-        # model_path = f"runs/{run_name}/model_{step}.pth"
-        # torch.save(q_network.state_dict(), model_path)
-        # print(f"Model saved to {model_path}")
-        
+       
         # Evaluate model
         episodic_returns, eval_frames = evaluate(actor_net, device, run_name)
         avg_return = np.mean(episodic_returns)
-        # avg_episodic_returns = np.mean(episodic_returns)
-        # print(f"Evaluation returns: {episodic_returns}")
-        # print(f"Average return: {avg_return:.2f}")
-        
+       
         
         if args.use_wandb:
             wandb.log({
@@ -397,14 +343,7 @@ for step in tqdm(range(args.total_timesteps)):
             })
         print(f"Evaluation returns: {episodic_returns}")
         # Log evaluation video to WandB
-        # if args.use_wandb and eval_frames:
-        #     val_video_path = f"videos/{run_name}/eval/rl-video-episode-{step}.mp4"
-            
-        #     imageio.mimsave(val_video_path, eval_frames, fps=30)
-            
-        #     eval_frames = np.array(eval_frames).transpose(0, 3, 1, 2)
-        #     wandb.log({"eval_video": wandb.Video(eval_frames, fps=30)})
-        
+       
         
     if done:
         obs, _ = env.reset()

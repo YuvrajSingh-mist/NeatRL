@@ -4,7 +4,7 @@ This repository contains an implementation of Deep Q-Network (DQN) for solving t
 
 ![Atari Breakout DQN Training](images/image.png)
 
-![Breakout Demo](images/output.gif)
+![Breakout Demo](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/DQN-atari/images/output.gif)
 
 ## 🚀 Quick Training with NeatRL Library
 
@@ -228,7 +228,7 @@ Here's a video showing the trained agent in action:
 <details>
   <summary>Click to see video (GIF format)</summary>
   
-![Breakout Agent Performance](images/output.gif)
+![Breakout Agent Performance](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/DQN-atari/images/output.gif)
   
 </details>
 

@@ -34,7 +34,7 @@ class Config:
     batch_size = 256
     clip = 0.5
     # exploration_fraction = 0.1
-    learning_starts = 25e3
+    learning_starts = 25e1
     train_frequency = 2
     
     # Logging & saving

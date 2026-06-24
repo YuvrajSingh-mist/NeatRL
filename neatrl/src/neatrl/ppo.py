@@ -1,6 +1,7 @@
 import os
 import random
 import time
+from dataclasses import dataclass
 from typing import Any, Callable, Optional, Union
 
 import gymnasium as gym
@@ -16,6 +17,7 @@ import wandb
 
 
 # ===== CONFIGURATION =====
+@dataclass
 class Config:
     """Configuration class for PPO training."""
 
@@ -53,9 +55,7 @@ class Config:
     atari_wrapper: bool = (
         False  # Whether to apply Atari preprocessing and frame stacking
     )
-    env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = (
-        None,
-    )  # Optional custom environment wrapper
+    env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = None  # Optional custom environment wrapper
     normalize_obs: bool = False  # Whether to normalize observations
     normalize_reward: bool = False  # Whether to normalize rewards
     log_gradients: bool = True  # Whether to log gradient norms to W&B

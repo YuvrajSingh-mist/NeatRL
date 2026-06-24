@@ -1,8 +1,9 @@
 import os
 import random
 import time
+from dataclasses import dataclass
+from typing import Any, Optional
 
-import ale_py
 import gymnasium as gym
 import imageio
 import numpy as np
@@ -15,47 +16,52 @@ from tqdm import tqdm
 
 import wandb
 
-gym.register_envs(ale_py)
+try:
+    import ale_py
+
+    gym.register_envs(ale_py)
+except ImportError:
+    pass
 
 
 # ===== CONFIGURATION =====
+@dataclass
 class Config:
     # Experiment settings
-    exp_name = "DQN"
-    seed = 42
-    env_id = "DQN-Experiment"
+    exp_name: str = "DQN"
+    seed: int = 42
+    env_id: str = "DQN-Experiment"
 
     # Training parameters
-    total_timesteps = 20000
-    learning_rate = 2.5e-4
-    buffer_size = 10000
-    gamma = 0.99
-    tau = 1.0
-    target_network_frequency = 50
-    batch_size = 128
-    start_e = 1.0
-    end_e = 0.05
-    exploration_fraction = 0.5
-    learning_starts = 1000
-    train_frequency = 10
-    max_grad_norm = 1.0  # Maximum gradient norm for gradient clipping
-    num_eval_eps = 10
-    grid_env = False
+    total_timesteps: int = 20000
+    learning_rate: float = 2.5e-4
+    buffer_size: int = 10000
+    gamma: float = 0.99
+    tau: float = 1.0
+    target_network_frequency: int = 50
+    batch_size: int = 128
+    start_e: float = 1.0
+    end_e: float = 0.05
+    exploration_fraction: float = 0.5
+    learning_starts: int = 1000
+    train_frequency: int = 10
+    max_grad_norm: float = 1.0  # Maximum gradient norm for gradient clipping
+    num_eval_eps: int = 10
+    grid_env: bool = False
 
-    eval_every = 1000
-    save_every = 1000
-    upload_every = 100
-    atari_wrapper = False
-    n_envs = 4
-    capture_video = False
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # Custom agent
-    custom_agent = None  # Custom neural network class or instance
+    eval_every: int = 1000
+    save_every: int = 1000
+    upload_every: int = 100
+    atari_wrapper: bool = False
+    n_envs: int = 4
+    capture_video: bool = False
+    device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    custom_agent: Optional[Any] = None  # Custom neural network class or instance
 
     # Logging & saving
-    use_wandb = False
-    wandb_project = "cleanRL"
-    wandb_entity = ""
+    use_wandb: bool = False
+    wandb_project: str = "cleanRL"
+    wandb_entity: str = ""
 
 
 class QNet(nn.Module):

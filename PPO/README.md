@@ -107,7 +107,7 @@ The following image shows the training performance on the ViZDoom Basic environm
 
 Agent gameplay demonstration:
 
-![ViZDoom Basic Gameplay](images/vizdoom-basic.gif)
+![ViZDoom Basic Gameplay](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/PPO/images/vizdoom-basic.gif)
 
 ### ViZDoom Defend the Center
 
@@ -115,7 +115,7 @@ PPO has been successfully applied to the ViZDoom Defend the Center environment, 
 
 Agent gameplay demonstration:
 
-![ViZDoom Defend the Center Gameplay](images/defend_the_center.gif)
+![ViZDoom Defend the Center Gameplay](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/PPO/images/defend_the_center.gif)
 
 Detailed training results and analysis can be found in this comprehensive report:
 [**VizDoom Defend The Center PPO - WandB Report**](https://wandb.ai/rentio/cleanRL-Atari/reports/VizDoom-Defend-The-Center-PPO---VmlldzoxMzQ3MTY5NQ?accessToken=2yj2rba31fe3bd05niesrduhj0i8u7n7on0oz449nmew58bhf7h5acmc2qbdu5gf)
@@ -126,7 +126,7 @@ The following image shows the training performance on the CarRacing-v3 environme
 
 ![Car Racing Training Results](images/car-racing.png)
 
-![Car Racing Output](images/car-racing.gif)
+![Car Racing Output](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/PPO/images/car-racing.gif)
 
 PPO has been successfully applied to the CarRacing-v3 environment, a challenging continuous control task where the agent must learn to drive a car around a randomly generated track. The environment features:
 - **Continuous action space**: Steering, acceleration, and braking
@@ -145,7 +145,7 @@ PPO has been successfully applied to the Pendulum-v1 environment, a classic cont
 
 The following shows the training performance and agent behavior:
 
-![Pendulum Training Results](images/pendulum.gif)
+![Pendulum Training Results](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/PPO/images/pendulum.gif)
 
 Detailed training results and analysis can be found in this comprehensive report:
 [**PPO on Pendulum-v1 - WandB Report**](https://wandb.ai/rentio/cleanRL/reports/PPO-on-Pendulum-v1--VmlldzoxMzQ3MTA5MQ)
@@ -159,7 +159,7 @@ PPO has been successfully applied to the BipedalWalker-v3 environment, a challen
 
 The following shows the training performance and agent behavior:
 
-![BipedalWalker Training Results](images/bipedal-walker.gif)
+![BipedalWalker Training Results](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/PPO/images/bipedal-walker.gif)
 
 Detailed training results and analysis can be found in this comprehensive report:
 [**PPO on BipedalWalker-v3 - WandB Report**](https://api.wandb.ai/links/rentio/v3cfjd2d)

@@ -1,6 +1,7 @@
 import os
 import random
 import time
+from dataclasses import dataclass
 from typing import Any, Callable, Optional, Union
 
 import gymnasium as gym
@@ -16,6 +17,7 @@ import wandb
 
 
 # ===== CONFIGURATION =====
+@dataclass
 class Config:
     """Configuration class for PPO-RND training."""
 

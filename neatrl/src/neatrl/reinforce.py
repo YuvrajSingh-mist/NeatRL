@@ -1,9 +1,9 @@
 import os
 import random
 import time
+from dataclasses import dataclass
 from typing import Callable, Optional, Union
 
-import ale_py
 import gymnasium as gym
 import imageio
 import numpy as np
@@ -20,10 +20,16 @@ from tqdm import tqdm
 
 import wandb
 
-gym.register_envs(ale_py)
+try:
+    import ale_py
+
+    gym.register_envs(ale_py)
+except ImportError:
+    pass
 
 
 # ===== CONFIGURATION =====
+@dataclass
 class Config:
     # Experiment settings
     exp_name: str = "REINFORCE"

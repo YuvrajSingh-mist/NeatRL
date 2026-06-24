@@ -1,6 +1,7 @@
 import os
 import random
 import time
+from dataclasses import dataclass
 from typing import Any, Callable, Optional, Union
 
 import gymnasium as gym
@@ -19,6 +20,7 @@ LOG_STD_MIN = -20
 
 
 # ===== CONFIGURATION =====
+@dataclass
 class Config:
     """Configuration class for SAC training."""
 

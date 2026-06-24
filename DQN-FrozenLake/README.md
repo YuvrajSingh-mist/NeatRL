@@ -2,7 +2,7 @@
 
 This project implements reinforcement learning algorithms for the Frozen Lake environment from OpenAI Gymnasium. The agent learns to navigate across a frozen lake from the start to a goal without falling into holes.
 
-![Frozen Lake Environment](images/output.gif)
+![Frozen Lake Environment](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/DQN-FrozenLake/images/output.gif)
 
 ## Environment Description
 

@@ -8,7 +8,7 @@ This implementation features vectorized PPO training on Atari environments with 
 
 ### 🏓 Trained Agent in Action
 
-![Pong Agent](pong.mp4)
+![Pong Agent](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/PPO/Atari/images/pong.mp4)
 
 *PPO agent playing Pong after 10M training steps - achieving consistent wins against the built-in AI opponent*
 
@@ -107,9 +107,9 @@ Edit the `Config` class in each file to modify hyperparameters:
 
 ### Training Videos
 Training videos are saved in the `images/` directory:
-- `pong.mp4` - Trained Pong agent gameplay
-- `boxing.mp4` - Trained Boxing agent gameplay
-- `bowling.mp4` - Trained Bowling agent gameplay
+- [`pong.mp4`](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/PPO/Atari/images/pong.mp4) - Trained Pong agent gameplay
+- [`boxing.mp4`](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/PPO/Atari/images/boxing.mp4) - Trained Boxing agent gameplay
+- [`bowling.mp4`](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/PPO/Atari/images/bowling.mp4) - Trained Bowling agent gameplay
 
 ### Detailed Training Reports
 📈 **[View Complete Training Report on Weights & Biases](https://wandb.ai/rentio/cleanRL/reports/PPO-Atari-Pong--VmlldzoxMzY0NzA5NA?accessToken=0f5b8n8lprxffdwlhij5n9sfjlg077uqesbtv5g3wo28pla2gakfgre0t9j5ud4a)**

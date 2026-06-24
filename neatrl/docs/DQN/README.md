@@ -1,29 +1,22 @@
-# 🎯 NeatRL Documentation
+# NeatRL Documentation - DQN
 
-Welcome to the NeatRL documentation! This guide shows you how to use NeatRL's reinforcement learning algorithms, with a focus on practical examples and best practices.
+This guide shows you how to use NeatRL's DQN implementation.
 
-## 🚀 Quick Start with DQN
+## Quick Start with DQN
 
 ### Basic Training
-
-Train a DQN agent on CartPole in just a few lines:
 
 ```python
 from neatrl import train_dqn
 
-# Train DQN on CartPole
 model = train_dqn(
     env_id="CartPole-v1",
     total_timesteps=10000,
     seed=42
 )
-
-print("Training completed! 🎉")
 ```
 
 ### Training with Experiment Tracking
-
-Enable Weights & Biases for experiment tracking and video recording:
 
 ```python
 from neatrl import train_dqn
@@ -32,8 +25,8 @@ model = train_dqn(
     env_id="CartPole-v1",
     total_timesteps=50000,
     seed=42,
-    capture_video=True,        # Record training videos
-    use_wandb=True,           # Enable W&B logging
+    capture_video=True,
+    use_wandb=True,
     wandb_project="my-rl-experiments",
     exp_name="dqn-cartpole-v1"
 )
@@ -41,13 +34,10 @@ model = train_dqn(
 
 ### Atari Games Training
 
-Train DQN on Atari games like Breakout with convolutional networks:
-
 ```python
 import torch.nn as nn
 from neatrl import train_dqn
 
-# Define convolutional Q-network for Atari
 class AtariQNet(nn.Module):
     def __init__(self, state_space, action_space):
         super().__init__()
@@ -66,7 +56,6 @@ class AtariQNet(nn.Module):
         x = torch.relu(self.fc1(x))
         return self.fc2(x)
 
-# Train on Breakout
 model = train_dqn(
     env_id="BreakoutNoFrameskip-v4",
     total_timesteps=1000000,
@@ -75,201 +64,123 @@ model = train_dqn(
     buffer_size=100000,
     gamma=0.99,
     batch_size=32,
-    atari_wrapper=True,  # Apply Atari preprocessing
-    custom_agent=AtariQNet(4, 4),  # 4 stacked frames, 4 actions
+    atari_wrapper=True,
+    custom_agent=AtariQNet(4, 4),
     use_wandb=True,
     wandb_project="atari-experiments",
     exp_name="dqn-breakout"
 )
-
 ```
 
-## 🔧 Function Arguments
-
-The `train_dqn` function accepts the following arguments for customizing your DQN training:
+## Function Arguments
 
 | Argument | Type | Default | Description |
 |----------|------|---------|-------------|
-| `env_id` | str | `"BreakoutNoFrameskip-v4"` | Gymnasium environment ID to train on |
-| `total_timesteps` | int | `20000` | Total number of environment steps to train for |
-| `seed` | int | `42` | Random seed for reproducibility |
+| `env_id` | str | `"BreakoutNoFrameskip-v4"` | Gymnasium environment ID |
+| `total_timesteps` | int | `20000` | Total number of environment steps |
+| `seed` | int | `42` | Random seed |
 | `learning_rate` | float | `2.5e-4` | Learning rate for the Adam optimizer |
 | `buffer_size` | int | `10000` | Size of the replay buffer |
-| `gamma` | float | `0.99` | Discount factor for future rewards |
-| `tau` | float | `1.0` | Target network update rate (1.0 = hard update, <1.0 = soft update) |
-| `target_network_frequency` | int | `50` | How often to update the target network (in steps) |
+| `gamma` | float | `0.99` | Discount factor |
+| `tau` | float | `1.0` | Target network update rate (1.0 = hard update) |
+| `target_network_frequency` | int | `50` | How often to update the target network |
 | `batch_size` | int | `128` | Batch size for training |
-| `start_e` | float | `1.0` | Initial epsilon for ε-greedy exploration |
-| `end_e` | float | `0.05` | Final epsilon for ε-greedy exploration |
+| `start_e` | float | `1.0` | Initial epsilon for exploration |
+| `end_e` | float | `0.05` | Final epsilon for exploration |
 | `exploration_fraction` | float | `0.5` | Fraction of training steps for epsilon decay |
-| `learning_starts` | int | `1000` | Number of steps to collect before starting training |
-| `train_frequency` | int | `10` | How often to train the network (in steps) |
+| `learning_starts` | int | `1000` | Steps before training begins |
+| `train_frequency` | int | `10` | How often to train the network |
 | `max_grad_norm` | float | `0.0` | Maximum gradient norm for clipping (0.0 to disable) |
 | `capture_video` | bool | `False` | Whether to record training videos |
 | `use_wandb` | bool | `False` | Whether to log to Weights & Biases |
 | `wandb_project` | str | `"cleanRL"` | W&B project name |
 | `wandb_entity` | str | `""` | W&B username/entity |
-| `exp_name` | str | `"DQN"` | Experiment name for logging |
-| `eval_every` | int | `1000` | Frequency of evaluation during training (in steps) |
-| `save_every` | int | `1000` | Frequency of saving model checkpoints (in steps) |
-| `atari_wrapper` | bool | `False` | Whether to apply Atari preprocessing wrappers |
-| `custom_agent` | nn.Module | `None` | Custom Q-network class/instance (overrides default) |
-| `num_eval_eps` | int | `10` | Number of episodes for evaluation |
-| `n_envs` | int | `4` | Number of parallel environments for vectorized training |
-| `capture_video` | bool | `False` | Whether to record evaluation videos |
-| `device` | str | `"cpu"` | Device for training ("cpu", "cuda", "mps") |
+| `exp_name` | str | `"DQN"` | Experiment name |
+| `eval_every` | int | `1000` | Evaluation frequency (steps) |
+| `save_every` | int | `1000` | Model save frequency (steps) |
+| `atari_wrapper` | bool | `False` | Whether to apply Atari preprocessing |
+| `custom_agent` | nn.Module | `None` | Custom Q-network class/instance |
+| `num_eval_eps` | int | `10` | Number of evaluation episodes |
+| `n_envs` | int | `4` | Number of parallel environments |
+| `device` | str | `"cpu"` | Training device ("cpu", "cuda", "mps") |
+| `grid_env` | bool | `False` | Enable one-hot encoding for discrete states |
 
-## 🎮 Supported Environments
-
-DQN works with any Gymnasium environment. Here are some popular choices:
+## Supported Environments
 
 ### Classic Control
-- `CartPole-v1` - Balance a pole on a cart
-- `MountainCar-v0` - Drive up a hill
-- `Acrobot-v1` - Swing up a two-link robot
+- `CartPole-v1`
+- `MountainCar-v0`
+- `Acrobot-v1`
 
 ### Grid Environments
-NeatRL now supports grid-based environments with automatic one-hot encoding for discrete states!
-
-**Example: FrozenLake**
 
 ```python
 from neatrl import train_dqn
 
-# Train DQN on FrozenLake with automatic one-hot encoding
 model = train_dqn(
     env_id="FrozenLake-v1",
     total_timesteps=50000,
     seed=42,
-    grid_env=False,  # Enable one-hot encoding for discrete states
+    grid_env=True,
     use_wandb=True,
-    wandb_project="grid-experiments",
     exp_name="dqn-frozenlake"
 )
 ```
 
-**Example: Taxi**
-
-```python
-from neatrl import train_dqn
-
-# Train DQN on Taxi with automatic one-hot encoding
-model = train_dqn(
-    env_id="Taxi-v3",
-    total_timesteps=50000,
-    seed=42,
-    grid_env=False,  # Enable one-hot encoding for discrete states
-    use_wandb=True,
-    wandb_project="grid-experiments",
-    exp_name="dqn-taxi"
-)
-```
-
-The `grid_env=False` parameter automatically applies one-hot encoding to discrete state observations, making them suitable for neural network input.
-
 ### Box2D
-- `LunarLander-v2` - Land a spacecraft safely
-- `LunarLander-v3` - Land a spacecraft safely (updated version)
-- `CarRacing-v2` - Race a car around a track if discrete action space is chosen
+- `LunarLander-v2`
+- `LunarLander-v3`
 
-## Toy Text
-
-- `FrozenLake-v1` - Navigate a slippery frozen lake
-- `Taxi-v3` - Pick up and drop off passengers
-- `CliffWalking-v0` - Avoid cliffs while walking
-
+### Toy Text
+- `FrozenLake-v1`
+- `Taxi-v3`
+- `CliffWalking-v0`
 
 ### Atari Games
-- `BreakoutNoFrameskip-v4` - Breakout game
-- `ALE/Pong-v5` - Classic Pong game
-- `ALE/SpaceInvaders-v5` - Space Invaders
-- and many more...
+- `BreakoutNoFrameskip-v4`
+- `ALE/Pong-v5`
+- `ALE/SpaceInvaders-v5`
 
-## 📊 Experiment Tracking with Weights & Biases
+## Experiment Tracking with Weights & Biases
 
-### Setting up W&B
-
-1. Install Weights & Biases:
-```bash
-pip install wandb
-```
-
-2. Login to W&B:
-```bash
-wandb login
-```
-
-3. Train with logging:
 ```python
 model = train_dqn(
     env_id="CartPole-v1",
     total_timesteps=50000,
     use_wandb=True,
     wandb_project="my-rl-project",
-    wandb_entity="your-username",  # Optional: your W&B username
+    wandb_entity="your-username",
     exp_name="cartpole-experiment"
 )
 ```
 
-### What gets logged:
+What gets logged:
+- Episode returns, episode lengths, epsilon values, training loss
+- Training progress videos (if `capture_video=True`)
+- All training configuration
 
-- **Metrics**: Episode returns, episode lengths, epsilon values, training loss
-- **Videos**: Training progress videos (recorded every 100 steps by default)
-- **Hyperparameters**: All training configuration
-- **System info**: Hardware usage, training time
-
-## 🎥 Video Recording
-
-NeatRL can automatically record and upload training videos:
+## Video Recording
 
 ```python
 model = train_dqn(
     env_id="CartPole-v1",
     total_timesteps=50000,
-    capture_video=True,     # Enable video recording
-    use_wandb=True,         # Upload to W&B
-    upload_every=100        # Upload frequency (steps)
+    capture_video=True,
+    use_wandb=True,
+    upload_every=100
 )
 ```
-
-Videos are:
-- Recorded every 100 training steps (configurable)
-- Uploaded directly to W&B (no local storage)
-- Automatically cleaned up after upload
-
-
-## 📚 Examples
-
-Check out these example scripts:
-
-- [`run_dqn_cartpole.py`](./run_dqn_cartpole.py) - Basic DQN training on CartPole
-- [`run_dqn_frozenlake.py`](./run_dqn_frozenlake.py) - DQN training on FrozenLake (with one-hot encoding)
-- [`run_dqn_mountaincar.py`](./run_dqn_mountaincar.py) - DQN training on MountainCar
-- [`run_dqn_acrobot.py`](./run_dqn_acrobot.py) - DQN training on Acrobot
-- [`run_dqn_lunarlander.py`](./run_dqn_lunarlander.py) - DQN training on LunarLander
-- [`run_dqn_carracing.py`](./run_dqn_carracing.py) - DQN training on CarRacing (discrete)
-- [`run_dqn_atari.py`](./run_dqn_atari.py) - DQN training on Atari-Breakout
 
 ## Installation
 
 ```bash
-# Install base package
 pip install neatrl
 
-# Install extras based on environments you want to use
-pip install neatrl[atari]      # For CarRacing, Atari-Breakout
+pip install neatrl[atari]      # For Atari games
 pip install neatrl[box2d]      # For LunarLander
 pip install neatrl[classic]    # For CartPole, FrozenLake, MountainCar, Acrobot
-
-# Or install all extras at once
-pip install neatrl[atari,box2d,classic]
 ```
-
----
-
-Happy training! 🚀
 
 ## PyPI
 
-For installation and more information, visit [NeatRL on PyPI](https://pypi.org/project/neatrl/)</content>
-<parameter name="filePath">/Users/yuvrajsingh9886/Desktop/NeatRL/NeatRL/neatrl/docs/README.md
+For installation and more information, visit [NeatRL on PyPI](https://pypi.org/project/neatrl/)

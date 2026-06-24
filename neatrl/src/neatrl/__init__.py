@@ -5,6 +5,8 @@ from .dueling_dqn import train_dueling_dqn
 from .ppo import train_ppo, train_ppo_cnn
 from .reinforce import train_reinforce, train_reinforce_cnn
 from .rnd import train_ppo_rnd, train_ppo_rnd_cnn
+from .sac import train_sac, train_sac_cnn
+from .td3 import train_td3, train_td3_cnn
 
 __all__ = [
     "train_dqn",
@@ -19,4 +21,8 @@ __all__ = [
     "train_ddpg_cnn",
     "train_a2c",
     "train_a2c_cnn",
+    "train_sac",
+    "train_sac_cnn",
+    "train_td3",
+    "train_td3_cnn",
 ]

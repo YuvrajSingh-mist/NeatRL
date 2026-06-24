@@ -57,6 +57,6 @@ The agent is trained through an iterative process:
 
 ## Results
 
-The agent successfully learns to play Flappy Bird, navigating through pipes with increasing proficiency as training progresses. A video of the trained agent's performance is included (`final_FlappyBird-v0.mp4`).
+The agent successfully learns to play Flappy Bird, navigating through pipes with increasing proficiency as training progresses. A video of the trained agent's performance is included ([`final_FlappyBird-v0.mp4`](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/FlappyBird-PPO/final_FlappyBird-v0.mp4)).
 
-![Flappy Bird Agent](images/output.gif)
+![Flappy Bird Agent](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/FlappyBird-PPO/images/output.gif)
