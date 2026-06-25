@@ -1,8 +1,8 @@
 {
-  "venvPath": "neatrl",
+  "venvPath": ".",
   "venv": ".venv",
   "pythonVersion": "3.12",
   "typeCheckingMode": "basic",
   "reportMissingModuleSource": "none",
-  "include": ["neatrl/src"]
+  "include": ["src"]
 }

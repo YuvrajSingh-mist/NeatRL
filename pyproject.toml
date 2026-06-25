@@ -64,3 +64,11 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.19.0",
+    "pyright>=1.1.411",
+    "pytest>=8.4.2",
+    "ruff>=0.14.9",
+]
