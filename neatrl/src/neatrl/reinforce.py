@@ -205,7 +205,7 @@ def evaluate(
                 frames.append(frame)
 
             with torch.no_grad():
-                action = model.get_action(  # type: ignore[union-attr]
+                action = model.get_action(  # type: ignore[operator]
                     torch.tensor(obs, device=device, dtype=torch.float32)
                 )
                 if len(action) == 2:
@@ -559,7 +559,7 @@ def train_reinforce(
             optimizer.param_groups[0]["lr"] = lrnow
 
         while True:
-            result = policy_network.get_action(  # type: ignore[union-attr]
+            result = policy_network.get_action(  # type: ignore[operator]
                 torch.tensor(obs, device=Config.device, dtype=torch.float32)
             )
             if len(result) == 2:
@@ -827,7 +827,7 @@ def train_reinforce(
             atari_wrapper=Config.atari_wrapper,
             grid_env=Config.grid_env,
         )
-        imageio.mimsave(train_video_path, frames, fps=30)
+        imageio.mimsave(train_video_path, frames, fps=30)  # type: ignore[arg-type]
         print(f"Final training video saved to {train_video_path}")
         wandb.finish()
 
@@ -1096,7 +1096,7 @@ def train_reinforce_cnn(
             optimizer.param_groups[0]["lr"] = lrnow
 
         while True:
-            result = policy_network.get_action(  # type: ignore[union-attr]
+            result = policy_network.get_action(  # type: ignore[operator]
                 torch.tensor(obs, device=Config.device, dtype=torch.float32)
             )
             if len(result) == 2:
@@ -1364,7 +1364,7 @@ def train_reinforce_cnn(
             atari_wrapper=Config.atari_wrapper,
             grid_env=Config.grid_env,
         )
-        imageio.mimsave(train_video_path, frames, fps=30)
+        imageio.mimsave(train_video_path, frames, fps=30)  # type: ignore[arg-type]
         print(f"Final training video saved to {train_video_path}")
         wandb.finish()
 

@@ -447,7 +447,7 @@ def validate_feature_network_dimensions(
 
 def evaluate(
     model: nn.Module,
-    device: torch.device,
+    device: Union[str, torch.device],
     env_id: str,
     env: Optional[gym.Env] = None,
     seed: int = 42,
@@ -494,7 +494,7 @@ def evaluate(
                     np.array(obs), device=device, dtype=torch.float32
                 ).unsqueeze(0)
                 # For SAC, use stochastic action during evaluation
-                action, _ = model.get_action(obs_tensor)  # type: ignore[union-attr]
+                action, _ = model.get_action(obs_tensor)  # type: ignore[operator]
                 action = action.cpu().numpy()
                 if isinstance(eval_env.action_space, gym.spaces.Discrete):
                     action = action.item()
@@ -631,7 +631,7 @@ def train_sac(
     random.seed(Config.seed)
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
-    device: torch.device = torch.device(Config.device)  # type: ignore[assignment]
+    device = torch.device(Config.device)  # type: ignore[assignment]
 
     # Create environments - check for pre-created env first, then default
     if env is not None:
@@ -686,7 +686,7 @@ def train_sac(
     # Create actor network
     if isinstance(actor_class, nn.Module):
         # Use custom actor instance
-        validate_policy_network_dimensions(actor_class, obs_space_shape, action_shape)
+        validate_policy_network_dimensions(actor_class, obs_space_shape, action_space_n)
         actor_net = actor_class.to(device)
     else:
         # Use actor class
@@ -749,18 +749,18 @@ def train_sac(
         n_envs=Config.n_envs,
     )
 
-    obs, _ = envs.reset()
+    obs, _ = envs.reset()  # type: ignore[var-annotated]
     start_time = time.time()
 
     for step in tqdm(range(Config.total_timesteps)):
         # Sample action from stochastic policy
         with torch.no_grad():
-            action, _ = actor_net.get_action(  # type: ignore[union-attr]
+            action, _ = actor_net.get_action(  # type: ignore[operator]
                 torch.tensor(obs, device=device, dtype=torch.float32)
             )
 
         action_np = action.cpu().numpy()
-        new_obs, reward, terminated, truncated, info = envs.step(action_np)
+        new_obs, reward, terminated, truncated, info = envs.step(action_np)  # type: ignore[var-annotated]
         done = np.logical_or(terminated, truncated)
         replay_buffer.add(
             obs, new_obs, action_np, np.array(reward), np.array(done), [info]
@@ -772,7 +772,7 @@ def train_sac(
 
             # Update Q-networks
             with torch.no_grad():
-                next_actions, next_log_probs = actor_net.get_action(  # type: ignore[union-attr]
+                next_actions, next_log_probs = actor_net.get_action(  # type: ignore[operator]
                     data.next_observations.to(torch.float32)
                 )
 
@@ -815,7 +815,7 @@ def train_sac(
             # Update policy
             if step % Config.policy_frequency == 0:
                 actor_optim.zero_grad()
-                new_actions, log_probs = actor_net.get_action(  # type: ignore[union-attr]
+                new_actions, log_probs = actor_net.get_action(  # type: ignore[operator]
                     data.observations.to(torch.float32)
                 )
                 q1_new = q1_network(data.observations.to(torch.float32), new_actions)
@@ -1019,7 +1019,7 @@ def train_sac(
 
         if eval_frames:
             train_video_path = f"videos/final_{Config.env_id}.mp4"
-            imageio.mimsave(train_video_path, eval_frames, fps=30, codec="libx264")
+            imageio.mimsave(train_video_path, eval_frames, fps=30, codec="libx264")  # type: ignore[arg-type]
             print(f"Final training video saved to {train_video_path}")
             wandb.finish()
 
@@ -1126,7 +1126,7 @@ def train_sac_cnn(
     random.seed(Config.seed)
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
-    device: torch.device = torch.device(Config.device)  # type: ignore[assignment]
+    device = torch.device(Config.device)  # type: ignore[assignment]
 
     # Create environments - check for pre-created env first, then default
     if env is not None:
@@ -1183,7 +1183,7 @@ def train_sac_cnn(
     # Create actor network
     if isinstance(actor_class, nn.Module):
         # Use custom actor instance
-        validate_policy_network_dimensions(actor_class, obs_space_shape, action_shape)
+        validate_policy_network_dimensions(actor_class, obs_space_shape, action_space_n)
         actor_net = actor_class.to(device)
     else:
         # Use actor class
@@ -1246,18 +1246,18 @@ def train_sac_cnn(
         n_envs=Config.n_envs,
     )
 
-    obs, _ = envs.reset()
+    obs, _ = envs.reset()  # type: ignore[var-annotated]
     start_time = time.time()
 
     for step in tqdm(range(Config.total_timesteps)):
         # Sample action from stochastic policy
         with torch.no_grad():
-            action, log_probs = actor_net.get_action(  # type: ignore[union-attr]
+            action, log_probs = actor_net.get_action(  # type: ignore[operator]
                 torch.tensor(obs, device=device, dtype=torch.float32)
             )
         action_np = action.cpu().numpy()
 
-        new_obs, reward, terminated, truncated, info = envs.step(action_np)
+        new_obs, reward, terminated, truncated, info = envs.step(action_np)  # type: ignore[var-annotated]
         done = np.logical_or(terminated, truncated)
         replay_buffer.add(
             obs, new_obs, action_np, np.array(reward), np.array(done), [info]
@@ -1272,7 +1272,7 @@ def train_sac_cnn(
 
             # Update Q-networks
             with torch.no_grad():
-                next_actions, next_log_probs = actor_net.get_action(  # type: ignore[union-attr]
+                next_actions, next_log_probs = actor_net.get_action(  # type: ignore[operator]
                     data.next_observations.to(torch.float32)
                 )
                 next_log_probs = (
@@ -1318,7 +1318,7 @@ def train_sac_cnn(
             # Update policy
             if step % Config.policy_frequency == 0:
                 actor_optim.zero_grad()
-                new_actions, log_probs = actor_net.get_action(  # type: ignore[union-attr]
+                new_actions, log_probs = actor_net.get_action(  # type: ignore[operator]
                     data.observations.to(torch.float32)
                 )
                 q1_new = q1_network(data.observations.to(torch.float32), new_actions)
@@ -1522,7 +1522,7 @@ def train_sac_cnn(
 
         if eval_frames:
             train_video_path = f"videos/final_{Config.env_id}.mp4"
-            imageio.mimsave(train_video_path, eval_frames, fps=30, codec="libx264")
+            imageio.mimsave(train_video_path, eval_frames, fps=30, codec="libx264")  # type: ignore[arg-type]
             print(f"Final training video saved to {train_video_path}")
             wandb.finish()
 

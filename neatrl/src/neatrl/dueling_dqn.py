@@ -668,7 +668,7 @@ def train_dueling_dqn(
             capture_video=capture_video,
             grid_env=grid_env,
         )
-        imageio.mimsave(train_video_path, frames, fps=30)
+        imageio.mimsave(train_video_path, frames, fps=30)  # type: ignore[arg-type]
         print(f"Final training video saved to {train_video_path}")
         wandb.finish()
 

@@ -410,7 +410,7 @@ def validate_feature_network_dimensions(
 
 def evaluate(
     model: nn.Module,
-    device: torch.device,
+    device: Union[str, torch.device],
     env_id: str,
     env: Optional[gym.Env] = None,
     seed: int = 42,
@@ -448,7 +448,7 @@ def evaluate(
                 frames.append(frame)
             with torch.no_grad():
                 obs = torch.tensor(obs, device=device, dtype=torch.float32)
-                action, _, _ = model.get_action(obs)  # type: ignore[union-attr]
+                action, _, _ = model.get_action(obs)  # type: ignore[operator]
                 action = action.cpu().numpy()
                 if isinstance(eval_env.action_space, gym.spaces.Discrete):
                     action = action.item()
@@ -733,7 +733,7 @@ def train_ppo_rnd_cnn(
 
     global_step = 0
 
-    next_obs, _ = envs.reset(seed=Config.seed)
+    next_obs, _ = envs.reset(seed=Config.seed)  # type: ignore[var-annotated]
     next_obs = torch.Tensor(next_obs).to(device)
     next_done = torch.zeros(Config.n_envs).to(device)
 
@@ -755,7 +755,7 @@ def train_ppo_rnd_cnn(
             dones_storage[step] = next_done
 
             with torch.no_grad():
-                action, logprob, dist = actor_network.get_action(next_obs)  # type: ignore[union-attr]
+                action, logprob, dist = actor_network.get_action(next_obs)  # type: ignore[operator]
                 ext_value, int_value = critic_network(next_obs)
 
                 # Log distribution statistics
@@ -803,10 +803,10 @@ def train_ppo_rnd_cnn(
                 intrinsic_reward_rms.var + 1e-8
             )
 
-            intrinsic_rewards_storage[step] = normalized_intrinsic_reward
+
 
             # Step the environment
-            new_obs, reward, terminated, truncated, info = envs.step(
+            new_obs, reward, terminated, truncated, info = envs.step(  # type: ignore[var-annotated]
                 action.cpu().numpy()
             )
             done = np.logical_or(terminated, truncated)
@@ -899,7 +899,7 @@ def train_ppo_rnd_cnn(
 
                 # --- PPO Policy and Value Loss ---
 
-                _, new_log_probs, dist = actor_network.get_action(  # type: ignore[union-attr]
+                _, new_log_probs, dist = actor_network.get_action(  # type: ignore[operator]
                     b_obs[mb_inds], b_actions[mb_inds]
                 )
                 ratio = torch.exp(new_log_probs - b_logprobs[mb_inds])
@@ -1122,7 +1122,7 @@ def train_ppo_rnd_cnn(
         # Save final video to file if frames were captured
         if eval_frames:
             train_video_path = "videos/final.mp4"
-            imageio.mimsave(train_video_path, eval_frames, fps=30)
+            imageio.mimsave(train_video_path, eval_frames, fps=30)  # type: ignore[arg-type]
             print(f"Final training video saved to {train_video_path}")
 
     envs.close()
@@ -1358,8 +1358,9 @@ def train_ppo_rnd(
 
     # Tensor Storage
 
+    obs_shape_tuple = obs_space_shape if isinstance(obs_space_shape, tuple) else (obs_space_shape,)
     obs_storage = torch.zeros(
-        (Config.max_steps, Config.n_envs) + (obs_space_shape,)
+        (Config.max_steps, Config.n_envs) + obs_shape_tuple  # type: ignore[arg-type]
     ).to(device)
     actions_storage = torch.zeros((Config.max_steps, Config.n_envs) + action_shape).to(
         device
@@ -1375,7 +1376,7 @@ def train_ppo_rnd(
 
     global_step = 0
 
-    next_obs, _ = envs.reset(seed=Config.seed)
+    next_obs, _ = envs.reset(seed=Config.seed)  # type: ignore[var-annotated]
     next_obs = torch.Tensor(next_obs).to(device)
     next_done = torch.zeros(Config.n_envs).to(device)
 
@@ -1398,7 +1399,7 @@ def train_ppo_rnd(
             dones_storage[step] = next_done
 
             with torch.no_grad():
-                action, logprob, dist = actor_network.get_action(next_obs)  # type: ignore[union-attr]
+                action, logprob, dist = actor_network.get_action(next_obs)  # type: ignore[operator]
                 ext_value, int_value = critic_network(next_obs)
 
                 # Log distribution statistics
@@ -1446,10 +1447,10 @@ def train_ppo_rnd(
                 intrinsic_reward_rms.var + 1e-8
             )
 
-            intrinsic_rewards_storage[step] = normalized_intrinsic_reward
+            intrinsic_rewards_storage[step] = normalized_intrinsic_reward  # type: ignore[assignment]
 
             # Step the environment
-            new_obs, reward, terminated, truncated, info = envs.step(
+            new_obs, reward, terminated, truncated, info = envs.step(  # type: ignore[var-annotated]
                 action.cpu().numpy()
             )
             done = np.logical_or(terminated, truncated)
@@ -1525,7 +1526,7 @@ def train_ppo_rnd(
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
         # Flatten the batch
-        b_obs = obs_storage.reshape((-1,) + (obs_space_shape,))
+        b_obs = obs_storage.reshape((-1,) + obs_shape_tuple)  # type: ignore[arg-type]
         b_logprobs = logprobs_storage.reshape(-1)
         b_actions = actions_storage.reshape((-1,) + action_shape)
         b_advantages = advantages.reshape(-1)
@@ -1542,7 +1543,7 @@ def train_ppo_rnd(
 
                 # --- PPO Policy and Value Loss ---
 
-                _, new_log_probs, dist = actor_network.get_action(  # type: ignore[union-attr]
+                _, new_log_probs, dist = actor_network.get_action(  # type: ignore[operator]
                     b_obs[mb_inds], b_actions[mb_inds]
                 )
                 ratio = torch.exp(new_log_probs - b_logprobs[mb_inds])
@@ -1765,7 +1766,7 @@ def train_ppo_rnd(
         # Save final video to file if frames were captured
         if eval_frames:
             train_video_path = "videos/final.mp4"
-            imageio.mimsave(train_video_path, eval_frames, fps=30)
+            imageio.mimsave(train_video_path, eval_frames, fps=30)  # type: ignore[arg-type]
             print(f"Final training video saved to {train_video_path}")
 
     envs.close()

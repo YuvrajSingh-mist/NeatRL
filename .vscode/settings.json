@@ -1,0 +1,6 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/neatrl/.venv/bin/python3",
+  "python.analysis.extraPaths": ["${workspaceFolder}/neatrl/src"],
+  "python.analysis.venvPath": "${workspaceFolder}/neatrl",
+  "python.analysis.venv": ".venv"
+}

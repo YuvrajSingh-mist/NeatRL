@@ -348,7 +348,7 @@ def validate_feature_network_dimensions(
 
 def evaluate(
     model: nn.Module,
-    device: torch.device,
+    device: Union[str, torch.device],
     env_id: str,
     env: Optional[gym.Env] = None,
     seed: int = 42,
@@ -386,7 +386,7 @@ def evaluate(
                 frames.append(frame)
             with torch.no_grad():
                 obs = torch.tensor(obs, device=device, dtype=torch.float32).unsqueeze(0)
-                action, _, _ = model.get_action(obs)  # type: ignore[union-attr]
+                action, _, _ = model.get_action(obs)  # type: ignore[operator]
                 action = action.cpu().numpy()
                 if isinstance(eval_env.action_space, gym.spaces.Discrete):
                     action = action.item()
@@ -515,7 +515,7 @@ def train_ppo(
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
 
-    device: torch.device = torch.device(Config.device)  # type: ignore[assignment]
+    device = torch.device(Config.device)  # type: ignore[assignment]
 
     if Config.device == "cuda":
         torch.backends.cudnn.deterministic = True
@@ -555,12 +555,12 @@ def train_ppo(
 
     envs = gym.vector.SyncVectorEnv(env_thunks)
     if isinstance(envs.single_observation_space, gym.spaces.Discrete):
-        obs_space_shape = (envs.single_observation_space.n,)
+        obs_space_shape: Union[int, tuple[int, ...]] = (int(envs.single_observation_space.n),)  # type: ignore[attr-defined]
     else:
-        obs_space_shape = envs.single_observation_space.shape[0]
+        obs_space_shape = int(envs.single_observation_space.shape[0])
 
-    action_space_n = (
-        envs.single_action_space.n
+    action_space_n = int(
+        envs.single_action_space.n  # type: ignore[attr-defined]
         if isinstance(envs.single_action_space, gym.spaces.Discrete)
         else envs.single_action_space.shape[0]
     )
@@ -609,8 +609,9 @@ def train_ppo(
 
     # Tensor Storage
 
+    obs_shape_tuple = obs_space_shape if isinstance(obs_space_shape, tuple) else (obs_space_shape,)
     obs_storage = torch.zeros(
-        (Config.max_steps, Config.n_envs) + (obs_space_shape,)
+        (Config.max_steps, Config.n_envs) + obs_shape_tuple  # type: ignore[arg-type]
     ).to(device)
     actions_storage = torch.zeros((Config.max_steps, Config.n_envs) + action_shape).to(
         device
@@ -622,7 +623,7 @@ def train_ppo(
 
     global_step = 0
 
-    next_obs, _ = envs.reset(seed=Config.seed)
+    next_obs, _ = envs.reset(seed=Config.seed)  # type: ignore[var-annotated]
     next_obs = torch.Tensor(next_obs).to(device)
     next_done = torch.zeros(Config.n_envs).to(device)
 
@@ -643,7 +644,7 @@ def train_ppo(
             dones_storage[step] = next_done
 
             with torch.no_grad():
-                action, logprob, dist = actor_network.get_action(next_obs)
+                action, logprob, dist = actor_network.get_action(next_obs)  # type: ignore[operator]
                 value = critic_network(next_obs)
 
                 # Log distribution statistics
@@ -678,7 +679,7 @@ def train_ppo(
             )
 
             # Step the environment
-            new_obs, reward, terminated, truncated, info = envs.step(
+            new_obs, reward, terminated, truncated, info = envs.step(  # type: ignore[var-annotated]
                 action.cpu().numpy()
             )
             done = np.logical_or(terminated, truncated)
@@ -722,7 +723,7 @@ def train_ppo(
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
         # Flatten the batch
-        b_obs = obs_storage.reshape((-1,) + (obs_space_shape,))
+        b_obs = obs_storage.reshape((-1,) + obs_shape_tuple)  # type: ignore[arg-type]
         b_logprobs = logprobs_storage.reshape(-1)
         b_actions = actions_storage.reshape((-1,) + action_shape)
         b_advantages = advantages.reshape(-1)
@@ -740,7 +741,7 @@ def train_ppo(
 
                 # --- PPO Policy and Value Loss ---
 
-                _, new_log_probs, dist = actor_network.get_action(
+                _, new_log_probs, dist = actor_network.get_action(  # type: ignore[operator]
                     b_obs[mb_inds], b_actions[mb_inds]
                 )
                 new_log_probs = (
@@ -965,7 +966,7 @@ def train_ppo(
         # Save final video to file if frames were captured
         if eval_frames:
             train_video_path = "videos/final.mp4"
-            imageio.mimsave(train_video_path, eval_frames, fps=30)
+            imageio.mimsave(train_video_path, eval_frames, fps=30)  # type: ignore[arg-type]
             print(f"Final training video saved to {train_video_path}")
 
     envs.close()
@@ -1067,7 +1068,7 @@ def train_ppo_cnn(
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
 
-    device: torch.device = torch.device(Config.device)  # type: ignore[assignment]
+    device = torch.device(Config.device)  # type: ignore[assignment]
 
     if Config.device == "cuda":
         torch.backends.cudnn.deterministic = True
@@ -1107,14 +1108,14 @@ def train_ppo_cnn(
 
     envs = gym.vector.SyncVectorEnv(env_thunks)
     if isinstance(envs.single_observation_space, gym.spaces.Discrete):
-        obs_space_shape = (envs.single_observation_space.n,)
+        obs_space_shape: tuple[int, ...] = (int(envs.single_observation_space.n),)  # type: ignore[attr-defined]
     else:
-        obs_space_shape = envs.single_observation_space.shape
+        obs_space_shape = tuple(envs.single_observation_space.shape)
 
-    action_space_n = (
-        envs.single_action_space.n
+    action_space_n = int(
+        envs.single_action_space.n  # type: ignore[attr-defined]
         if isinstance(envs.single_action_space, gym.spaces.Discrete)
-        else envs.single_action_space.shape
+        else envs.single_action_space.shape[0]
     )
 
     action_shape = (
@@ -1174,7 +1175,7 @@ def train_ppo_cnn(
 
     global_step = 0
 
-    next_obs, _ = envs.reset(seed=Config.seed)
+    next_obs, _ = envs.reset(seed=Config.seed)  # type: ignore[var-annotated]
     next_obs = torch.Tensor(next_obs).to(device)
     next_done = torch.zeros(Config.n_envs).to(device)
 
@@ -1195,7 +1196,7 @@ def train_ppo_cnn(
             dones_storage[step] = next_done
 
             with torch.no_grad():
-                action, logprob, dist = actor_network.get_action(next_obs)
+                action, logprob, dist = actor_network.get_action(next_obs)  # type: ignore[operator]
                 value = critic_network(next_obs)
 
                 # Log distribution statistics
@@ -1230,7 +1231,7 @@ def train_ppo_cnn(
             )
 
             # Step the environment
-            new_obs, reward, terminated, truncated, info = envs.step(
+            new_obs, reward, terminated, truncated, info = envs.step(  # type: ignore[var-annotated]
                 action.cpu().numpy()
             )
             done = np.logical_or(terminated, truncated)
@@ -1292,7 +1293,7 @@ def train_ppo_cnn(
 
                 # --- PPO Policy and Value Loss ---
 
-                _, new_log_probs, dist = actor_network.get_action(
+                _, new_log_probs, dist = actor_network.get_action(  # type: ignore[operator]
                     b_obs[mb_inds], b_actions[mb_inds]
                 )
                 logratio = new_log_probs - b_logprobs[mb_inds]
@@ -1512,7 +1513,7 @@ def train_ppo_cnn(
         # Save final video to file if frames were captured
         if eval_frames:
             train_video_path = "videos/final.mp4"
-            imageio.mimsave(train_video_path, eval_frames, fps=30)
+            imageio.mimsave(train_video_path, eval_frames, fps=30)  # type: ignore[arg-type]
             print(f"Final training video saved to {train_video_path}")
 
     envs.close()

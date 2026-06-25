@@ -341,7 +341,7 @@ def validate_feature_network_dimensions(
 
 def evaluate(
     model: nn.Module,
-    device: torch.device,
+    device: Union[str, torch.device],
     env_id: str,
     env: Optional[gym.Env] = None,
     seed: int = 42,
@@ -379,7 +379,7 @@ def evaluate(
                 frames.append(frame)
             with torch.no_grad():
                 obs = torch.tensor(obs, device=device, dtype=torch.float32).unsqueeze(0)
-                action, _, _ = model.get_action(obs)  # type: ignore[union-attr]
+                action, _, _ = model.get_action(obs)  # type: ignore[operator]
                 action = action.cpu().numpy()
                 if isinstance(eval_env.action_space, gym.spaces.Discrete):
                     action = action.item()
@@ -577,7 +577,7 @@ def train_a2c(
 
     global_step = 0
 
-    next_obs, _ = envs.reset(seed=Config.seed)
+    next_obs, _ = envs.reset(seed=Config.seed)  # type: ignore[var-annotated]
     next_obs = torch.Tensor(next_obs).to(device)
 
     start_time = time.time()
@@ -599,7 +599,7 @@ def train_a2c(
 
         while True:
             # Get action and value
-            result = actor_network.get_action(next_obs)
+            result = actor_network.get_action(next_obs)  # type: ignore[operator]
             if len(result) == 2:
                 action, logprob = result
                 logprob = logprob.sum(dim=-1) if len(logprob.shape) > 1 else logprob
@@ -638,7 +638,7 @@ def train_a2c(
 
             # Step the environment
 
-            new_obs, reward, terminated, truncated, info = envs.step(
+            new_obs, reward, terminated, truncated, info = envs.step(  # type: ignore[var-annotated]
                 action.cpu().numpy()
             )
             done = np.logical_or(terminated, truncated)
@@ -663,7 +663,7 @@ def train_a2c(
         returns = torch.zeros_like(rewards_tensor, dtype=torch.float32).to(device)
         rt = 0.0
         for t in reversed(range(num_steps)):
-            rt = rewards_tensor[t] + rt * Config.gamma
+            rt = rewards_tensor[t] + rt * Config.gamma  # type: ignore[assignment]
             returns[t] = rt
 
         # Calculate advantages (no normalization in pure A2C)
@@ -862,7 +862,7 @@ def train_a2c(
         # Save final video to file if frames were captured
         if eval_frames:
             train_video_path = "videos/final.mp4"
-            imageio.mimsave(train_video_path, eval_frames, fps=30)
+            imageio.mimsave(train_video_path, eval_frames, fps=30)  # type: ignore[arg-type]
             print(f"Final training video saved to {train_video_path}")
 
     envs.close()
@@ -952,9 +952,9 @@ def train_a2c_cnn(
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
     if Config.device == "auto":
-        device: torch.device = torch.device(
+        device = torch.device(  # type: ignore[assignment]
             "cuda" if torch.cuda.is_available() else "cpu"
-        )  # type: ignore[assignment]
+        )
     else:
         device = torch.device(Config.device)  # type: ignore[assignment]
 
@@ -1041,7 +1041,7 @@ def train_a2c_cnn(
 
     global_step = 0
 
-    next_obs, _ = envs.reset(seed=Config.seed)
+    next_obs, _ = envs.reset(seed=Config.seed)  # type: ignore[var-annotated]
     next_obs = torch.Tensor(next_obs).to(device)
 
     start_time = time.time()
@@ -1066,7 +1066,7 @@ def train_a2c_cnn(
             global_step += Config.n_envs
 
             # Get action and value
-            result = actor_network.get_action(next_obs)
+            result = actor_network.get_action(next_obs)  # type: ignore[operator]
             if len(result) == 2:
                 action, logprob = result
                 logprob = logprob.sum(dim=-1) if len(logprob.shape) > 1 else logprob
@@ -1104,7 +1104,7 @@ def train_a2c_cnn(
             log_probs.append(logprob)
 
             # Step the environment
-            new_obs, reward, terminated, truncated, info = envs.step(
+            new_obs, reward, terminated, truncated, info = envs.step(  # type: ignore[var-annotated]
                 action.cpu().numpy()
             )
             done = np.logical_or(terminated, truncated)
@@ -1127,7 +1127,7 @@ def train_a2c_cnn(
         returns = torch.zeros_like(rewards_tensor, dtype=torch.float32).to(device)
         rt = 0.0
         for t in reversed(range(num_steps)):
-            rt = rewards_tensor[t] + rt * Config.gamma
+            rt = rewards_tensor[t] + rt * Config.gamma  # type: ignore[assignment]
             returns[t] = rt
 
         # Calculate advantages (no normalization in pure A2C)
@@ -1327,7 +1327,7 @@ def train_a2c_cnn(
         # Save final video to file if frames were captured
         if eval_frames:
             train_video_path = "videos/final.mp4"
-            imageio.mimsave(train_video_path, eval_frames, fps=30)
+            imageio.mimsave(train_video_path, eval_frames, fps=30)  # type: ignore[arg-type]
             print(f"Final training video saved to {train_video_path}")
 
     envs.close()

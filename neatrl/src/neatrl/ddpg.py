@@ -404,7 +404,7 @@ def validate_feature_network_dimensions(
 
 def evaluate(
     model: nn.Module,
-    device: torch.device,
+    device: Union[str, torch.device],
     env_id: str,
     env: Optional[gym.Env] = None,
     seed: int = 42,
@@ -594,7 +594,7 @@ def train_ddpg(
     random.seed(Config.seed)
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
-    device: torch.device = torch.device(Config.device)  # type: ignore[assignment]
+    device = torch.device(Config.device)  # type: ignore[assignment]
 
     # Create environment
     if env is not None:
@@ -773,7 +773,7 @@ def train_ddpg(
                 # Apply gradient clipping for actor
                 if Config.max_grad_norm != 0.0:
                     torch.nn.utils.clip_grad_norm_(
-                        list(actor_net.parameters() + q_network.parameters()),
+                        list(actor_net.parameters()) + list(q_network.parameters()),
                         max_norm=Config.max_grad_norm,
                     )
 
@@ -931,7 +931,7 @@ def train_ddpg(
 
         if eval_frames:
             train_video_path = f"videos/final_{Config.env_id}.mp4"
-            imageio.mimsave(train_video_path, eval_frames, fps=30, codec="libx264")
+            imageio.mimsave(train_video_path, eval_frames, fps=30, codec="libx264")  # type: ignore[arg-type]
             print(f"Final training video saved to {train_video_path}")
             wandb.finish()
 
@@ -1043,7 +1043,7 @@ def train_ddpg_cnn(
     random.seed(Config.seed)
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
-    device: torch.device = torch.device(Config.device)  # type: ignore[assignment]
+    device = torch.device(Config.device)  # type: ignore[assignment]
 
     # Create environment
     if env is not None:
@@ -1072,7 +1072,7 @@ def train_ddpg_cnn(
 
     # Compute observation dimensions
     if is_discrete_obs:
-        obs_shape = int(obs_space.n)  # type: ignore[attr-defined]
+        obs_shape: Union[int, tuple[int, ...]] = int(obs_space.n)  # type: ignore[attr-defined]
     else:
         obs_shape = tuple(obs_space.shape)
 
@@ -1224,7 +1224,7 @@ def train_ddpg_cnn(
                 # Apply gradient clipping for actor
                 if Config.max_grad_norm != 0.0:
                     torch.nn.utils.clip_grad_norm_(
-                        list(actor_net.parameters() + q_network.parameters()),
+                        list(actor_net.parameters()) + list(q_network.parameters()),
                         max_norm=Config.max_grad_norm,
                     )
 
@@ -1382,7 +1382,7 @@ def train_ddpg_cnn(
 
         if eval_frames:
             train_video_path = f"videos/final_{Config.env_id}.mp4"
-            imageio.mimsave(train_video_path, eval_frames, fps=30, codec="libx264")
+            imageio.mimsave(train_video_path, eval_frames, fps=30, codec="libx264")  # type: ignore[arg-type]
             print(f"Final training video saved to {train_video_path}")
             wandb.finish()
 

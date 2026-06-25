@@ -418,7 +418,7 @@ def validate_feature_network_dimensions(
 
 def evaluate(
     model: nn.Module,
-    device: torch.device,
+    device: Union[str, torch.device],
     env_id: str,
     env: Optional[gym.Env] = None,
     seed: int = 42,
@@ -464,7 +464,7 @@ def evaluate(
                 obs_tensor = torch.tensor(
                     np.array(obs), device=device, dtype=torch.float32
                 ).unsqueeze(0)
-                action = model.get_action(obs_tensor)  # type: ignore[union-attr]
+                action = model.get_action(obs_tensor)  # type: ignore[operator]
                 action = torch.clip(
                     action, Config.low, Config.high
                 )  # Use args low and high
@@ -477,7 +477,7 @@ def evaluate(
 
             obs, rewards_curr, terminated, truncated, info = eval_env.step(action)
             done = terminated or truncated
-            rewards += rewards_curr
+            rewards += float(rewards_curr)
 
         returns.append(rewards)
 
@@ -707,10 +707,10 @@ def train_td3(
 
     # Replay buffer
     obs_space_obj = (
-        env.single_observation_space if Config.n_envs > 1 else env.observation_space
+        env.single_observation_space if Config.n_envs > 1 else env.observation_space  # type: ignore[attr-defined]
     )
     action_space_obj = (
-        env.single_action_space if Config.n_envs > 1 else env.action_space
+        env.single_action_space if Config.n_envs > 1 else env.action_space  # type: ignore[attr-defined]
     )
 
     replay_buffer = ReplayBuffer(
@@ -729,7 +729,7 @@ def train_td3(
     for step in tqdm(range(updates), desc="Training"):
         # Get action from actor network with exploration noise
         with torch.no_grad():
-            action = actor_net.get_action(  # type: ignore[union-attr]
+            action = actor_net.get_action(  # type: ignore[operator]
                 torch.tensor(obs, device=device, dtype=torch.float32)
             )
             action = action + torch.clip(
@@ -833,7 +833,7 @@ def train_td3(
             # TD3: Delayed Policy Updates - update actor less frequently than critics
             if step % Config.train_frequency == 0:
                 actor_optim.zero_grad()
-                actions = actor_net.get_action(data.observations.to(torch.float32))  # type: ignore[union-attr]
+                actions = actor_net.get_action(data.observations.to(torch.float32))  # type: ignore[operator]
                 # Only use Q1 for policy gradient (standard practice in TD3)
                 policy_loss = -q1_network(
                     data.observations.to(torch.float32), actions.to(torch.float32)
@@ -1024,7 +1024,7 @@ def train_td3(
 
         if eval_frames:
             train_video_path = f"videos/final_{Config.env_id}.mp4"
-            imageio.mimsave(train_video_path, eval_frames, fps=30, codec="libx264")
+            imageio.mimsave(train_video_path, eval_frames, fps=30, codec="libx264")  # type: ignore[arg-type]
             print(f"Final training video saved to {train_video_path}")
             wandb.finish()
 
@@ -1138,7 +1138,7 @@ def train_td3_cnn(
     random.seed(Config.seed)
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
-    device = torch.device(Config.device)
+    device = torch.device(Config.device)  # type: ignore[assignment]
 
     # Create environment(s)
     if Config.n_envs > 1:
@@ -1154,14 +1154,15 @@ def train_td3_cnn(
             )
             for i in range(Config.n_envs)
         ]
-        env = gym.vector.SyncVectorEnv(env_thunks)
-        is_discrete_obs = isinstance(env.single_observation_space, gym.spaces.Discrete)
-        obs_space = env.single_observation_space
-        obs_shape = obs_space.n if is_discrete_obs else obs_space.shape
-        action_shape = (
-            env.single_action_space.n
-            if isinstance(env.single_action_space, gym.spaces.Discrete)
-            else env.single_action_space.shape[0]
+        vec_env = gym.vector.SyncVectorEnv(env_thunks)
+        env = vec_env  # type: ignore[assignment]
+        is_discrete_obs = isinstance(vec_env.single_observation_space, gym.spaces.Discrete)
+        obs_space = vec_env.single_observation_space
+        obs_shape = int(obs_space.n) if is_discrete_obs else int(obs_space.shape[0])  # type: ignore[attr-defined]
+        action_shape = int(
+            vec_env.single_action_space.n  # type: ignore[attr-defined]
+            if isinstance(vec_env.single_action_space, gym.spaces.Discrete)
+            else vec_env.single_action_space.shape[0]
         )
     else:
         # Single environment
@@ -1176,9 +1177,9 @@ def train_td3_cnn(
         env = env_thunk()
         is_discrete_obs = isinstance(env.observation_space, gym.spaces.Discrete)
         obs_space = env.observation_space
-        obs_shape = obs_space.n if is_discrete_obs else obs_space.shape
-        action_shape = (
-            env.action_space.n
+        obs_shape = int(obs_space.n) if is_discrete_obs else int(obs_space.shape[0])  # type: ignore[attr-defined]
+        action_shape = int(
+            env.action_space.n  # type: ignore[attr-defined]
             if isinstance(env.action_space, gym.spaces.Discrete)
             else env.action_space.shape[0]
         )
@@ -1234,10 +1235,10 @@ def train_td3_cnn(
 
     # Replay buffer
     obs_space_obj = (
-        env.single_observation_space if Config.n_envs > 1 else env.observation_space
+        env.single_observation_space if Config.n_envs > 1 else env.observation_space  # type: ignore[union-attr]
     )
     action_space_obj = (
-        env.single_action_space if Config.n_envs > 1 else env.action_space
+        env.single_action_space if Config.n_envs > 1 else env.action_space  # type: ignore[union-attr]
     )
 
     replay_buffer = ReplayBuffer(
@@ -1528,7 +1529,7 @@ def train_td3_cnn(
 
         if eval_frames:
             train_video_path = f"videos/final_{Config.env_id}.mp4"
-            imageio.mimsave(train_video_path, eval_frames, fps=30, codec="libx264")
+            imageio.mimsave(train_video_path, eval_frames, fps=30, codec="libx264")  # type: ignore[arg-type]
             print(f"Final training video saved to {train_video_path}")
             wandb.finish()
 
