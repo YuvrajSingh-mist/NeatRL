@@ -14,7 +14,7 @@ import wandb
 from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
 
-from .utils import configure_logging, get_logger, setup_device
+from .utils import configure_logging, get_logger, get_space_dims, setup_device
 from .utils.nn_utils import (
     validate_critic_network_dimensions,
     validate_policy_network_dimensions,
@@ -80,6 +80,7 @@ class Config:
 
 
 class ActorNet(nn.Module):
+    """Deterministic actor (policy) network for continuous action spaces."""
     def __init__(
         self,
         state_space: Union[int, tuple[int, ...]],
@@ -94,6 +95,7 @@ class ActorNet(nn.Module):
         self.out = nn.Linear(256, action_space)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass — returns network output(s)."""
         x = torch.tanh(
             self.out(
                 torch.nn.functional.mish(
@@ -105,10 +107,12 @@ class ActorNet(nn.Module):
         return x
 
     def get_action(self, x: torch.Tensor) -> torch.Tensor:
+        """Sample an action and return it with log-prob and entropy."""
         return self.forward(x)
 
 
 class QNet(nn.Module):
+    """Critic Q-network taking concatenated state-action pairs as input."""
     def __init__(self, state_space: Union[int, tuple[int, ...]], action_space: int):
         super().__init__()
         # Handle state_space as tuple or int
@@ -121,6 +125,7 @@ class QNet(nn.Module):
         self.out = nn.Linear(256, 1)
 
     def forward(self, state, act):
+        """Forward pass — returns network output(s)."""
         st = torch.nn.functional.mish(self.fc1(state))
         action = torch.nn.functional.mish(self.fc2(act))
         temp = torch.cat((st, action), dim=1)  # Concatenate state and action
@@ -131,6 +136,7 @@ class QNet(nn.Module):
 
 
 class ActorNetCNN(nn.Module):
+    """CNN-based deterministic actor for pixel observations."""
     def __init__(self, obs_shape, action_space):
         super().__init__()
         # Convolutional layers for image processing
@@ -143,6 +149,7 @@ class ActorNetCNN(nn.Module):
 
     def forward(self, x):
         # x shape: (batch, channels, height, width)
+        """Forward pass — returns network output(s)."""
         x = torch.nn.functional.relu(self.conv1(x))
         x = torch.nn.functional.relu(self.conv2(x))
         x = torch.nn.functional.relu(self.conv3(x))
@@ -152,6 +159,7 @@ class ActorNetCNN(nn.Module):
         return x
 
     def get_action(self, x):
+        """Sample an action and return it with log-prob and entropy."""
         x = self.forward(x)
         x = torch.tanh(x)  # Output between -1 and 1
         x = x * 1.0  # Scale to action limits
@@ -159,6 +167,7 @@ class ActorNetCNN(nn.Module):
 
 
 class QNetCNN(nn.Module):
+    """CNN-based critic for pixel observations."""
     def __init__(self, obs_shape, action_space):
         super().__init__()
         # Convolutional layers for image processing
@@ -178,6 +187,7 @@ class QNetCNN(nn.Module):
 
     def forward(self, state, action):
         # Process state through conv layers
+        """Forward pass — returns network output(s)."""
         x = torch.nn.functional.relu(self.conv1(state))
         x = torch.nn.functional.relu(self.conv2(x))
         x = torch.nn.functional.relu(self.conv3(x))
@@ -194,12 +204,14 @@ class QNetCNN(nn.Module):
 
 
 class OneHotWrapper(gym.ObservationWrapper):
+    """Wraps a discrete observation space into a one-hot float vector."""
     def __init__(self, env: gym.Env, obs_shape: int = 16) -> None:
         super().__init__(env)
         self.obs_shape = obs_shape
         self.observation_space = gym.spaces.Box(0, 1, (obs_shape,), dtype=np.float32)
 
     def observation(self, obs: Any) -> np.ndarray:
+        """Convert discrete integer observation to one-hot float tensor."""
         one_hot = torch.zeros(self.obs_shape, dtype=torch.float32)
         one_hot[obs] = 1.0
         return one_hot.numpy()
@@ -216,12 +228,14 @@ def make_env(
     env: Optional[gym.Env] = None,
 ) -> Callable[[], gym.Env]:
     # Validate that only one of env_id or env is provided
+    """Return a thunk that creates and seeds a gymnasium environment."""
     if env_id and env is not None:
         raise ValueError(
             "Cannot provide both env_id and env. Use env_id for Gymnasium environments or env for custom environments."
         )
 
     def thunk():
+        """Environment factory thunk (called by SyncVectorEnv)."""
         if env is not None:
             # Use provided environment but still apply wrappers
             env_to_use = env
@@ -272,6 +286,7 @@ def evaluate(
     use_wandb: bool = False,
 ) -> tuple[list[float], list[np.ndarray]]:
     # Validate that only one of env_id or env is provided
+    """Run eval_episodes episodes and return total rewards and any recorded frames."""
     if env_id and env is not None:
         raise ValueError(
             "Cannot provide both env_id and env. Use env_id for Gymnasium environments or env for custom environments."
@@ -384,6 +399,7 @@ def train_td3(
     high: float = Config.high,
 ) -> nn.Module:
     # Update Config with passed arguments
+    """Train a TD3 agent on a continuous-action environment."""
     Config.env_id = env_id or env.spec.id  # type: ignore[union-attr]
     Config.total_timesteps = total_timesteps
     Config.seed = seed
@@ -470,16 +486,6 @@ def train_td3(
         ]
         vec_env = gym.vector.SyncVectorEnv(env_thunks)
         train_env = vec_env  # type: ignore[assignment]
-        is_discrete_obs = isinstance(
-            vec_env.single_observation_space, gym.spaces.Discrete
-        )
-        obs_space = vec_env.single_observation_space
-        obs_shape = int(obs_space.n) if is_discrete_obs else int(obs_space.shape[0])  # type: ignore[attr-defined]
-        action_shape = int(
-            vec_env.single_action_space.n  # type: ignore[attr-defined]
-            if isinstance(vec_env.single_action_space, gym.spaces.Discrete)
-            else vec_env.single_action_space.shape[0]  # type: ignore[index]
-        )
     else:
         env_thunk = make_env(
             Config.env_id if env is None else "",
@@ -490,14 +496,7 @@ def train_td3(
             env=env,
         )
         train_env = env_thunk()
-        is_discrete_obs = isinstance(train_env.observation_space, gym.spaces.Discrete)
-        obs_space = train_env.observation_space
-        obs_shape = int(obs_space.n) if is_discrete_obs else int(obs_space.shape[0])  # type: ignore[attr-defined]
-        action_shape = int(
-            train_env.action_space.n  # type: ignore[attr-defined]
-            if isinstance(train_env.action_space, gym.spaces.Discrete)
-            else train_env.action_space.shape[0]  # type: ignore[index]
-        )
+    obs_shape, action_shape = get_space_dims(train_env)
     env = train_env
 
     # Create actor network
@@ -776,8 +775,11 @@ def train_td3(
                             "global_step": step,
                         }
                     )
-                print(
-                    f"Step {step}, Q1 Loss: {loss1.item():.4f}, Q2 Loss: {loss2.item():.4f}, Actor Loss: {policy_loss.item() if step % Config.train_frequency == 0 else 0.0:.4f}, SPS: {int(step / (time.time() - start_time))}"
+                logger.info(
+                    "Step %d Q1 Loss: %.4f Q2 Loss: %.4f Actor Loss: %.4f SPS: %d",
+                    step, loss1.item(), loss2.item(),
+                    policy_loss.item() if step % Config.train_frequency == 0 else 0.0,
+                    int(step / (time.time() - start_time)),
                 )
 
             # Evaluation
@@ -809,9 +811,7 @@ def train_td3(
                             "val_step": step,
                         }
                     )
-                print(
-                    f"Evaluation returns: {[float(r) for r in episodic_returns]}, Average: {avg_return:.2f}"
-                )
+                logger.info("Evaluation returns: %s  Average: %.2f", [float(r) for r in episodic_returns], avg_return)
 
                 # Save video if frames were captured
                 if eval_frames and Config.use_wandb:
@@ -915,6 +915,7 @@ def train_td3_cnn(
     q_network_class: Any = QNet,
 ) -> nn.Module:
     # Update Config with passed arguments
+    """Train a CNN-based TD3 agent on pixel observations."""
     Config.env_id = env_id or env.spec.id  # type: ignore[union-attr]
     Config.total_timesteps = total_timesteps
     Config.seed = seed
@@ -1282,8 +1283,11 @@ def train_td3_cnn(
                             "global_step": step,
                         }
                     )
-                print(
-                    f"Step {step}, Q1 Loss: {loss1.item():.4f}, Q2 Loss: {loss2.item():.4f}, Actor Loss: {policy_loss.item() if step % Config.train_frequency == 0 else 0.0:.4f}, SPS: {int(step / (time.time() - start_time))}"
+                logger.info(
+                    "Step %d Q1 Loss: %.4f Q2 Loss: %.4f Actor Loss: %.4f SPS: %d",
+                    step, loss1.item(), loss2.item(),
+                    policy_loss.item() if step % Config.train_frequency == 0 else 0.0,
+                    int(step / (time.time() - start_time)),
                 )
 
             # Evaluation
@@ -1315,9 +1319,7 @@ def train_td3_cnn(
                             "val_step": step,
                         }
                     )
-                print(
-                    f"Evaluation returns: {[float(r) for r in episodic_returns]}, Average: {avg_return:.2f}"
-                )
+                logger.info("Evaluation returns: %s  Average: %.2f", [float(r) for r in episodic_returns], avg_return)
 
                 # Save video if frames were captured
                 if eval_frames and Config.use_wandb:

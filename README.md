@@ -14,6 +14,97 @@ NeatRL provides readable implementations of popular RL algorithms with a focus o
 - **Easy to Extend**: Modular design for adding new algorithms
 - **Video Recording**: Automatic video capture and WandB integration
 
+
+## Installation
+
+```bash
+pip install neatrl
+```
+
+With optional environment extras:
+
+```bash
+pip install "neatrl[atari]"    # Atari games (ALE)
+pip install "neatrl[box2d]"    # Box2D environments (LunarLander, BipedalWalker, …)
+pip install "neatrl[classic]"  # Classic control (CartPole, Pendulum, …)
+pip install "neatrl[mujoco]"   # MuJoCo continuous control
+```
+
+> Browse supported environments: [MuJoCo](https://gymnasium.farama.org/environments/mujoco/) · [Box2D](https://gymnasium.farama.org/environments/box2d/) · [Classic Control](https://gymnasium.farama.org/environments/classic_control/) · [Atari](https://gymnasium.farama.org/environments/atari/)
+
+## Quick Start
+
+### Train DQN on CartPole
+
+```python
+from neatrl import train_dqn
+
+model = train_dqn(
+    env_id="CartPole-v1",
+    total_timesteps=10000,
+    seed=42
+)
+```
+
+### Train PPO on Classic Control
+
+```python
+from neatrl import train_ppo
+
+model = train_ppo(
+    env_id="CartPole-v1",
+    total_timesteps=50000,
+    n_envs=4,           # Parallel environments
+    GAE=0.95,           # Generalized Advantage Estimation lambda
+    clip_value=0.2,     # PPO clipping parameter
+    use_wandb=True,     # Track with WandB
+    seed=42
+)
+```
+
+### Train SAC on Continuous Control
+
+```python
+from neatrl import train_sac
+
+model = train_sac(
+    env_id="Pendulum-v1",
+    total_timesteps=50000,
+    alpha=0.2,           # Entropy regularization coefficient
+    autotune_alpha=True, # Automatically tune alpha
+    use_wandb=True,      # Track with WandB
+    seed=42
+)
+```
+
+### Train SAC on Atari
+
+```python
+from neatrl import train_sac_cnn
+
+model = train_sac_cnn(
+    env_id="BreakoutNoFrameskip-v4",
+    total_timesteps=100000,
+    alpha=0.2,
+    autotune_alpha=True,
+    atari_wrapper=True,  # Automatic Atari preprocessing
+    use_wandb=True,
+    seed=42
+)
+```
+
+
+## Documentation
+
+**[Complete Documentation](https://github.com/YuvrajSingh-mist/NeatRL/tree/master/docs)**
+
+The docs include:
+- Detailed usage examples for every algorithm
+- Hyperparameter tuning guides
+- Environment compatibility notes
+- Experiment tracking setup (WandB)
+
+
 ## Supported Algorithms
 
 ### Current Implementations
@@ -78,96 +169,6 @@ NeatRL provides readable implementations of popular RL algorithms with a focus o
 
 - *More algorithms coming soon...*
 
-## Installation
-
-```bash
-uv venv
-source .venv/bin/activate
-
-uv pip install neatrl
-
-# Optional environment extras — click to browse available environments:
-uv pip install "neatrl[atari]"   
-uv pip install "neatrl[box2d]"   
-uv pip install "neatrl[classic]"
-uv pip install "neatrl[mujoco]" 
-```
-> - [MuJoCo](https://gymnasium.farama.org/environments/mujoco/)
-> - [Box2D](https://gymnasium.farama.org/environments/box2d/)
-> - [Classic Control](https://gymnasium.farama.org/environments/classic_control/) 
-> - [Atari](https://gymnasium.farama.org/environments/atari/)
-
-## Quick Start
-
-### Train DQN on CartPole
-
-```python
-from neatrl import train_dqn
-
-model = train_dqn(
-    env_id="CartPole-v1",
-    total_timesteps=10000,
-    seed=42
-)
-```
-
-### Train PPO on Classic Control
-
-```python
-from neatrl import train_ppo
-
-model = train_ppo(
-    env_id="CartPole-v1",
-    total_timesteps=50000,
-    n_envs=4,           # Parallel environments
-    GAE=0.95,           # Generalized Advantage Estimation lambda
-    clip_value=0.2,     # PPO clipping parameter
-    use_wandb=True,     # Track with WandB
-    seed=42
-)
-```
-
-### Train SAC on Continuous Control
-
-```python
-from neatrl import train_sac
-
-model = train_sac(
-    env_id="Pendulum-v1",
-    total_timesteps=50000,
-    alpha=0.2,           # Entropy regularization coefficient
-    autotune_alpha=True, # Automatically tune alpha
-    use_wandb=True,      # Track with WandB
-    seed=42
-)
-```
-
-### Train SAC on Atari
-
-```python
-from neatrl import train_sac_cnn
-
-model = train_sac_cnn(
-    env_id="BreakoutNoFrameskip-v4",
-    total_timesteps=100000,
-    alpha=0.2,
-    autotune_alpha=True,
-    atari_wrapper=True,  # Automatic Atari preprocessing
-    use_wandb=True,
-    seed=42
-)
-```
-
-## Documentation
-
-**[Complete Documentation](https://github.com/YuvrajSingh-mist/NeatRL/tree/master/neatrl/docs)**
-
-The docs include:
-- Detailed usage examples
-- Hyperparameter tuning guides
-- Environment compatibility
-- Experiment tracking setup
-
 ## Contributing
 
 Contributions are welcome. Please feel free to submit a Pull Request.
@@ -176,11 +177,13 @@ Contributions are welcome. Please feel free to submit a Pull Request.
 
 ```bash
 git clone https://github.com/YuvrajSingh-mist/NeatRL.git
-cd NeatRL
-uv pip install -e ".[dev]"
+cd NeatRL/NeatRL
+uv sync --extra dev   # installs neatrl in editable mode + dev tools
+uv run pytest         # run the test suite
+uv run ruff check src # lint
 ```
 
-For the complete changelog, see [CHANGELOG.md](https://github.com/YuvrajSingh-mist/NeatRL/tree/master/neatrl/CHANGELOG.md).
+For the complete changelog, see [CHANGELOG.md](https://github.com/YuvrajSingh-mist/NeatRL/blob/master/CHANGELOG.md).
 
 ## License
 

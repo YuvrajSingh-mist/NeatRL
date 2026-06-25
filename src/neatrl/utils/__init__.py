@@ -1,7 +1,8 @@
 import logging
 import os
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
+import gymnasium as gym
 import torch
 
 from .nn_utils import (
@@ -41,6 +42,31 @@ def get_logger(name: str) -> logging.Logger:
     return logging.getLogger(name)
 
 
+def get_space_dims(env: Any) -> tuple[int, int]:
+    """Return (obs_dim, act_dim) as plain ints for any gymnasium env or SyncVectorEnv.
+
+    Handles both plain envs (observation_space) and vector envs (single_observation_space)
+    via duck-typing, and supports Discrete (uses .n) or Box (uses .shape[0]) spaces.
+    """
+    if hasattr(env, "single_observation_space"):
+        obs_space = env.single_observation_space
+        act_space = env.single_action_space
+    else:
+        obs_space = env.observation_space
+        act_space = env.action_space
+    obs_dim = (
+        int(obs_space.n)  # type: ignore[attr-defined]
+        if isinstance(obs_space, gym.spaces.Discrete)
+        else int(obs_space.shape[0])  # type: ignore[index]
+    )
+    act_dim = (
+        int(act_space.n)  # type: ignore[attr-defined]
+        if isinstance(act_space, gym.spaces.Discrete)
+        else int(act_space.shape[0])  # type: ignore[index]
+    )
+    return obs_dim, act_dim
+
+
 def setup_device(
     device: Union[str, torch.device] = "cpu", seed: int = 0
 ) -> torch.device:
@@ -64,6 +90,7 @@ __all__ = [
     "calculate_param_norm",
     "configure_logging",
     "get_logger",
+    "get_space_dims",
     "setup_device",
     "validate_critic_network_dimensions",
     "validate_dueling_q_network_dimensions",

@@ -15,7 +15,7 @@ from gymnasium.wrappers import AtariPreprocessing, FrameStackObservation
 from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
 
-from .utils import configure_logging, get_logger, setup_device
+from .utils import configure_logging, get_logger, get_space_dims, setup_device
 from .utils.nn_utils import (
     calculate_param_norm,
     validate_dueling_q_network_dimensions,
@@ -35,6 +35,7 @@ except ImportError:
 @dataclass
 class Config:
     # Experiment settings
+    """Hyperparameters and settings for Dueling DQN training."""
     exp_name: str = "Dueling-DQN"
     seed: int = 42
     env_id: str = "CliffWalking-v0"
@@ -74,6 +75,7 @@ class Config:
 
 
 class DuelingQNet(nn.Module):
+    """Dueling Q-network with separate value and advantage streams."""
     def __init__(self, state_space, action_space):
         super().__init__()
         logger.info(f"State space: {state_space}, Action space: {action_space}")
@@ -88,6 +90,7 @@ class DuelingQNet(nn.Module):
         )
 
     def forward(self, x):
+        """Forward pass — returns network output(s)."""
         feat = self.features(x)
         values = self.values(feat)
         adv = self.adv(feat)
@@ -97,6 +100,7 @@ class DuelingQNet(nn.Module):
 
 
 class LinearEpsilonDecay(nn.Module):
+    """Linearly decays epsilon from start to end over duration steps."""
     def __init__(self, initial_eps, end_eps, total_timesteps):
         super().__init__()
         self.initial_eps = initial_eps
@@ -104,6 +108,7 @@ class LinearEpsilonDecay(nn.Module):
         self.end_eps = end_eps
 
     def forward(self, current_timestep, decay_factor):
+        """Forward pass — returns network output(s)."""
         slope = (self.end_eps - self.initial_eps) / (
             self.total_timesteps * decay_factor
         )
@@ -111,18 +116,21 @@ class LinearEpsilonDecay(nn.Module):
 
 
 class OneHotWrapper(gym.ObservationWrapper):
+    """Wraps a discrete observation space into a one-hot float vector."""
     def __init__(self, env, obs_shape=48):
         super().__init__(env)
         self.obs_shape = obs_shape
         self.observation_space = gym.spaces.Box(0, 1, (obs_shape,), dtype=np.float32)
 
     def observation(self, obs):
+        """Convert discrete integer observation to one-hot float tensor."""
         one_hot = torch.zeros(self.obs_shape, dtype=torch.float32)
         one_hot[obs] = 1.0
         return one_hot.numpy()
 
 
 def make_env(env_id, seed, idx, atari_wrapper=False, grid_env=False):
+    """Return a thunk that creates and seeds a gymnasium environment."""
     def thunk():
         """Create environment with video recording"""
         env = gym.make(env_id, render_mode="rgb_array")
@@ -153,6 +161,7 @@ def evaluate(
     capture_video=False,
     grid_env=False,
 ):
+    """Run eval_episodes episodes and return total rewards and any recorded frames."""
     eval_env = make_env(
         idx=0, env_id=env_id, seed=seed, atari_wrapper=atari_wrapper, grid_env=grid_env
     )()
@@ -311,22 +320,7 @@ def train_dueling_dqn(
             env_id, seed, idx=0, atari_wrapper=atari_wrapper, grid_env=grid_env
         )()
 
-    # Determine if we're dealing with discrete observation spaces
-    if n_envs > 1:
-        is_discrete_obs = isinstance(env.single_observation_space, gym.spaces.Discrete)  # type: ignore[attr-defined]
-        obs_space = env.single_observation_space  # type: ignore[attr-defined]
-    else:
-        is_discrete_obs = isinstance(env.observation_space, gym.spaces.Discrete)
-        obs_space = env.observation_space
-
-    # Compute observation dimensions
-    if is_discrete_obs and grid_env:
-        obs_shape = obs_space.n  # type: ignore[attr-defined]
-    else:
-        obs_shape = obs_space.shape[0]  # type: ignore[index]
-
-    # Compute action dimensions
-    action_shape = env.single_action_space.n if n_envs > 1 else env.action_space.n  # type: ignore[attr-defined]
+    obs_shape, action_shape = get_space_dims(env)
 
     # Use custom agent if provided, otherwise use default DuelingQNet
     if custom_agent is not None:
@@ -404,9 +398,7 @@ def train_dueling_dqn(
                         ep_ret = info["episode"]["r"][i]
                         ep_len = info["episode"]["l"][i]
 
-                        print(
-                            f"Step={step}, Env={i}, Return={ep_ret:.2f}, Length={ep_len}"
-                        )
+                        logger.info("Step=%d Env=%d Return=%.2f Length=%d", step, i, ep_ret, ep_len)
 
                         if use_wandb:
                             wandb.log(

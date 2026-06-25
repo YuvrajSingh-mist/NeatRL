@@ -14,7 +14,7 @@ import torch.optim as optim
 import wandb
 from tqdm import tqdm
 
-from .utils import configure_logging, get_logger, setup_device
+from .utils import configure_logging, get_logger, get_space_dims, setup_device
 from .utils.nn_utils import (
     validate_critic_network_dimensions,
     validate_policy_network_dimensions,
@@ -75,12 +75,14 @@ class Config:
 def layer_init(
     layer: nn.Module, std: float = np.sqrt(2), bias_const: float = 0.0
 ) -> nn.Module:
+    """Apply orthogonal init (weight) and constant init (bias) to a linear layer."""
     torch.nn.init.orthogonal_(layer.weight, std)  # type: ignore[arg-type]
     torch.nn.init.constant_(layer.bias, bias_const)  # type: ignore[arg-type]
     return layer
 
 
 class ActorNet(nn.Module):
+    """Shared-trunk actor network for discrete or continuous action spaces."""
     def __init__(
         self,
         state_space: Union[int, tuple[int, ...]],
@@ -94,6 +96,7 @@ class ActorNet(nn.Module):
         self.out = layer_init(nn.Linear(16, action_space))
 
     def forward(self, x: torch.Tensor) -> torch.distributions.Distribution:
+        """Forward pass — returns network output(s)."""
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
@@ -107,6 +110,7 @@ class ActorNet(nn.Module):
         self,
         x: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.distributions.Distribution]:
+        """Sample an action and return it with log-prob and entropy."""
         dist = self.forward(x)
         action = dist.sample()
         log_prob = dist.log_prob(action)
@@ -115,6 +119,7 @@ class ActorNet(nn.Module):
 
 
 class CriticNet(nn.Module):
+    """State-value critic network."""
     def __init__(self, state_space: Union[int, tuple[int, ...]]) -> None:
         super().__init__()
         self.fc1 = layer_init(nn.Linear(state_space, 32))  # type: ignore[arg-type]
@@ -123,6 +128,7 @@ class CriticNet(nn.Module):
         self.value = layer_init(nn.Linear(16, 1))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass — returns network output(s)."""
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
@@ -130,12 +136,14 @@ class CriticNet(nn.Module):
 
 
 class OneHotWrapper(gym.ObservationWrapper):
+    """Wraps a discrete observation space into a one-hot float vector."""
     def __init__(self, env: gym.Env, obs_shape: int = 16) -> None:
         super().__init__(env)
         self.obs_shape = obs_shape
         self.observation_space = gym.spaces.Box(0, 1, (obs_shape,), dtype=np.float32)
 
     def observation(self, obs: Any) -> np.ndarray:
+        """Convert discrete integer observation to one-hot float tensor."""
         one_hot = torch.zeros(self.obs_shape, dtype=torch.float32)
         one_hot[obs] = 1.0
         return one_hot.numpy()
@@ -151,7 +159,9 @@ def make_env(
     env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = None,
     env: Optional[gym.Env] = None,
 ) -> Callable[[], gym.Env]:
+    """Return a thunk that creates and seeds a gymnasium environment."""
     def thunk():
+        """Environment factory thunk (called by SyncVectorEnv)."""
         if env is not None:
             # Use provided environment
             env_to_use = env
@@ -198,6 +208,7 @@ def evaluate(
     use_wandb: bool = False,
 ) -> tuple[list[float], list[np.ndarray]]:
     # Create evaluation environment
+    """Run eval_episodes episodes and return total rewards and any recorded frames."""
     eval_env = make_env(
         env_id if env is None else "",
         seed,
@@ -287,6 +298,7 @@ def train_a2c(
     device: str = Config.device,
 ) -> nn.Module:
     # Update Config with passed arguments
+    """Train an A2C agent on a vectorised environment, returning the trained model."""
     Config.env_id = env_id if env is None else env.spec.id  # type: ignore[union-attr]
     Config.total_timesteps = total_timesteps
     Config.seed = seed
@@ -370,18 +382,7 @@ def train_a2c(
         ]
 
     envs = gym.vector.SyncVectorEnv(env_thunks)
-    if isinstance(envs.single_observation_space, gym.spaces.Discrete):
-        obs_space_shape: Union[int, tuple[int, ...]] = (
-            int(envs.single_observation_space.n),
-        )  # type: ignore[attr-defined]
-    else:
-        obs_space_shape = int(envs.single_observation_space.shape[0])  # type: ignore[index]
-
-    action_space_n = int(
-        envs.single_action_space.n  # type: ignore[attr-defined]
-        if isinstance(envs.single_action_space, gym.spaces.Discrete)
-        else envs.single_action_space.shape[0]  # type: ignore[index]
-    )
+    obs_space_shape, action_space_n = get_space_dims(envs)
 
     logger.info(f"Observation Space: {obs_space_shape}, Action Space: {action_space_n}")
 
@@ -634,8 +635,10 @@ def train_a2c(
                     "global_step": global_step,
                 }
             )
-            print(
-                f"Step {step}, Global Step: {global_step}, Policy Loss: {policy_loss.item():.4f}, Critic Loss: {critic_loss.item():.4f}, SPS: {int(global_step / (time.time() - start_time))}"
+            logger.info(
+                "Step %d global_step %d Policy Loss: %.4f Critic Loss: %.4f SPS: %d",
+                step, global_step, policy_loss.item(), critic_loss.item(),
+                int(global_step / (time.time() - start_time)),
             )
 
             if Config.use_wandb:
@@ -743,6 +746,7 @@ def train_a2c_cnn(
     device: str = Config.device,
 ) -> nn.Module:
     # Update Config with passed arguments
+    """Train a CNN-based A2C agent on pixel observations."""
     Config.env_id = env_id if env is None else env.spec.id  # type: ignore[union-attr]
     Config.total_timesteps = total_timesteps
     Config.seed = seed
@@ -1101,8 +1105,10 @@ def train_a2c_cnn(
                     "global_step": global_step,
                 }
             )
-            print(
-                f"Step {step}, Global Step: {global_step}, Policy Loss: {policy_loss.item():.4f}, Critic Loss: {critic_loss.item():.4f}, SPS: {int(global_step / (time.time() - start_time))}"
+            logger.info(
+                "Step %d global_step %d Policy Loss: %.4f Critic Loss: %.4f SPS: %d",
+                step, global_step, policy_loss.item(), critic_loss.item(),
+                int(global_step / (time.time() - start_time)),
             )
 
             if Config.use_wandb:

@@ -19,7 +19,7 @@ from gymnasium.wrappers import (
 )
 from tqdm import tqdm
 
-from .utils import configure_logging, get_logger, setup_device
+from .utils import configure_logging, get_logger, get_space_dims, setup_device
 from .utils.nn_utils import (
     validate_policy_network_dimensions,
 )
@@ -38,6 +38,7 @@ except ImportError:
 @dataclass
 class Config:
     # Experiment settings
+    """Hyperparameters and settings for REINFORCE training."""
     exp_name: str = "REINFORCE"
     seed: int = 42
     env_id: Optional[str] = "CartPole-v1"
@@ -94,6 +95,7 @@ class Config:
 
 # For discrete actions
 class PolicyNet(nn.Module):
+    """Stochastic policy network (actor) for REINFORCE."""
     def __init__(self, state_space, action_space):
         super().__init__()
         logger.info(f"State space: {state_space}, Action space: {action_space}")
@@ -103,11 +105,13 @@ class PolicyNet(nn.Module):
         self.out = nn.Linear(16, action_space)
 
     def forward(self, x):
+        """Forward pass — returns network output(s)."""
         x = self.out(self.fc3(torch.relu(self.fc2(torch.relu(self.fc1(x))))))
         x = torch.nn.functional.softmax(x, dim=-1)  # Apply softmax to get probabilities
         return x
 
     def get_action(self, x):
+        """Sample an action and return it with log-prob and entropy."""
         action_probs = self.forward(x)
         dist = torch.distributions.Categorical(
             action_probs
@@ -118,12 +122,14 @@ class PolicyNet(nn.Module):
 
 
 class OneHotWrapper(gym.ObservationWrapper):
+    """Wraps a discrete observation space into a one-hot float vector."""
     def __init__(self, env, obs_shape=16):
         super().__init__(env)
         self.obs_shape = obs_shape
         self.observation_space = gym.spaces.Box(0, 1, (obs_shape,), dtype=np.float32)
 
     def observation(self, obs):
+        """Convert discrete integer observation to one-hot float tensor."""
         one_hot = torch.zeros(self.obs_shape, dtype=torch.float32)
         one_hot[obs] = 1.0
         return one_hot.numpy()
@@ -139,7 +145,9 @@ def make_env(
     env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = None,
     env: Optional[gym.Env] = None,
 ) -> Callable[[], gym.Env]:
+    """Return a thunk that creates and seeds a gymnasium environment."""
     def thunk():
+        """Environment factory thunk (called by SyncVectorEnv)."""
         if env is not None:
             # Use provided environment
             env_to_use = env
@@ -186,6 +194,7 @@ def evaluate(
     atari_wrapper=False,
     grid_env=False,
 ):
+    """Run eval_episodes episodes and return total rewards and any recorded frames."""
     eval_env = make_env(
         env_id=env_id,
         env=env,
@@ -367,8 +376,9 @@ def train_reinforce(
 
     # Warn if entropy_coeff is set but use_entropy is False
     if not Config.use_entropy and Config.entropy_coeff != 0.0:
-        print(
-            f"Warning: entropy_coeff={Config.entropy_coeff} is provided but use_entropy=False. Entropy regularization will not be applied."
+        logger.warning(
+            "entropy_coeff=%.4f provided but use_entropy=False — entropy regularization will not be applied",
+            Config.entropy_coeff,
         )
 
     if Config.capture_video:
@@ -416,33 +426,7 @@ def train_reinforce(
             env_wrapper=Config.env_wrapper,
         )()
 
-    # Determine if we're dealing with discrete observation spaces
-    if Config.n_envs > 1:
-        is_discrete_obs = isinstance(env.single_observation_space, gym.spaces.Discrete)  # type: ignore[attr-defined]
-        obs_space = env.single_observation_space  # type: ignore[attr-defined]
-    else:
-        is_discrete_obs = isinstance(env.observation_space, gym.spaces.Discrete)
-        obs_space = env.observation_space
-
-    # Compute observation dimensions
-    if is_discrete_obs:
-        obs_shape = obs_space.n  # type: ignore[attr-defined]
-    else:
-        obs_shape = obs_space.shape[0]  # type: ignore[index]
-
-    # Compute action dimensions
-    if Config.n_envs > 1:
-        action_shape = (
-            env.single_action_space.n  # type: ignore[attr-defined]
-            if isinstance(env.single_action_space, gym.spaces.Discrete)  # type: ignore[attr-defined]
-            else env.single_action_space.shape[0]  # type: ignore[attr-defined, index]
-        )
-    else:
-        action_shape = (
-            env.action_space.n
-            if isinstance(env.action_space, gym.spaces.Discrete)
-            else env.action_space.shape[0]  # type: ignore[index]
-        )
+    obs_shape, action_shape = get_space_dims(env)
 
     # Use custom agent if provided, otherwise use default PolicyNet
     if Config.custom_agent is not None:
@@ -706,9 +690,7 @@ def train_reinforce(
 
         # Print progress every 1000 steps
         if step % 10 == 0:
-            print(
-                f"Step {step}, Policy Loss: {loss.item():.4f}, SPS: {int(step / (time.time() - start_time))}"
-            )
+            logger.info("Step %d Policy Loss: %.4f SPS: %d", step, loss.item(), int(step / (time.time() - start_time)))
             if Config.use_wandb:
                 wandb.log(
                     {
@@ -896,8 +878,9 @@ def train_reinforce_cnn(
 
     # Warn if entropy_coeff is set but use_entropy is False
     if not Config.use_entropy and Config.entropy_coeff != 0.0:
-        print(
-            f"Warning: entropy_coeff={Config.entropy_coeff} is provided but use_entropy=False. Entropy regularization will not be applied."
+        logger.warning(
+            "entropy_coeff=%.4f provided but use_entropy=False — entropy regularization will not be applied",
+            Config.entropy_coeff,
         )
 
     if Config.capture_video:
@@ -1233,9 +1216,7 @@ def train_reinforce_cnn(
 
         # Print progress every 1000 steps
         if step % 10 == 0:
-            print(
-                f"Step {step}, Policy Loss: {loss.item():.4f}, SPS: {int(step / (time.time() - start_time))}"
-            )
+            logger.info("Step %d Policy Loss: %.4f SPS: %d", step, loss.item(), int(step / (time.time() - start_time)))
             if Config.use_wandb:
                 wandb.log(
                     {
