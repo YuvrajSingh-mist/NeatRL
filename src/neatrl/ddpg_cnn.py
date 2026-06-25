@@ -1,5 +1,6 @@
 """Deep Deterministic Policy Gradient (DDPG) with CNN networks for visual environments."""
 
+import copy
 import os
 import random
 import time
@@ -22,6 +23,7 @@ from .utils.nn_utils import (
     validate_critic_network_dimensions,
     validate_policy_network_dimensions,
 )
+from .utils.wrappers import OneHotWrapper
 
 logger = get_logger(__name__)
 
@@ -152,28 +154,6 @@ class QNetCNN(nn.Module):
         combined = torch.cat([state_features, action_features], dim=1)
         x = torch.nn.functional.relu(self.combined_fc(combined))
         return self.out(x)
-
-
-class OneHotWrapper(gym.ObservationWrapper):
-    """Wraps a discrete observation space into a one-hot float vector."""
-
-    def __init__(self, env: gym.Env, obs_shape: int = 16) -> None:
-        super().__init__(env)
-        self.obs_shape = obs_shape
-        self.observation_space = gym.spaces.Box(0, 1, (obs_shape,), dtype=np.float32)
-
-    def observation(self, obs: Any) -> np.ndarray:
-        """Convert a discrete integer observation to a one-hot float32 vector.
-
-        Args:
-            obs (int | np.ndarray): Discrete observation from the wrapped environment.
-
-        Returns:
-            np.ndarray: One-hot encoded float32 array of shape (obs_shape,).
-        """
-        one_hot = torch.zeros(self.obs_shape, dtype=torch.float32)
-        one_hot[obs] = 1.0
-        return one_hot.numpy()
 
 
 def make_env(
@@ -557,12 +537,8 @@ def train_ddpg_cnn(
         # Use critic class
         q_network = q_network_class(obs_shape, action_shape).to(device)
 
-    actor_net = actor_class(obs_shape, action_shape).to(device)
-    q_network = q_network_class(obs_shape, action_shape).to(device)
-
-    # Create target networks
-    target_actor_net = actor_class(obs_shape, action_shape).to(device)
-    target_q_network = q_network_class(obs_shape, action_shape).to(device)
+    target_actor_net = copy.deepcopy(actor_net)
+    target_q_network = copy.deepcopy(q_network)
 
     target_q_network.load_state_dict(q_network.state_dict())
     target_actor_net.load_state_dict(actor_net.state_dict())

@@ -151,6 +151,9 @@ Desktop.ini
 *.swp
 *.swo
 
+# Claude Code agent worktrees (never commit)
+.claude/worktrees/
+
 # Secrets / API keys
 .env.local
 .env.*.local

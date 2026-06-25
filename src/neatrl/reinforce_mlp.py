@@ -25,6 +25,7 @@ from .utils import configure_logging, get_logger, get_space_dims, setup_device
 from .utils.nn_utils import (
     validate_policy_network_dimensions,
 )
+from .utils.wrappers import OneHotWrapper
 
 logger = get_logger(__name__)
 
@@ -138,28 +139,6 @@ class PolicyNet(nn.Module):
 
         action = dist.sample()  # Sample an action from the distribution
         return action, dist.log_prob(action), dist
-
-
-class OneHotWrapper(gym.ObservationWrapper):
-    """Wraps a discrete observation space into a one-hot float vector."""
-
-    def __init__(self, env, obs_shape=16):
-        super().__init__(env)
-        self.obs_shape = obs_shape
-        self.observation_space = gym.spaces.Box(0, 1, (obs_shape,), dtype=np.float32)
-
-    def observation(self, obs):
-        """Convert a discrete integer observation to a one-hot float32 vector.
-
-        Args:
-            obs (int | np.ndarray): Discrete observation from the wrapped environment.
-
-        Returns:
-            np.ndarray: One-hot encoded float32 array of shape (obs_shape,).
-        """
-        one_hot = torch.zeros(self.obs_shape, dtype=torch.float32)
-        one_hot[obs] = 1.0
-        return one_hot.numpy()
 
 
 def make_env(

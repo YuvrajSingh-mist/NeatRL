@@ -21,6 +21,7 @@ from .utils.nn_utils import (
     validate_critic_network_dimensions,
     validate_policy_network_dimensions,
 )
+from .utils.wrappers import OneHotWrapper
 
 logger = get_logger(__name__)
 
@@ -172,28 +173,6 @@ class CriticNet(nn.Module):
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
         return self.value(x)
-
-
-class OneHotWrapper(gym.ObservationWrapper):
-    """Wraps a discrete observation space into a one-hot float vector."""
-
-    def __init__(self, env: gym.Env, obs_shape: int = 16) -> None:
-        super().__init__(env)
-        self.obs_shape = obs_shape
-        self.observation_space = gym.spaces.Box(0, 1, (obs_shape,), dtype=np.float32)
-
-    def observation(self, obs: Any) -> np.ndarray:
-        """Convert a discrete integer observation to a one-hot float32 vector.
-
-        Args:
-            obs (int | np.ndarray): Discrete observation from the wrapped environment.
-
-        Returns:
-            np.ndarray: One-hot encoded float32 array of shape (obs_shape,).
-        """
-        one_hot = torch.zeros(self.obs_shape, dtype=torch.float32)
-        one_hot[obs] = 1.0
-        return one_hot.numpy()
 
 
 def make_env(
@@ -629,7 +608,6 @@ def train_ppo(
                         )
 
             values_storage[step] = value.flatten()
-            # print(action_space_n, action.shape, actions_storage[step].shape, action_shape)
             actions_storage[step] = action
             logprobs_storage[step] = (
                 logprob.sum(dim=-1) if len(logprob.shape) > 1 else logprob
@@ -698,9 +676,8 @@ def train_ppo(
 
                 # --- PPO Policy and Value Loss ---
 
-                _, new_log_probs, dist = actor_network.get_action(  # type: ignore[operator]
-                    b_obs[mb_inds], b_actions[mb_inds]
-                )
+                dist = actor_network(b_obs[mb_inds])
+                new_log_probs = dist.log_prob(b_actions[mb_inds])
                 new_log_probs = (
                     new_log_probs.sum(dim=-1)
                     if len(new_log_probs.shape) > 1
@@ -747,7 +724,6 @@ def train_ppo(
                         * F.mse_loss(current_values.squeeze(), b_returns[mb_inds])
                     )
 
-                critic_loss = F.mse_loss(current_values.squeeze(), b_returns[mb_inds])
                 entropy_loss = dist.entropy().mean()
 
                 # Total Loss

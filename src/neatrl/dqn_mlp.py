@@ -22,6 +22,7 @@ from .utils.nn_utils import (
     calculate_param_norm,
     validate_q_network_dimensions,
 )
+from .utils.wrappers import OneHotWrapper
 
 logger = get_logger(__name__)
 
@@ -123,28 +124,6 @@ class LinearEpsilonDecay(nn.Module):
         return max(slope * current_timestep + self.initial_eps, self.end_eps)
 
 
-class OneHotWrapper(gym.ObservationWrapper):
-    """Wraps a discrete observation space into a one-hot float vector."""
-
-    def __init__(self, env, obs_shape=16):
-        super().__init__(env)
-        self.obs_shape = obs_shape
-        self.observation_space = gym.spaces.Box(0, 1, (obs_shape,), dtype=np.float32)
-
-    def observation(self, obs):
-        """Convert a discrete integer observation to a one-hot float32 vector.
-
-        Args:
-            obs (int | np.ndarray): Discrete observation from the wrapped environment.
-
-        Returns:
-            np.ndarray: One-hot encoded float32 array of shape (obs_shape,).
-        """
-        one_hot = torch.zeros(self.obs_shape, dtype=torch.float32)
-        one_hot[obs] = 1.0
-        return one_hot.numpy()
-
-
 def make_env(env_id, seed, idx, atari_wrapper=False, grid_env=False):
     """Return a thunk that constructs and seeds a Gymnasium environment.
 
@@ -219,7 +198,6 @@ def evaluate(
         obs, _ = eval_env.reset()
         done = False
         episode_reward = 0.0
-        # episode_frames = []
 
         while not done:
             if capture_video:

@@ -1,8 +1,11 @@
 """Utility functions for neural network validation and parameter inspection."""
 
+import logging
 from typing import Optional, Union
 
 import torch.nn as nn
+
+logger = logging.getLogger(__name__)
 
 
 def calculate_param_norm(model: nn.Module) -> float:
@@ -141,8 +144,8 @@ def validate_policy_network_dimensions(
             isinstance(module, nn.Conv2d) for module in policy_network.modules()
         )
         if not has_conv:
-            print(
-                "Warning: Observation is multi-dimensional but network has no Conv2d layers."
+            logger.warning(
+                "Observation is multi-dimensional but network has no Conv2d layers."
             )
     else:
         # Find first Linear layer for input dimension
@@ -201,8 +204,8 @@ def validate_critic_network_dimensions(
             isinstance(module, nn.Conv2d) for module in critic_network.modules()
         )
         if not has_conv:
-            print(
-                "Warning: Observation is multi-dimensional but network has no Conv2d layers."
+            logger.warning(
+                "Observation is multi-dimensional but network has no Conv2d layers."
             )
     else:
         # Find first Linear layer for input dimension
@@ -261,8 +264,8 @@ def validate_feature_network_dimensions(
             isinstance(module, nn.Conv2d) for module in feature_network.modules()
         )
         if not has_conv:
-            print(
-                "Warning: Observation is multi-dimensional but network has no Conv2d layers."
+            logger.warning(
+                "Observation is multi-dimensional but network has no Conv2d layers."
             )
     else:
         # Find first Linear layer for input dimension

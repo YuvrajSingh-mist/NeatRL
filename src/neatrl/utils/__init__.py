@@ -15,8 +15,9 @@ from .nn_utils import (
     validate_policy_network_dimensions,
     validate_q_network_dimensions,
 )
+from .wrappers import OneHotWrapper
 
-_LOG_FMT = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
+_LOG_FMT = "%(asctime)s | %(levelname)-8s | %(module)s | %(message)s"
 _DATE_FMT = "%Y-%m-%d %H:%M:%S"
 
 
