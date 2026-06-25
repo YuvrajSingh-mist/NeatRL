@@ -104,8 +104,8 @@ class RunningMeanStd:
 def layer_init(
     layer: nn.Module, std: float = np.sqrt(2), bias_const: float = 0.0
 ) -> nn.Module:
-    torch.nn.init.orthogonal_(layer.weight, std)
-    torch.nn.init.constant_(layer.bias, bias_const)
+    torch.nn.init.orthogonal_(layer.weight, std)  # type: ignore[arg-type]
+    torch.nn.init.constant_(layer.bias, bias_const)  # type: ignore[arg-type]
     return layer
 
 
@@ -117,7 +117,7 @@ class ActorNet(nn.Module):
     ) -> None:
         super().__init__()
 
-        self.fc1 = layer_init(nn.Linear(state_space, 32))
+        self.fc1 = layer_init(nn.Linear(state_space, 32))  # type: ignore[arg-type]
         self.fc2 = layer_init(nn.Linear(32, 32))
         self.fc3 = layer_init(nn.Linear(32, 16))
         self.out = layer_init(nn.Linear(16, action_space))
@@ -148,7 +148,7 @@ class ActorNet(nn.Module):
 class CriticNet(nn.Module):
     def __init__(self, state_space: Union[int, tuple[int, ...]]) -> None:
         super().__init__()
-        self.fc1 = layer_init(nn.Linear(state_space, 32))
+        self.fc1 = layer_init(nn.Linear(state_space, 32))  # type: ignore[arg-type]
         self.fc2 = layer_init(nn.Linear(32, 32))
         self.fc3 = layer_init(nn.Linear(32, 16))
         self.value_ext = layer_init(nn.Linear(16, 1))
@@ -164,7 +164,7 @@ class CriticNet(nn.Module):
 class PredictorNet(nn.Module):
     def __init__(self, state_space: Union[int, tuple[int, ...]]) -> None:
         super().__init__()
-        self.fc1 = layer_init(nn.Linear(state_space, 64))
+        self.fc1 = layer_init(nn.Linear(state_space, 64))  # type: ignore[arg-type]
         self.fc2 = layer_init(nn.Linear(64, 64))
         self.fc3 = layer_init(nn.Linear(64, 32))
         self.out = layer_init(nn.Linear(32, 32))
@@ -179,7 +179,7 @@ class PredictorNet(nn.Module):
 class TargetNet(nn.Module):
     def __init__(self, state_space: Union[int, tuple[int, ...]]) -> None:
         super().__init__()
-        self.fc1 = layer_init(nn.Linear(state_space, 64))
+        self.fc1 = layer_init(nn.Linear(state_space, 64))  # type: ignore[arg-type]
         self.fc2 = layer_init(nn.Linear(64, 64))
         self.fc3 = layer_init(nn.Linear(64, 32))
         self.out = layer_init(nn.Linear(32, 32))
@@ -444,18 +444,18 @@ def evaluate(
 
         while not done:
             if record:
-                frame = eval_env.render()
+                frame: Any = eval_env.render()
                 frames.append(frame)
             with torch.no_grad():
                 obs = torch.tensor(obs, device=device, dtype=torch.float32)
-                action, _, _ = model.get_action(obs)
+                action, _, _ = model.get_action(obs)  # type: ignore[union-attr]
                 action = action.cpu().numpy()
                 if isinstance(eval_env.action_space, gym.spaces.Discrete):
                     action = action.item()
 
             obs, rewards_curr, terminated, truncated, info = eval_env.step(action)
             done = terminated or truncated
-            rewards += rewards_curr
+            rewards += float(rewards_curr)
 
         returns.append(rewards)
 
@@ -577,9 +577,11 @@ def train_ppo_rnd_cnn(
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
     if Config.device == "auto":
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        device = torch.device(  # type: ignore[assignment]
+            "cuda" if torch.cuda.is_available() else "cpu"
+        )
     else:
-        device = torch.device(Config.device)
+        device = torch.device(Config.device)  # type: ignore[assignment]
 
     # Create environments - check for pre-created env first, then default
     if env is not None:
@@ -613,14 +615,14 @@ def train_ppo_rnd_cnn(
 
     envs = gym.vector.SyncVectorEnv(env_thunks)
     if isinstance(envs.single_observation_space, gym.spaces.Discrete):
-        obs_space_shape = (envs.single_observation_space.n,)
+        obs_space_shape: tuple[int, ...] = (int(envs.single_observation_space.n),)  # type: ignore[attr-defined]
     else:
-        obs_space_shape = envs.single_observation_space.shape
+        obs_space_shape = tuple(envs.single_observation_space.shape)
 
-    action_space_n = (
-        envs.single_action_space.n
+    action_space_n = int(
+        envs.single_action_space.n  # type: ignore[attr-defined]
         if isinstance(envs.single_action_space, gym.spaces.Discrete)
-        else envs.single_action_space.shape
+        else envs.single_action_space.shape[0]
     )
 
     action_shape = (
@@ -753,7 +755,7 @@ def train_ppo_rnd_cnn(
             dones_storage[step] = next_done
 
             with torch.no_grad():
-                action, logprob, dist = actor_network.get_action(next_obs)
+                action, logprob, dist = actor_network.get_action(next_obs)  # type: ignore[union-attr]
                 ext_value, int_value = critic_network(next_obs)
 
                 # Log distribution statistics
@@ -897,7 +899,7 @@ def train_ppo_rnd_cnn(
 
                 # --- PPO Policy and Value Loss ---
 
-                _, new_log_probs, dist = actor_network.get_action(
+                _, new_log_probs, dist = actor_network.get_action(  # type: ignore[union-attr]
                     b_obs[mb_inds], b_actions[mb_inds]
                 )
                 ratio = torch.exp(new_log_probs - b_logprobs[mb_inds])
@@ -1226,7 +1228,7 @@ def train_ppo_rnd(
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
 
-    device = torch.device(Config.device)
+    device = torch.device(Config.device)  # type: ignore[assignment]
 
     if Config.device == "cuda":
         torch.backends.cudnn.deterministic = True
@@ -1266,12 +1268,14 @@ def train_ppo_rnd(
 
     envs = gym.vector.SyncVectorEnv(env_thunks)
     if isinstance(envs.single_observation_space, gym.spaces.Discrete):
-        obs_space_shape = (envs.single_observation_space.n,)
+        obs_space_shape: Union[int, tuple[int, ...]] = (
+            int(envs.single_observation_space.n),
+        )  # type: ignore[attr-defined]
     else:
-        obs_space_shape = envs.single_observation_space.shape[0]
+        obs_space_shape = int(envs.single_observation_space.shape[0])
 
-    action_space_n = (
-        envs.single_action_space.n
+    action_space_n = int(
+        envs.single_action_space.n  # type: ignore[attr-defined]
         if isinstance(envs.single_action_space, gym.spaces.Discrete)
         else envs.single_action_space.shape[0]
     )
@@ -1394,7 +1398,7 @@ def train_ppo_rnd(
             dones_storage[step] = next_done
 
             with torch.no_grad():
-                action, logprob, dist = actor_network.get_action(next_obs)
+                action, logprob, dist = actor_network.get_action(next_obs)  # type: ignore[union-attr]
                 ext_value, int_value = critic_network(next_obs)
 
                 # Log distribution statistics
@@ -1538,7 +1542,7 @@ def train_ppo_rnd(
 
                 # --- PPO Policy and Value Loss ---
 
-                _, new_log_probs, dist = actor_network.get_action(
+                _, new_log_probs, dist = actor_network.get_action(  # type: ignore[union-attr]
                     b_obs[mb_inds], b_actions[mb_inds]
                 )
                 ratio = torch.exp(new_log_probs - b_logprobs[mb_inds])

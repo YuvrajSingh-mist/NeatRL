@@ -1,7 +1,7 @@
 # Multi-Agent Proximal Policy Optimization (MAPPO)
 
 <p align="center">
-  <img src="https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/MARL/MAPPO/images/simple_spread.mp4" width="400" alt="MAPPO Simple Spread Demo"/
+  <img src="https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/artifacts/MARL/MAPPO/images/simple_spread.mp4" width="400" alt="MAPPO Simple Spread Demo"/
   <br>
   <em>MAPPO agents cooperating in Simple Spread environment</em>
 </p>

@@ -66,7 +66,7 @@ TD3 addresses several shortcomings of DDPG:
 
 ## Results
 
-The implementation includes a video recording ([`TD3_BipedalWalker.mp4`](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/TD3/TD3_BipedalWalker.mp4)) that demonstrates the performance of the trained TD3 agent on the BipedalWalker environment.
+The implementation includes a video recording ([`TD3_BipedalWalker.mp4`](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/artifacts/TD3/TD3_BipedalWalker.mp4)) that demonstrates the performance of the trained TD3 agent on the BipedalWalker environment.
 
 ### Training Visualizations
 
@@ -76,7 +76,7 @@ The implementation includes a video recording ([`TD3_BipedalWalker.mp4`](https:/
 
 Here's a GIF showing the trained TD3 agent navigating the BipedalWalker environment:
 
-![BipedalWalker Agent in Action](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/TD3/images/output_bipedal_walker.gif)
+![BipedalWalker Agent in Action](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/artifacts/TD3/images/output_bipedal_walker.gif)
 
 #### HalfCheetah Training
 

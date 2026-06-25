@@ -311,7 +311,9 @@ def validate_policy_network_dimensions(
 
 
 def validate_critic_network_dimensions(
-    critic_network: nn.Module, obs_dim: Union[int, tuple[int, ...]]
+    critic_network: nn.Module,
+    obs_dim: Union[int, tuple[int, ...]],
+    action_dim: Optional[int] = None,
 ) -> None:
     """
     Validate that the Critic-network's input dimension matches the environment.
@@ -319,7 +321,7 @@ def validate_critic_network_dimensions(
     Args:
         critic_network: The critic neural network model (nn.Module)
         obs_dim: Expected observation dimension (int or tuple)
-        action_dim: Expected action dimension
+        action_dim: Expected action dimension (optional, for actor-critic methods)
     """
     if isinstance(obs_dim, tuple):
         # For Atari-like, check if it has conv layers
@@ -456,13 +458,13 @@ def evaluate(
 
         while not done:
             if record:
-                frame = eval_env.render()
+                frame: Any = eval_env.render()
                 frames.append(frame)
             with torch.no_grad():
                 obs_tensor = torch.tensor(
                     np.array(obs), device=device, dtype=torch.float32
                 ).unsqueeze(0)
-                action = model.get_action(obs_tensor)
+                action = model.get_action(obs_tensor)  # type: ignore[union-attr]
                 action = torch.clip(
                     action, Config.low, Config.high
                 )  # Use args low and high
@@ -608,11 +610,11 @@ def train_td3(
     random.seed(Config.seed)
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
-    device = torch.device(Config.device)
+    device = torch.device(Config.device)  # type: ignore[assignment]
 
     # Create environment(s)
+    train_env: gym.Env
     if Config.n_envs > 1:
-        # Create vectorized environments for parallel execution
         env_thunks = [
             make_env(
                 Config.env_id if env is None else "",
@@ -624,17 +626,19 @@ def train_td3(
             )
             for i in range(Config.n_envs)
         ]
-        env = gym.vector.SyncVectorEnv(env_thunks)
-        is_discrete_obs = isinstance(env.single_observation_space, gym.spaces.Discrete)
-        obs_space = env.single_observation_space
-        obs_shape = obs_space.n if is_discrete_obs else obs_space.shape[0]
-        action_shape = (
-            env.single_action_space.n
-            if isinstance(env.single_action_space, gym.spaces.Discrete)
-            else env.single_action_space.shape[0]
+        vec_env = gym.vector.SyncVectorEnv(env_thunks)
+        train_env = vec_env  # type: ignore[assignment]
+        is_discrete_obs = isinstance(
+            vec_env.single_observation_space, gym.spaces.Discrete
+        )
+        obs_space = vec_env.single_observation_space
+        obs_shape = int(obs_space.n) if is_discrete_obs else int(obs_space.shape[0])  # type: ignore[attr-defined]
+        action_shape = int(
+            vec_env.single_action_space.n  # type: ignore[attr-defined]
+            if isinstance(vec_env.single_action_space, gym.spaces.Discrete)
+            else vec_env.single_action_space.shape[0]
         )
     else:
-        # Single environment
         env_thunk = make_env(
             Config.env_id if env is None else "",
             Config.seed,
@@ -643,15 +647,16 @@ def train_td3(
             env_wrapper=Config.env_wrapper,
             env=env,
         )
-        env = env_thunk()
-        is_discrete_obs = isinstance(env.observation_space, gym.spaces.Discrete)
-        obs_space = env.observation_space
-        obs_shape = obs_space.n if is_discrete_obs else obs_space.shape[0]
-        action_shape = (
-            env.action_space.n
-            if isinstance(env.action_space, gym.spaces.Discrete)
-            else env.action_space.shape[0]
+        train_env = env_thunk()
+        is_discrete_obs = isinstance(train_env.observation_space, gym.spaces.Discrete)
+        obs_space = train_env.observation_space
+        obs_shape = int(obs_space.n) if is_discrete_obs else int(obs_space.shape[0])  # type: ignore[attr-defined]
+        action_shape = int(
+            train_env.action_space.n  # type: ignore[attr-defined]
+            if isinstance(train_env.action_space, gym.spaces.Discrete)
+            else train_env.action_space.shape[0]
         )
+    env = train_env
 
     # Create actor network
     if isinstance(actor_class, nn.Module):
@@ -724,7 +729,7 @@ def train_td3(
     for step in tqdm(range(updates), desc="Training"):
         # Get action from actor network with exploration noise
         with torch.no_grad():
-            action = actor_net.get_action(
+            action = actor_net.get_action(  # type: ignore[union-attr]
                 torch.tensor(obs, device=device, dtype=torch.float32)
             )
             action = action + torch.clip(
@@ -828,7 +833,7 @@ def train_td3(
             # TD3: Delayed Policy Updates - update actor less frequently than critics
             if step % Config.train_frequency == 0:
                 actor_optim.zero_grad()
-                actions = actor_net.get_action(data.observations.to(torch.float32))
+                actions = actor_net.get_action(data.observations.to(torch.float32))  # type: ignore[union-attr]
                 # Only use Q1 for policy gradient (standard practice in TD3)
                 policy_loss = -q1_network(
                     data.observations.to(torch.float32), actions.to(torch.float32)

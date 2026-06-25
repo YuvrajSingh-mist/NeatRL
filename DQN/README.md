@@ -178,9 +178,9 @@ Here's a video showing the trained agent in action:
 <details>
   <summary>Click to see video (GIF format)</summary>
   
-  <!-- <!-- ![CartPole Agent Performance](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/DQN/images/final.mp4) -->
+  <!-- <!-- ![CartPole Agent Performance](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/artifacts/DQN/images/final.mp4) -->
   
-![CartPole Demo](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/DQN/images/cartpole_demo.gif) -->
+![CartPole Demo](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/artifacts/DQN/images/cartpole_demo.gif) -->
   
 </details>
 

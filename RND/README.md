@@ -6,7 +6,7 @@ The following demonstrates RND performance on the challenging FrozenLake 8x8 env
 
 Agent gameplay demonstration:
 
-![FrozenLake 8x8 RND Gameplay](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/RND/images/frozen-lake-8x8.gif)
+![FrozenLake 8x8 RND Gameplay](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/artifacts/RND/images/frozen-lake-8x8.gif)
 
 **Detailed Training Metrics**: View the complete training logs and metrics on [Weights & Biases](https://api.wandb.ai/links/rentio/b6xhf0a2)
 
@@ -135,7 +135,7 @@ The following image shows the training performance on the CartPole environment w
 
 Agent gameplay demonstration:
 
-![CartPole RND Gameplay](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/RND/images/cart.gif)
+![CartPole RND Gameplay](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/artifacts/RND/images/cart.gif)
 
 **Detailed Training Metrics**: View the complete training logs and metrics on [Weights & Biases](https://api.wandb.ai/links/rentio/flnibb95)
 
@@ -147,7 +147,7 @@ The following demonstrates RND performance on the more complex LunarLander envir
 
 Agent gameplay demonstration:
 
-![LunarLander RND Gameplay](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/RND/images/lunar.gif)
+![LunarLander RND Gameplay](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/artifacts/RND/images/lunar.gif)
 
 
 **Detailed Training Metrics**: View the complete training logs and metrics on [Weights & Biases](https://api.wandb.ai/links/rentio/p5aqeazk)
@@ -160,7 +160,7 @@ The following demonstrates RND performance on the challenging MountainCar enviro
 
 Agent gameplay demonstration:
 
-![MountainCar RND Gameplay](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/RND/images/car-racing.gif)
+![MountainCar RND Gameplay](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/artifacts/RND/images/car-racing.gif)
 
 **Detailed Training Metrics**: View the complete training logs and metrics on [Weights & Biases](https://wandb.ai/rentio/cleanRL/reports/RND-PPO-on-MountainCar--VmlldzoxMzQ5MDA1NA)
 
@@ -184,7 +184,7 @@ The following demonstrates RND performance on the stochastic FrozenLake environm
 
 Agent gameplay demonstration:
 
-![FrozenLake RND Gameplay](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/RND/images/frozen-lake.gif)
+![FrozenLake RND Gameplay](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/artifacts/RND/images/frozen-lake.gif)
 
 **Detailed Training Metrics**: View the complete training logs and metrics on [Weights & Biases](https://api.wandb.ai/links/rentio/xag9itvm)
 
@@ -196,7 +196,7 @@ The following demonstrates RND performance with CNN on the challenging CarRacing
 
 Agent gameplay demonstration:
 
-![CarRacing RND Gameplay](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/RND/images/car.gif)
+![CarRacing RND Gameplay](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/artifacts/RND/images/car.gif)
 
 **Detailed Training Metrics**: View the complete training logs and metrics on [Weights & Biases](https://wandb.ai/rentio/cleanRL/reports/RND-PPO-w-CNN---VmlldzoxMzU4NTYzNQ?accessToken=peteh2tfa64ls1jpppsx0rp7rk36knn8i4i0nerxges2dpfmt13x9wuzlb7nbcbo)
 

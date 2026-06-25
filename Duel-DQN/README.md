@@ -2,7 +2,7 @@
 
 This project implements the Dueling Deep Q-Network (Dueling DQN) algorithm for the CliffWalking environment from OpenAI Gymnasium. The agent learns to navigate through a dangerous cliff area to reach a goal without falling off.
 
-![Cliff Climbing Environment](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/Duel-DQN/images/output.gif)
+![Cliff Climbing Environment](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/artifacts/Duel-DQN/images/output.gif)
 
 ## Algorithm Description
 

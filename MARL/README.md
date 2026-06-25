@@ -1,8 +1,8 @@
 # Multi-Agent Reinforcement Learning (MARL) Research Project
 
 <p align="center">
-  <img src="https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/MARL/IPPO/images/pong.gif" width="300" alt="IPPO Pong Demo"/
-  <img src="https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/MARL/MAPPO/images/simple_spread.mp4" width="300" alt="MAPPO Simple Spread Demo"/
+  <img src="https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/artifacts/MARL/IPPO/images/pong.gif" width="300" alt="IPPO Pong Demo"/
+  <img src="https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/artifacts/MARL/MAPPO/images/simple_spread.mp4" width="300" alt="MAPPO Simple Spread Demo"/
   <br>
   <em>IPPO agents competing in Pong (left) and MAPPO agents cooperating in Simple Spread (right)</em>
 </p>

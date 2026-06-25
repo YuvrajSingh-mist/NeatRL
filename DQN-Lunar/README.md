@@ -2,7 +2,7 @@
 
 This repository contains an implementation of a Deep Q-Network (DQN) agent that learns to play the Lunar Lander environment from OpenAI Gymnasium.
 
-![Lunar Lander Demo](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/DQN-Lunar/images/output.gif)
+![Lunar Lander Demo](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/artifacts/DQN-Lunar/images/output.gif)
 
 ![Lunar Lander Training Visualization](images/image.png)
 ## Overview

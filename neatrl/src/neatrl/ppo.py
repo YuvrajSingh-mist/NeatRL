@@ -55,7 +55,9 @@ class Config:
     atari_wrapper: bool = (
         False  # Whether to apply Atari preprocessing and frame stacking
     )
-    env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = None  # Optional custom environment wrapper
+    env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = (
+        None  # Optional custom environment wrapper
+    )
     normalize_obs: bool = False  # Whether to normalize observations
     normalize_reward: bool = False  # Whether to normalize rewards
     log_gradients: bool = True  # Whether to log gradient norms to W&B
@@ -68,8 +70,8 @@ class Config:
 def layer_init(
     layer: nn.Module, std: float = np.sqrt(2), bias_const: float = 0.0
 ) -> nn.Module:
-    torch.nn.init.orthogonal_(layer.weight, std)
-    torch.nn.init.constant_(layer.bias, bias_const)
+    torch.nn.init.orthogonal_(layer.weight, std)  # type: ignore[arg-type]
+    torch.nn.init.constant_(layer.bias, bias_const)  # type: ignore[arg-type]
     return layer
 
 
@@ -81,7 +83,7 @@ class ActorNet(nn.Module):
     ) -> None:
         super().__init__()
 
-        self.fc1 = layer_init(nn.Linear(state_space, 64))
+        self.fc1 = layer_init(nn.Linear(state_space, 64))  # type: ignore[arg-type]
         self.fc2 = layer_init(nn.Linear(64, 64))
         self.fc3 = layer_init(nn.Linear(64, 32))
         self.out = layer_init(nn.Linear(32, action_space))
@@ -112,7 +114,7 @@ class ActorNet(nn.Module):
 class CriticNet(nn.Module):
     def __init__(self, state_space: Union[int, tuple[int, ...]]) -> None:
         super().__init__()
-        self.fc1 = layer_init(nn.Linear(state_space, 32))
+        self.fc1 = layer_init(nn.Linear(state_space, 32))  # type: ignore[arg-type]
         self.fc2 = layer_init(nn.Linear(32, 32))
         self.fc3 = layer_init(nn.Linear(32, 16))
         self.value = layer_init(nn.Linear(16, 1))
@@ -380,11 +382,11 @@ def evaluate(
 
         while not done:
             if record:
-                frame = eval_env.render()
+                frame: Any = eval_env.render()
                 frames.append(frame)
             with torch.no_grad():
                 obs = torch.tensor(obs, device=device, dtype=torch.float32).unsqueeze(0)
-                action, _, _ = model.get_action(obs)
+                action, _, _ = model.get_action(obs)  # type: ignore[union-attr]
                 action = action.cpu().numpy()
                 if isinstance(eval_env.action_space, gym.spaces.Discrete):
                     action = action.item()
@@ -395,7 +397,7 @@ def evaluate(
 
             obs, rewards_curr, terminated, truncated, info = eval_env.step(action)
             done = terminated or truncated
-            rewards += rewards_curr
+            rewards += float(rewards_curr)
 
         returns.append(rewards)
 
@@ -513,7 +515,7 @@ def train_ppo(
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
 
-    device = torch.device(Config.device)
+    device: torch.device = torch.device(Config.device)  # type: ignore[assignment]
 
     if Config.device == "cuda":
         torch.backends.cudnn.deterministic = True
@@ -1065,7 +1067,7 @@ def train_ppo_cnn(
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
 
-    device = torch.device(Config.device)
+    device: torch.device = torch.device(Config.device)  # type: ignore[assignment]
 
     if Config.device == "cuda":
         torch.backends.cudnn.deterministic = True

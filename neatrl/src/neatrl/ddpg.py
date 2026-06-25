@@ -297,7 +297,9 @@ def validate_policy_network_dimensions(
 
 
 def validate_critic_network_dimensions(
-    critic_network: nn.Module, obs_dim: Union[int, tuple[int, ...]]
+    critic_network: nn.Module,
+    obs_dim: Union[int, tuple[int, ...]],
+    action_dim: Optional[int] = None,
 ) -> None:
     """
     Validate that the Critic-network's input dimension matches the environment.
@@ -305,7 +307,7 @@ def validate_critic_network_dimensions(
     Args:
         critic_network: The critic neural network model (nn.Module)
         obs_dim: Expected observation dimension (int or tuple)
-        action_dim: Expected action dimension
+        action_dim: Expected action dimension (optional, for actor-critic methods)
     """
     if isinstance(obs_dim, tuple):
         # For Atari-like, check if it has conv layers
@@ -442,7 +444,7 @@ def evaluate(
 
         while not done:
             if record:
-                frame = eval_env.render()
+                frame: Any = eval_env.render()
                 frames.append(frame)
             with torch.no_grad():
                 obs_tensor = torch.tensor(
@@ -461,7 +463,7 @@ def evaluate(
 
             obs, rewards_curr, terminated, truncated, info = eval_env.step(action)
             done = terminated or truncated
-            rewards += rewards_curr
+            rewards += float(rewards_curr)
 
         returns.append(rewards)
 
@@ -592,7 +594,7 @@ def train_ddpg(
     random.seed(Config.seed)
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
-    device = torch.device(Config.device)
+    device: torch.device = torch.device(Config.device)  # type: ignore[assignment]
 
     # Create environment
     if env is not None:
@@ -613,24 +615,25 @@ def train_ddpg(
             env_wrapper=Config.env_wrapper,
         )
 
-    env = env_thunk()
+    train_env = env_thunk()
 
     # Determine if we're dealing with discrete observation spaces
-    is_discrete_obs = isinstance(env.observation_space, gym.spaces.Discrete)
-    obs_space = env.observation_space
+    is_discrete_obs = isinstance(train_env.observation_space, gym.spaces.Discrete)
+    obs_space = train_env.observation_space
 
     # Compute observation dimensions
     if is_discrete_obs:
-        obs_shape = obs_space.n
+        obs_shape = int(obs_space.n)  # type: ignore[attr-defined]
     else:
-        obs_shape = obs_space.shape[0]
+        obs_shape = int(obs_space.shape[0])
 
     # Compute action dimensions
-    action_shape = (
-        env.action_space.n
-        if isinstance(env.action_space, gym.spaces.Discrete)
-        else env.action_space.shape[0]
+    action_shape = int(
+        train_env.action_space.n  # type: ignore[attr-defined]
+        if isinstance(train_env.action_space, gym.spaces.Discrete)
+        else train_env.action_space.shape[0]
     )
+    env = train_env
 
     # Create actor network
     if isinstance(actor_class, nn.Module):
@@ -1040,7 +1043,7 @@ def train_ddpg_cnn(
     random.seed(Config.seed)
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
-    device = torch.device(Config.device)
+    device: torch.device = torch.device(Config.device)  # type: ignore[assignment]
 
     # Create environment
     if env is not None:
@@ -1061,24 +1064,25 @@ def train_ddpg_cnn(
             env_wrapper=Config.env_wrapper,
         )
 
-    env = env_thunk()
+    train_env_cnn = env_thunk()
 
     # Determine if we're dealing with discrete observation spaces
-    is_discrete_obs = isinstance(env.observation_space, gym.spaces.Discrete)
-    obs_space = env.observation_space
+    is_discrete_obs = isinstance(train_env_cnn.observation_space, gym.spaces.Discrete)
+    obs_space = train_env_cnn.observation_space
 
     # Compute observation dimensions
     if is_discrete_obs:
-        obs_shape = obs_space.n
+        obs_shape = int(obs_space.n)  # type: ignore[attr-defined]
     else:
-        obs_shape = obs_space.shape
+        obs_shape = tuple(obs_space.shape)
 
     # Compute action dimensions
-    action_shape = (
-        env.action_space.n
-        if isinstance(env.action_space, gym.spaces.Discrete)
-        else env.action_space.shape[0]
+    action_shape = int(
+        train_env_cnn.action_space.n  # type: ignore[attr-defined]
+        if isinstance(train_env_cnn.action_space, gym.spaces.Discrete)
+        else train_env_cnn.action_space.shape[0]
     )
+    env = train_env_cnn
 
     # Create actor network
     if isinstance(actor_class, nn.Module):

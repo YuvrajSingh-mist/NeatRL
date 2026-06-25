@@ -340,7 +340,9 @@ def validate_policy_network_dimensions(
 
 
 def validate_critic_network_dimensions(
-    critic_network: nn.Module, obs_dim: Union[int, tuple[int, ...]]
+    critic_network: nn.Module,
+    obs_dim: Union[int, tuple[int, ...]],
+    action_dim: Optional[int] = None,
 ) -> None:
     """
     Validate that the Critic-network's input dimension matches the environment.
@@ -348,7 +350,7 @@ def validate_critic_network_dimensions(
     Args:
         critic_network: The critic neural network model (nn.Module)
         obs_dim: Expected observation dimension (int or tuple)
-        action_dim: Expected action dimension
+        action_dim: Expected action dimension (optional, for actor-critic methods)
     """
     if isinstance(obs_dim, tuple):
         # For Atari-like, check if it has conv layers
@@ -485,14 +487,14 @@ def evaluate(
 
         while not done:
             if record:
-                frame = eval_env.render()
+                frame: Any = eval_env.render()
                 frames.append(frame)
             with torch.no_grad():
                 obs_tensor = torch.tensor(
                     np.array(obs), device=device, dtype=torch.float32
                 ).unsqueeze(0)
                 # For SAC, use stochastic action during evaluation
-                action, _ = model.get_action(obs_tensor)
+                action, _ = model.get_action(obs_tensor)  # type: ignore[union-attr]
                 action = action.cpu().numpy()
                 if isinstance(eval_env.action_space, gym.spaces.Discrete):
                     action = action.item()
@@ -502,7 +504,7 @@ def evaluate(
 
             obs, rewards_curr, terminated, truncated, info = eval_env.step(action)
             done = terminated or truncated
-            rewards += rewards_curr
+            rewards += float(rewards_curr)
 
         returns.append(rewards)
 
@@ -629,7 +631,7 @@ def train_sac(
     random.seed(Config.seed)
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
-    device = torch.device(Config.device)
+    device: torch.device = torch.device(Config.device)  # type: ignore[assignment]
 
     # Create environments - check for pre-created env first, then default
     if env is not None:
@@ -663,12 +665,12 @@ def train_sac(
 
     envs = gym.vector.SyncVectorEnv(env_thunks)
     if isinstance(envs.single_observation_space, gym.spaces.Discrete):
-        obs_space_shape = (envs.single_observation_space.n,)
+        obs_space_shape: tuple[int, ...] = (int(envs.single_observation_space.n),)  # type: ignore[attr-defined]
     else:
-        obs_space_shape = envs.single_observation_space.shape
+        obs_space_shape = tuple(envs.single_observation_space.shape)
 
-    action_space_n = (
-        envs.single_action_space.n
+    action_space_n = int(
+        envs.single_action_space.n  # type: ignore[attr-defined]
         if isinstance(envs.single_action_space, gym.spaces.Discrete)
         else envs.single_action_space.shape[0]
     )
@@ -725,7 +727,7 @@ def train_sac(
 
     # Automatic entropy tuning
     if Config.autotune_alpha:
-        target_entropy = Config.target_entropy_scale * action_space_n
+        target_entropy = Config.target_entropy_scale * float(action_space_n)
         log_alpha = torch.zeros(1, requires_grad=True, device=device)
         alpha = log_alpha.exp().item()
         alpha_optim = optim.Adam([log_alpha], lr=Config.learning_rate)
@@ -753,7 +755,7 @@ def train_sac(
     for step in tqdm(range(Config.total_timesteps)):
         # Sample action from stochastic policy
         with torch.no_grad():
-            action, _ = actor_net.get_action(
+            action, _ = actor_net.get_action(  # type: ignore[union-attr]
                 torch.tensor(obs, device=device, dtype=torch.float32)
             )
 
@@ -770,7 +772,7 @@ def train_sac(
 
             # Update Q-networks
             with torch.no_grad():
-                next_actions, next_log_probs = actor_net.get_action(
+                next_actions, next_log_probs = actor_net.get_action(  # type: ignore[union-attr]
                     data.next_observations.to(torch.float32)
                 )
 
@@ -813,7 +815,7 @@ def train_sac(
             # Update policy
             if step % Config.policy_frequency == 0:
                 actor_optim.zero_grad()
-                new_actions, log_probs = actor_net.get_action(
+                new_actions, log_probs = actor_net.get_action(  # type: ignore[union-attr]
                     data.observations.to(torch.float32)
                 )
                 q1_new = q1_network(data.observations.to(torch.float32), new_actions)
@@ -1124,7 +1126,7 @@ def train_sac_cnn(
     random.seed(Config.seed)
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
-    device = torch.device(Config.device)
+    device: torch.device = torch.device(Config.device)  # type: ignore[assignment]
 
     # Create environments - check for pre-created env first, then default
     if env is not None:
@@ -1158,16 +1160,16 @@ def train_sac_cnn(
 
     envs = gym.vector.SyncVectorEnv(env_thunks)
     if isinstance(envs.single_observation_space, gym.spaces.Discrete):
-        obs_space_shape = (envs.single_observation_space.n,)
+        obs_space_shape: tuple[int, ...] = (int(envs.single_observation_space.n),)  # type: ignore[attr-defined]
     else:
-        obs_space_shape = envs.single_observation_space.shape
+        obs_space_shape = tuple(envs.single_observation_space.shape)
 
-    action_space_n = (
-        envs.single_action_space.n
+    action_space_n = int(
+        envs.single_action_space.n  # type: ignore[attr-defined]
         if isinstance(envs.single_action_space, gym.spaces.Discrete)
         else envs.single_action_space.shape[0]
         if isinstance(envs.single_action_space, gym.spaces.Box)
-        else envs.single_action_space.shape
+        else envs.single_action_space.shape[0]
     )
 
     action_shape = (
@@ -1221,7 +1223,7 @@ def train_sac_cnn(
 
     # Automatic entropy tuning
     if Config.autotune_alpha:
-        target_entropy = Config.target_entropy_scale * action_space_n
+        target_entropy = Config.target_entropy_scale * float(action_space_n)
         log_alpha = torch.zeros(1, requires_grad=True, device=device)
         alpha = log_alpha.exp().item()
         alpha_optim = optim.Adam([log_alpha], lr=Config.learning_rate)
@@ -1250,7 +1252,7 @@ def train_sac_cnn(
     for step in tqdm(range(Config.total_timesteps)):
         # Sample action from stochastic policy
         with torch.no_grad():
-            action, log_probs = actor_net.get_action(
+            action, log_probs = actor_net.get_action(  # type: ignore[union-attr]
                 torch.tensor(obs, device=device, dtype=torch.float32)
             )
         action_np = action.cpu().numpy()
@@ -1270,7 +1272,7 @@ def train_sac_cnn(
 
             # Update Q-networks
             with torch.no_grad():
-                next_actions, next_log_probs = actor_net.get_action(
+                next_actions, next_log_probs = actor_net.get_action(  # type: ignore[union-attr]
                     data.next_observations.to(torch.float32)
                 )
                 next_log_probs = (
@@ -1316,7 +1318,7 @@ def train_sac_cnn(
             # Update policy
             if step % Config.policy_frequency == 0:
                 actor_optim.zero_grad()
-                new_actions, log_probs = actor_net.get_action(
+                new_actions, log_probs = actor_net.get_action(  # type: ignore[union-attr]
                     data.observations.to(torch.float32)
                 )
                 q1_new = q1_network(data.observations.to(torch.float32), new_actions)

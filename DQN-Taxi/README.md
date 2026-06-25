@@ -2,7 +2,7 @@
 
 This project implements a Deep Q-Network (DQN) agent to solve the classic Taxi-v3 environment from OpenAI Gym. The agent learns to efficiently pick up and drop off passengers in a grid world using reinforcement learning.
 
-[![Taxi-v3 Demo](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/DQN-Taxi/images/output.gif)]
+[![Taxi-v3 Demo](https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/artifacts/DQN-Taxi/images/output.gif)]
 
 ## Environment
 - **Taxi-v3** is a discrete environment with:

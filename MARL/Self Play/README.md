@@ -1,7 +1,7 @@
 # Self-Play Multi-Agent Reinforcement Learning
 
 <p align="center">
-  <img src="https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/MARL/IPPO/images/pong.gif" width="400" alt="Self-Play Pong Demo"/
+  <img src="https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/artifacts/MARL/IPPO/images/pong.gif" width="400" alt="Self-Play Pong Demo"/
   <br>
   <em>Self-play agents competing in Pong environment</em>
 </p>

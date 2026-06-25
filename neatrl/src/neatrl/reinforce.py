@@ -205,7 +205,7 @@ def evaluate(
                 frames.append(frame)
 
             with torch.no_grad():
-                action = model.get_action(
+                action = model.get_action(  # type: ignore[union-attr]
                     torch.tensor(obs, device=device, dtype=torch.float32)
                 )
                 if len(action) == 2:
@@ -559,7 +559,7 @@ def train_reinforce(
             optimizer.param_groups[0]["lr"] = lrnow
 
         while True:
-            result = policy_network.get_action(
+            result = policy_network.get_action(  # type: ignore[union-attr]
                 torch.tensor(obs, device=Config.device, dtype=torch.float32)
             )
             if len(result) == 2:
@@ -640,14 +640,14 @@ def train_reinforce(
                 break
 
         # Calculate returns
-        returns = []
+        returns_list: list[float] = []
         G = 0.0
         for reward in reversed(rewards):
             G = reward + Config.gamma * G
-            returns.insert(0, G)
+            returns_list.insert(0, G)
 
         returns = torch.tensor(
-            returns, device=Config.device, dtype=torch.float32
+            returns_list, device=Config.device, dtype=torch.float32
         ).detach()
 
         if Config.use_wandb:
@@ -1096,7 +1096,7 @@ def train_reinforce_cnn(
             optimizer.param_groups[0]["lr"] = lrnow
 
         while True:
-            result = policy_network.get_action(
+            result = policy_network.get_action(  # type: ignore[union-attr]
                 torch.tensor(obs, device=Config.device, dtype=torch.float32)
             )
             if len(result) == 2:
@@ -1177,14 +1177,14 @@ def train_reinforce_cnn(
                 break
 
         # Calculate returns
-        returns = []
+        returns_list: list[float] = []
         G = 0.0
         for reward in reversed(rewards):
             G = reward + Config.gamma * G
-            returns.insert(0, G)
+            returns_list.insert(0, G)
 
         returns = torch.tensor(
-            returns, device=Config.device, dtype=torch.float32
+            returns_list, device=Config.device, dtype=torch.float32
         ).detach()
 
         if Config.use_wandb:

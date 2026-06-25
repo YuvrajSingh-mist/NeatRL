@@ -1,7 +1,7 @@
 # Independent Proximal Policy Optimization (IPPO)
 
 <p align="center">
-  <img src="https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/MARL/IPPO/images/pong.gif" width="400" alt="IPPO Pong Demo"/
+  <img src="https://huggingface.co/YuvrajSingh9886/neatrl/resolve/main/artifacts/MARL/IPPO/images/pong.gif" width="400" alt="IPPO Pong Demo"/
   <br>
   <em>IPPO agents competing in Pong environment</em>
 </p>
