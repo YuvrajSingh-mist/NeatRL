@@ -2,7 +2,7 @@ _vizdoom.ini
 test.py
 list_mujoco_envs.py
 TMRL/
-SimpleRLGames/
+NeatRL-Website/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -157,5 +157,3 @@ Desktop.ini
 secrets/
 *.key
 
-# neatrl/ legacy subfolder (caches/logs from old structure)
-neatrl/

@@ -3,6 +3,7 @@ script for DQN training on FrozenLake using neatrl library.
 """
 
 import gymnasium as gym
+import numpy as np
 import torch
 import torch.nn as nn
 
@@ -67,7 +68,7 @@ def test_dqn_frozenlake():
     class OneHotWrapper(gym.ObservationWrapper):
         def __init__(self, env):
             super().__init__(env)
-            self.observation_space = gym.spaces.Box(0, 1, (16,), dtype=float)
+            self.observation_space = gym.spaces.Box(0, 1, (16,), dtype=np.float64)
 
         def observation(self, obs):
             one_hot = torch.zeros(16)
@@ -79,7 +80,7 @@ def test_dqn_frozenlake():
     env = gym.wrappers.RecordEpisodeStatistics(env)
     obs, _ = env.reset()
     done = False
-    total_reward = 0
+    total_reward: float = 0.0
     steps = 0
 
     while not done and steps < 100:
@@ -88,7 +89,7 @@ def test_dqn_frozenlake():
             action = q_values.argmax().item()
         obs, reward, terminated, truncated, _ = env.step(action)
         done = terminated or truncated
-        total_reward += reward
+        total_reward += float(reward)
         steps += 1
 
     print(f"Test episode reward: {total_reward}, steps: {steps}")

@@ -16,8 +16,8 @@ from neatrl.ppo import train_ppo
 def layer_init(
     layer: nn.Module, std: float = np.sqrt(2), bias_const: float = 0.0
 ) -> nn.Module:
-    torch.nn.init.orthogonal_(layer.weight, std)
-    torch.nn.init.constant_(layer.bias, bias_const)
+    torch.nn.init.orthogonal_(layer.weight, std)  # type: ignore[arg-type]
+    torch.nn.init.constant_(layer.bias, bias_const)  # type: ignore[arg-type]
     return layer
 
 
@@ -29,7 +29,7 @@ class ActorNet(nn.Module):
     ) -> None:
         super().__init__()
 
-        self.fc1 = layer_init(nn.Linear(state_space, 128))
+        self.fc1 = layer_init(nn.Linear(state_space, 128))  # type: ignore[arg-type]
         self.fc2 = layer_init(nn.Linear(128, 64))
         self.fc3 = layer_init(nn.Linear(64, 32))
         self.mu = layer_init(nn.Linear(32, action_space))
@@ -62,7 +62,7 @@ class ActorNet(nn.Module):
 class CriticNet(nn.Module):
     def __init__(self, state_space: Union[int, tuple[int, ...]]) -> None:
         super().__init__()
-        self.fc1 = layer_init(nn.Linear(state_space, 128))
+        self.fc1 = layer_init(nn.Linear(state_space, 128))  # type: ignore[arg-type]
         self.fc2 = layer_init(nn.Linear(128, 64))
         self.fc3 = layer_init(nn.Linear(64, 32))
         self.value = layer_init(nn.Linear(32, 1))

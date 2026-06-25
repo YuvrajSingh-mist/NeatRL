@@ -39,7 +39,7 @@ class ActorNetCNN(nn.Module):
         dist = torch.distributions.Categorical(out)
         action = dist.sample()
         log_prob = dist.log_prob(action)
-        return action, log_prob.unsqueeze(-1)
+        return action, log_prob.unsqueeze(-1)  # type: ignore[return-value]
 
 
 class QNetCNN(nn.Module):
