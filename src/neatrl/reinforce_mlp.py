@@ -1,3 +1,5 @@
+"""REINFORCE policy gradient with MLP policy for Gymnasium environments."""
+
 import os
 import random
 import time
@@ -39,6 +41,7 @@ except ImportError:
 class Config:
     # Experiment settings
     """Hyperparameters and settings for REINFORCE training."""
+
     exp_name: str = "REINFORCE"
     seed: int = 42
     env_id: Optional[str] = "CartPole-v1"
@@ -96,6 +99,7 @@ class Config:
 # For discrete actions
 class PolicyNet(nn.Module):
     """Stochastic policy network (actor) for REINFORCE."""
+
     def __init__(self, state_space, action_space):
         super().__init__()
         logger.info(f"State space: {state_space}, Action space: {action_space}")
@@ -105,13 +109,28 @@ class PolicyNet(nn.Module):
         self.out = nn.Linear(16, action_space)
 
     def forward(self, x):
-        """Forward pass — returns network output(s)."""
+        """Forward pass — returns network output(s).
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor | tuple[torch.Tensor, ...]: Network output(s).
+        """
         x = self.out(self.fc3(torch.relu(self.fc2(torch.relu(self.fc1(x))))))
         x = torch.nn.functional.softmax(x, dim=-1)  # Apply softmax to get probabilities
         return x
 
     def get_action(self, x):
-        """Sample an action and return it with log-prob and entropy."""
+        """Sample an action and return it with log-probability and optional entropy.
+
+        Args:
+            x (torch.Tensor): Observation tensor.
+
+        Returns:
+            tuple[torch.Tensor, torch.Tensor] | tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+                Sampled action, log-probability, and (for stochastic policies) entropy.
+        """
         action_probs = self.forward(x)
         dist = torch.distributions.Categorical(
             action_probs
@@ -123,13 +142,21 @@ class PolicyNet(nn.Module):
 
 class OneHotWrapper(gym.ObservationWrapper):
     """Wraps a discrete observation space into a one-hot float vector."""
+
     def __init__(self, env, obs_shape=16):
         super().__init__(env)
         self.obs_shape = obs_shape
         self.observation_space = gym.spaces.Box(0, 1, (obs_shape,), dtype=np.float32)
 
     def observation(self, obs):
-        """Convert discrete integer observation to one-hot float tensor."""
+        """Convert a discrete integer observation to a one-hot float32 vector.
+
+        Args:
+            obs (int | np.ndarray): Discrete observation from the wrapped environment.
+
+        Returns:
+            np.ndarray: One-hot encoded float32 array of shape (obs_shape,).
+        """
         one_hot = torch.zeros(self.obs_shape, dtype=torch.float32)
         one_hot[obs] = 1.0
         return one_hot.numpy()
@@ -145,7 +172,22 @@ def make_env(
     env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = None,
     env: Optional[gym.Env] = None,
 ) -> Callable[[], gym.Env]:
-    """Return a thunk that creates and seeds a gymnasium environment."""
+    """Return a thunk that constructs and seeds a Gymnasium environment.
+
+    Args:
+        env_id (str): Gymnasium environment ID. Ignored when ``env`` is provided.
+        seed (int): Base random seed; actual seed is ``seed + idx``.
+        idx (int): Worker index added to the seed. Defaults to 0.
+        render_mode (str | None): Render mode passed to ``gym.make``. Defaults to None.
+        grid_env (bool): Apply one-hot observation encoding for grid environments.
+        atari_wrapper (bool): Apply Atari preprocessing wrappers when True.
+        env_wrapper (Callable | None): Optional extra wrapper applied after creation.
+        env (gym.Env | None): Pre-built environment; skips ``gym.make`` when provided.
+
+    Returns:
+        Callable[[], gym.Env]: A zero-argument thunk that creates the environment.
+    """
+
     def thunk():
         """Environment factory thunk (called by SyncVectorEnv)."""
         if env is not None:
@@ -194,7 +236,26 @@ def evaluate(
     atari_wrapper=False,
     grid_env=False,
 ):
-    """Run eval_episodes episodes and return total rewards and any recorded frames."""
+    """Run evaluation episodes and return episodic returns (and optional video frames).
+
+    Args:
+        model (nn.Module): The policy network to evaluate.
+        device (torch.device | str): Device on which to run the network.
+        env_id (str): Gymnasium environment ID for the evaluation environment.
+        env (gym.Env | None): Pre-created environment; skips ``gym.make`` when provided.
+        seed (int): Random seed for the evaluation environment. Defaults to 42.
+        num_eval_eps (int): Number of episodes to run.
+        record (bool): Record frames when True.
+        render_mode (str | None): Render mode passed to the environment.
+        grid_env (bool): Apply one-hot encoding for grid environments.
+        atari_wrapper (bool): Apply Atari preprocessing wrappers when True.
+        env_wrapper (Callable | None): Optional extra wrapper applied after creation.
+        use_wandb (bool): Upload recorded video to Weights & Biases when True.
+
+    Returns:
+        tuple[list[float], list]: A list of total rewards per episode and a list of
+            recorded RGB frames (empty if capture_video is False).
+    """
     eval_env = make_env(
         env_id=env_id,
         env=env,
@@ -291,39 +352,39 @@ def train_reinforce(
     anneal_lr=Config.anneal_lr,
     env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = None,
 ):
-    """
-    Train a REINFORCE agent on a Gymnasium environment.
+    """Train a REINFORCE agent on a Gymnasium environment.
 
     Args:
-        env_id: Optional Gymnasium environment ID (ignored if env is provided)
-        env: Optional pre-created Gymnasium environment (if provided, env_id is ignored)
-        total_steps: Number of steps to train
-        seed: Random seed
-        learning_rate: Learning rate for optimizer
-        gamma: Discount factor
-        max_grad_norm: Maximum gradient norm for gradient clipping (0.0 to disable)
-        capture_video: Whether to capture training videos
-        use_wandb: Whether to use Weights & Biases logging
-        wandb_project: W&B project name
-        wandb_entity: W&B entity/username
-        exp_name: Experiment name
-        eval_every: Frequency of evaluation during training
-        save_every: Frequency of saving the model
-        atari_wrapper: Whether to apply Atari preprocessing wrappers
-        custom_agent: Custom neural network class or instance (nn.Module subclass or instance, optional, defaults to PolicyNet)
-        num_eval_eps: Number of evaluation episodes
-        n_envs: Number of parallel environments (currently not used for training, kept for compatibility)
-        device: Device to use for training (e.g., "cpu", "cuda")
-        grid_env: Whether the environment uses discrete grid observations
-        use_entropy: Whether to include an entropy bonus in the loss
-        entropy_coeff: Coefficient for the entropy bonus (only used if use_entropy=True)
-        normalize_obs: Whether to normalize observations
-        normalize_reward: Whether to normalize rewards
-        log_gradients: Whether to log gradient norms to WandB
-        anneal_lr: Whether to anneal learning rate over time
-        env_wrapper: Optional environment wrapper function
+        env_id (str | None): Gymnasium environment ID. Mutually exclusive with ``env``.
+        env (gym.Env | None): Pre-created ``gym.Env`` instance. Mutually exclusive with ``env_id``.
+        total_steps (int): Total training episodes (REINFORCE).
+        seed (int): Global random seed for reproducibility.
+        learning_rate (float): Optimiser learning rate.
+        gamma (float): Discount factor γ (0 < γ ≤ 1).
+        max_grad_norm (float): Maximum gradient-norm for clipping (0 disables clipping).
+        capture_video (bool): Record evaluation episodes to video files when True.
+        use_wandb (bool): Log training metrics to Weights & Biases when True.
+        wandb_project (str): W&B project name (used when use_wandb=True).
+        wandb_entity (str): W&B entity/username (used when use_wandb=True).
+        exp_name (str): Run name used for log directories and W&B.
+        eval_every (int): Evaluate every this many environment steps.
+        save_every (int): Save a model checkpoint every this many steps.
+        atari_wrapper (bool): Apply Atari preprocessing (grayscale, frame-stack) when True.
+        custom_agent (nn.Module | None): Custom ``nn.Module`` instance replacing the default policy network.
+        num_eval_eps (int): Number of episodes per evaluation.
+        n_envs (int): Number of parallel vectorised environments.
+        device (str): PyTorch device string (``'cpu'``, ``'cuda'``, ``'mps'``).
+        grid_env (bool): Use one-hot observation encoding for grid environments.
+        use_entropy (bool): Add an entropy bonus to the policy-gradient loss when True.
+        entropy_coeff (float): Entropy-bonus coefficient (active when use_entropy=True).
+        normalize_obs (bool): Normalise observations with a running mean/std when True.
+        normalize_reward (bool): Normalise rewards with a running std when True.
+        log_gradients (bool): Log per-layer gradient norms to W&B when True.
+        anneal_lr (bool): Linearly anneal the learning rate to zero when True.
+        env_wrapper (Callable | None): Optional callable wrapping the environment after creation.
+
     Returns:
-        Trained Policy-network model
+        nn.Module: The trained network (actor / policy / Q-network) ready for inference.
     """
     run_name = f"{Config.env_id}__{Config.exp_name}__{Config.seed}__{int(time.time())}"
 
@@ -690,7 +751,12 @@ def train_reinforce(
 
         # Print progress every 1000 steps
         if step % 10 == 0:
-            logger.info("Step %d Policy Loss: %.4f SPS: %d", step, loss.item(), int(step / (time.time() - start_time)))
+            logger.info(
+                "Step %d Policy Loss: %.4f SPS: %d",
+                step,
+                loss.item(),
+                int(step / (time.time() - start_time)),
+            )
             if Config.use_wandb:
                 wandb.log(
                     {

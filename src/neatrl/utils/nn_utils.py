@@ -6,7 +6,14 @@ import torch.nn as nn
 
 
 def calculate_param_norm(model: nn.Module) -> float:
-    """Calculate the L2 norm of all parameters in a model."""
+    """Compute the total L2 norm of all trainable parameters in a model.
+
+    Args:
+        model (nn.Module): The neural network whose parameters are measured.
+
+    Returns:
+        float: The scalar sum of L2 norms across all parameter tensors.
+    """
     total_norm = 0.0
     for p in model.parameters():
         param_norm = p.data.norm(2)
@@ -21,9 +28,15 @@ def validate_q_network_dimensions(
     Validate that the Q-network's input and output dimensions match the environment.
 
     Args:
-        q_network: The neural network model (nn.Module)
-        obs_dim: Expected observation dimension
-        action_dim: Expected action dimension
+        q_network (nn.Module): The neural network model.
+        obs_dim (int): Expected observation dimension.
+        action_dim (int): Expected action dimension.
+
+    Returns:
+        None
+
+    Raises:
+        ValueError: If network dimensions do not match the environment spaces.
     """
     # Find first Linear layer for input dimension
     first_layer = None
@@ -63,9 +76,15 @@ def validate_dueling_q_network_dimensions(
     Validate that the Dueling Q-network's input and output dimensions match the environment.
 
     Args:
-        dueling_q_network: The neural network model (nn.Module)
-        obs_dim: Expected observation dimension
-        action_dim: Expected action dimension
+        dueling_q_network (nn.Module): The neural network model.
+        obs_dim (int): Expected observation dimension.
+        action_dim (int): Expected action dimension.
+
+    Returns:
+        None
+
+    Raises:
+        ValueError: If network dimensions do not match the environment spaces.
     """
     # Find first Linear layer for input dimension
     first_layer = None
@@ -106,9 +125,15 @@ def validate_policy_network_dimensions(
     Validate that the Policy-network's input and output dimensions match the environment.
 
     Args:
-        policy_network: The neural network model (nn.Module)
-        obs_dim: Expected observation dimension (int or tuple)
-        action_dim: Expected action dimension
+        policy_network (nn.Module): The neural network model.
+        obs_dim (int | tuple[int, ...]): Expected observation dimension.
+        action_dim (int): Expected action dimension.
+
+    Returns:
+        None
+
+    Raises:
+        ValueError: If network dimensions do not match the environment spaces.
     """
     if isinstance(obs_dim, tuple):
         # For Atari-like, check if it has conv layers
@@ -160,9 +185,15 @@ def validate_critic_network_dimensions(
     Validate that the Critic-network's input dimension matches the environment.
 
     Args:
-        critic_network: The critic neural network model (nn.Module)
-        obs_dim: Expected observation dimension (int or tuple)
-        action_dim: Expected action dimension (optional, for actor-critic methods)
+        critic_network (nn.Module): The critic neural network model.
+        obs_dim (int | tuple[int, ...]): Expected observation dimension.
+        action_dim (int | None): Expected action dimension (optional).
+
+    Returns:
+        None
+
+    Raises:
+        ValueError: If network dimensions do not match the environment spaces.
     """
     if isinstance(obs_dim, tuple):
         # For Atari-like, check if it has conv layers
@@ -214,9 +245,15 @@ def validate_feature_network_dimensions(
     Validate that the Feature-network's input and output dimensions match expectations.
 
     Args:
-        feature_network: The feature neural network model (nn.Module)
-        obs_dim: Expected observation dimension (int or tuple)
-        feature_dim: Expected feature dimension
+        feature_network (nn.Module): The feature neural network model.
+        obs_dim (int | tuple[int, ...]): Expected observation dimension.
+        feature_dim (int): Expected feature embedding dimension.
+
+    Returns:
+        None
+
+    Raises:
+        ValueError: If network dimensions do not match the environment spaces.
     """
     if isinstance(obs_dim, tuple):
         # For Atari-like, check if it has conv layers

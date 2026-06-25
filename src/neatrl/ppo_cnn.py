@@ -1,3 +1,5 @@
+"""Proximal Policy Optimization (PPO) with CNN networks for visual Gymnasium environments."""
+
 import os
 import random
 import time
@@ -14,7 +16,7 @@ import torch.optim as optim
 import wandb
 from tqdm import tqdm
 
-from .utils import get_logger, setup_device
+from .utils import configure_logging, get_logger, setup_device
 from .utils.nn_utils import (
     validate_critic_network_dimensions,
     validate_policy_network_dimensions,
@@ -77,7 +79,16 @@ class Config:
 def layer_init(
     layer: nn.Module, std: float = np.sqrt(2), bias_const: float = 0.0
 ) -> nn.Module:
-    """Apply orthogonal init (weight) and constant init (bias) to a linear layer."""
+    """Apply orthogonal init (weight) and constant init (bias) to a linear layer.
+
+    Args:
+        layer (nn.Linear): The linear layer to initialise.
+        std (float): Orthogonal init gain (standard deviation scaling). Defaults to sqrt(2).
+        bias_const (float): Constant value for bias initialisation. Defaults to 0.0.
+
+    Returns:
+        nn.Linear: The initialised layer (mutated in-place and returned).
+    """
     torch.nn.init.orthogonal_(layer.weight, std)  # type: ignore[arg-type]
     torch.nn.init.constant_(layer.bias, bias_const)  # type: ignore[arg-type]
     return layer
@@ -85,6 +96,7 @@ def layer_init(
 
 class ActorNet(nn.Module):
     """Shared-trunk actor network for discrete or continuous action spaces."""
+
     def __init__(
         self,
         state_space: Union[int, tuple[int, ...]],
@@ -98,7 +110,14 @@ class ActorNet(nn.Module):
         self.out = layer_init(nn.Linear(32, action_space))
 
     def forward(self, x: torch.Tensor) -> torch.distributions.Distribution:
-        """Forward pass — returns network output(s)."""
+        """Forward pass — returns network output(s).
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor | tuple[torch.Tensor, ...]: Network output(s).
+        """
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
@@ -112,7 +131,15 @@ class ActorNet(nn.Module):
         self,
         x: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.distributions.Distribution]:
-        """Sample an action and return it with log-prob and entropy."""
+        """Sample an action and return it with log-probability and optional entropy.
+
+        Args:
+            x (torch.Tensor): Observation tensor.
+
+        Returns:
+            tuple[torch.Tensor, torch.Tensor] | tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+                Sampled action, log-probability, and (for stochastic policies) entropy.
+        """
         dist = self.forward(x)
 
         action = dist.sample()
@@ -124,6 +151,7 @@ class ActorNet(nn.Module):
 
 class CriticNet(nn.Module):
     """State-value critic network."""
+
     def __init__(self, state_space: Union[int, tuple[int, ...]]) -> None:
         super().__init__()
         self.fc1 = layer_init(nn.Linear(state_space, 32))  # type: ignore[arg-type]
@@ -132,7 +160,14 @@ class CriticNet(nn.Module):
         self.value = layer_init(nn.Linear(16, 1))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass — returns network output(s)."""
+        """Forward pass — returns network output(s).
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor | tuple[torch.Tensor, ...]: Network output(s).
+        """
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
@@ -141,13 +176,21 @@ class CriticNet(nn.Module):
 
 class OneHotWrapper(gym.ObservationWrapper):
     """Wraps a discrete observation space into a one-hot float vector."""
+
     def __init__(self, env: gym.Env, obs_shape: int = 16) -> None:
         super().__init__(env)
         self.obs_shape = obs_shape
         self.observation_space = gym.spaces.Box(0, 1, (obs_shape,), dtype=np.float32)
 
     def observation(self, obs: Any) -> np.ndarray:
-        """Convert discrete integer observation to one-hot float tensor."""
+        """Convert a discrete integer observation to a one-hot float32 vector.
+
+        Args:
+            obs (int | np.ndarray): Discrete observation from the wrapped environment.
+
+        Returns:
+            np.ndarray: One-hot encoded float32 array of shape (obs_shape,).
+        """
         one_hot = torch.zeros(self.obs_shape, dtype=torch.float32)
         one_hot[obs] = 1.0
         return one_hot.numpy()
@@ -163,7 +206,22 @@ def make_env(
     env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = None,
     env: Optional[gym.Env] = None,
 ) -> Callable[[], gym.Env]:
-    """Return a thunk that creates and seeds a gymnasium environment."""
+    """Return a thunk that constructs and seeds a Gymnasium environment.
+
+    Args:
+        env_id (str): Gymnasium environment ID. Ignored when ``env`` is provided.
+        seed (int): Base random seed; actual seed is ``seed + idx``.
+        idx (int): Worker index added to the seed. Defaults to 0.
+        render_mode (str | None): Render mode passed to ``gym.make``. Defaults to None.
+        grid_env (bool): Apply one-hot observation encoding for grid environments.
+        atari_wrapper (bool): Apply Atari preprocessing wrappers when True.
+        env_wrapper (Callable | None): Optional extra wrapper applied after creation.
+        env (gym.Env | None): Pre-built environment; skips ``gym.make`` when provided.
+
+    Returns:
+        Callable[[], gym.Env]: A zero-argument thunk that creates the environment.
+    """
+
     def thunk():
         """Environment factory thunk (called by SyncVectorEnv)."""
         if env is not None:
@@ -215,7 +273,26 @@ def evaluate(
     use_wandb: bool = False,
 ) -> tuple[list[float], list[np.ndarray]]:
     # Create evaluation environment
-    """Run eval_episodes episodes and return total rewards and any recorded frames."""
+    """Run evaluation episodes and return episodic returns (and optional video frames).
+
+    Args:
+        model (nn.Module): The policy network to evaluate.
+        device (torch.device | str): Device on which to run the network.
+        env_id (str): Gymnasium environment ID for the evaluation environment.
+        env (gym.Env | None): Pre-created environment; skips ``gym.make`` when provided.
+        seed (int): Random seed for the evaluation environment. Defaults to 42.
+        num_eval_eps (int): Number of episodes to run.
+        record (bool): Record frames when True.
+        render_mode (str | None): Render mode passed to the environment.
+        grid_env (bool): Apply one-hot encoding for grid environments.
+        atari_wrapper (bool): Apply Atari preprocessing wrappers when True.
+        env_wrapper (Callable | None): Optional extra wrapper applied after creation.
+        use_wandb (bool): Upload recorded video to Weights & Biases when True.
+
+    Returns:
+        tuple[list[float], list]: A list of total rewards per episode and a list of
+            recorded RGB frames (empty if capture_video is False).
+    """
     eval_env = make_env(
         env_id if env is None else "",
         seed,
@@ -314,7 +391,46 @@ def train_ppo_cnn(
     value_clip: bool = False,
 ) -> nn.Module:
     # Update Config with passed arguments
-    """Train a CNN-based PPO agent on pixel observations."""
+    """Train a CNN-based PPO agent on pixel observations, returning the trained actor.
+
+    Args:
+    env_id (str | None): Gymnasium environment ID. Mutually exclusive with ``env``.
+    env (gym.Env | None): Pre-created ``gym.Env`` instance. Mutually exclusive with ``env_id``.
+    total_timesteps (int): Total environment interaction steps to train for.
+    seed (int): Global random seed for reproducibility.
+    lr (float): Optimiser learning rate.
+    gamma (float): Discount factor γ (0 < γ ≤ 1).
+    GAE (float): Generalised Advantage Estimation λ (0 = TD, 1 = MC).
+    n_envs (int): Number of parallel vectorised environments.
+    max_steps (int): Rollout steps collected per worker per update.
+    PPO_EPOCHS (int): Epochs of surrogate-objective optimisation per rollout.
+    clip_value (float): PPO clipping parameter ε.
+    ENTROPY_COEFF (float): Entropy bonus coefficient.
+    VALUE_COEFF (float): Value-function loss coefficient.
+    capture_video (bool): Record evaluation episodes to video files when True.
+    use_wandb (bool): Log training metrics to Weights & Biases when True.
+    wandb_project (str): W&B project name (used when use_wandb=True).
+    exp_name (str): Run name used for log directories and W&B.
+    grid_env (bool): Use one-hot observation encoding for grid environments.
+    max_grad_norm (float): Maximum gradient-norm for clipping (0 disables clipping).
+    eval_every (int): Evaluate every this many environment steps.
+    save_every (int): Save a model checkpoint every this many steps.
+    atari_wrapper (bool): Apply Atari preprocessing (grayscale, frame-stack) when True.
+    env_wrapper (Callable | None): Optional callable wrapping the environment after creation.
+    actor_class (type | nn.Module): Custom ``nn.Module`` class or instance replacing the default actor.
+    critic_class (type | nn.Module): Custom ``nn.Module`` class or instance replacing the default critic.
+    num_minibatches (int): Minibatches per policy-update epoch.
+    log_gradients (bool): Log per-layer gradient norms to W&B when True.
+    num_eval_episodes (int): Number of episodes per evaluation.
+    anneal_lr (bool): Linearly anneal the learning rate to zero when True.
+    normalize_obs (bool): Normalise observations with a running mean/std when True.
+    normalize_reward (bool): Normalise rewards with a running std when True.
+    device (str): PyTorch device string (``'cpu'``, ``'cuda'``, ``'mps'``).
+    value_clip (bool): Clip the value-function loss when True.
+
+    Returns:
+        nn.Module: The trained network (actor / policy / Q-network) ready for inference.
+    """
     Config.env_id = env_id
     Config.total_timesteps = total_timesteps
     Config.seed = seed
@@ -371,6 +487,7 @@ def train_ppo_cnn(
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
 
+    configure_logging(log_dir=os.path.join("runs", Config.exp_name))
     device = setup_device(Config.device, Config.seed)  # type: ignore[assignment]
 
     # Create environments - check for pre-created env first, then default
@@ -745,7 +862,10 @@ def train_ppo_cnn(
             )
             logger.info(
                 "Update %d global_step %d Policy Loss: %.4f Value Loss: %.4f SPS: %d",
-                update, global_step, policy_loss.item(), critic_loss.item(),
+                update,
+                global_step,
+                policy_loss.item(),
+                critic_loss.item(),
                 int(global_step / (time.time() - start_time)),
             )
 

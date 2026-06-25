@@ -1,3 +1,5 @@
+"""Dueling DQN with MLP architecture for discrete-action Gymnasium environments."""
+
 import os
 import random
 import time
@@ -36,6 +38,7 @@ except ImportError:
 class Config:
     # Experiment settings
     """Hyperparameters and settings for Dueling DQN training."""
+
     exp_name: str = "Dueling-DQN"
     seed: int = 42
     env_id: str = "CliffWalking-v0"
@@ -76,6 +79,7 @@ class Config:
 
 class DuelingQNet(nn.Module):
     """Dueling Q-network with separate value and advantage streams."""
+
     def __init__(self, state_space, action_space):
         super().__init__()
         logger.info(f"State space: {state_space}, Action space: {action_space}")
@@ -90,7 +94,14 @@ class DuelingQNet(nn.Module):
         )
 
     def forward(self, x):
-        """Forward pass — returns network output(s)."""
+        """Forward pass — returns network output(s).
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor | tuple[torch.Tensor, ...]: Network output(s).
+        """
         feat = self.features(x)
         values = self.values(feat)
         adv = self.adv(feat)
@@ -101,6 +112,7 @@ class DuelingQNet(nn.Module):
 
 class LinearEpsilonDecay(nn.Module):
     """Linearly decays epsilon from start to end over duration steps."""
+
     def __init__(self, initial_eps, end_eps, total_timesteps):
         super().__init__()
         self.initial_eps = initial_eps
@@ -108,7 +120,14 @@ class LinearEpsilonDecay(nn.Module):
         self.end_eps = end_eps
 
     def forward(self, current_timestep, decay_factor):
-        """Forward pass — returns network output(s)."""
+        """Forward pass — returns network output(s).
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor | tuple[torch.Tensor, ...]: Network output(s).
+        """
         slope = (self.end_eps - self.initial_eps) / (
             self.total_timesteps * decay_factor
         )
@@ -117,20 +136,40 @@ class LinearEpsilonDecay(nn.Module):
 
 class OneHotWrapper(gym.ObservationWrapper):
     """Wraps a discrete observation space into a one-hot float vector."""
+
     def __init__(self, env, obs_shape=48):
         super().__init__(env)
         self.obs_shape = obs_shape
         self.observation_space = gym.spaces.Box(0, 1, (obs_shape,), dtype=np.float32)
 
     def observation(self, obs):
-        """Convert discrete integer observation to one-hot float tensor."""
+        """Convert a discrete integer observation to a one-hot float32 vector.
+
+        Args:
+            obs (int | np.ndarray): Discrete observation from the wrapped environment.
+
+        Returns:
+            np.ndarray: One-hot encoded float32 array of shape (obs_shape,).
+        """
         one_hot = torch.zeros(self.obs_shape, dtype=torch.float32)
         one_hot[obs] = 1.0
         return one_hot.numpy()
 
 
 def make_env(env_id, seed, idx, atari_wrapper=False, grid_env=False):
-    """Return a thunk that creates and seeds a gymnasium environment."""
+    """Return a thunk that constructs and seeds a Gymnasium environment.
+
+    Args:
+        env_id (str): Gymnasium environment ID.
+        seed (int): Base random seed; actual seed is ``seed + idx``.
+        idx (int): Worker index added to the seed.
+        atari_wrapper (bool): Apply Atari preprocessing wrappers when True.
+        grid_env (bool): Apply one-hot observation encoding for grid environments.
+
+    Returns:
+        Callable[[], gym.Env]: A zero-argument thunk that creates the environment.
+    """
+
     def thunk():
         """Create environment with video recording"""
         env = gym.make(env_id, render_mode="rgb_array")
@@ -161,7 +200,22 @@ def evaluate(
     capture_video=False,
     grid_env=False,
 ):
-    """Run eval_episodes episodes and return total rewards and any recorded frames."""
+    """Run evaluation episodes using a greedy policy and return rewards and optional frames.
+
+    Args:
+        env_id (str): Gymnasium environment ID for the evaluation environment.
+        model (nn.Module): The Q-network to evaluate (greedy action selection).
+        device (torch.device | str): Device on which to run the network.
+        seed (int): Random seed for the evaluation environment.
+        atari_wrapper (bool): Apply Atari preprocessing wrappers when True.
+        num_eval_eps (int): Number of episodes to run.
+        capture_video (bool): Record frames when True.
+        grid_env (bool): Apply one-hot encoding for grid environments.
+
+    Returns:
+        tuple[list[float], list]: A list of total rewards per episode and a list of
+            recorded RGB frames (empty if capture_video is False).
+    """
     eval_env = make_env(
         idx=0, env_id=env_id, seed=seed, atari_wrapper=atari_wrapper, grid_env=grid_env
     )()
@@ -243,40 +297,40 @@ def train_dueling_dqn(
     device=Config.device,
     grid_env=Config.grid_env,
 ):
-    """
-    Train a Dueling DQN agent on a Gymnasium environment.
+    """Train a Dueling DQN agent on a Gymnasium environment.
 
     Args:
-        env_id: Gymnasium environment ID
-        total_timesteps: Total training timesteps
-        seed: Random seed
-        learning_rate: Learning rate for optimizer
-        buffer_size: Replay buffer size
-        gamma: Discount factor
-        tau: Target network update rate
-        target_network_frequency: How often to update target network
-        batch_size: Batch size for training
-        start_e: Initial epsilon for exploration
-        end_e: Final epsilon for exploration
-        exploration_fraction: Fraction of timesteps for epsilon decay
-        learning_starts: When to start learning
-        train_frequency: How often to train
-        max_grad_norm: Maximum gradient norm for clipping (0.0 to disable)
-        capture_video: Whether to capture training videos
-        use_wandb: Whether to use Weights & Biases logging
-        wandb_project: W&B project name
-        wandb_entity: W&B entity/username
-        exp_name: Experiment name
-        eval_every: Frequency of evaluation during training
-        save_every: Frequency of saving the model
-        atari_wrapper: Whether to apply Atari preprocessing wrappers
-        custom_agent: Custom neural network class or instance (nn.Module subclass or instance, optional, defaults to DuelingQNet)
-        num_eval_eps: Number of evaluation episodes
-        n_envs: Number of parallel environments for the replay buffer
-        device: Device to use for training (e.g., "cpu", "cuda")
-        grid_env: Whether the environment uses discrete grid observations
+        env_id (str): Gymnasium environment ID (e.g. ``'CartPole-v1'``).
+        total_timesteps (int): Total environment interaction steps to train for.
+        seed (int): Global random seed for reproducibility.
+        learning_rate (float): Optimiser learning rate.
+        buffer_size (int): Replay buffer capacity (number of transitions).
+        gamma (float): Discount factor γ (0 < γ ≤ 1).
+        tau (float): Soft target-network update coefficient (0 < τ ≤ 1).
+        target_network_frequency (int): Sync target networks every this many steps.
+        batch_size (int): Mini-batch size sampled from the replay buffer.
+        start_e (float): Initial epsilon for epsilon-greedy exploration.
+        end_e (float): Final epsilon after decay.
+        exploration_fraction (float): Fraction of total_timesteps over which epsilon decays.
+        learning_starts (int): Random-action steps before gradient updates begin.
+        train_frequency (int): Update the network every this many steps.
+        max_grad_norm (float): Maximum gradient-norm for clipping (0 disables clipping).
+        capture_video (bool): Record evaluation episodes to video files when True.
+        use_wandb (bool): Log training metrics to Weights & Biases when True.
+        wandb_project (str): W&B project name (used when use_wandb=True).
+        wandb_entity (str): W&B entity/username (used when use_wandb=True).
+        exp_name (str): Run name used for log directories and W&B.
+        eval_every (int): Evaluate every this many environment steps.
+        save_every (int): Save a model checkpoint every this many steps.
+        atari_wrapper (bool): Apply Atari preprocessing (grayscale, frame-stack) when True.
+        custom_agent (nn.Module | None): Custom ``nn.Module`` instance replacing the default Q-network.
+        num_eval_eps (int): Number of episodes per evaluation.
+        n_envs (int): Number of parallel vectorised environments.
+        device (str | torch.device): PyTorch device string (``'cpu'``, ``'cuda'``, ``'mps'``).
+        grid_env (bool): Use one-hot observation encoding for grid environments.
+
     Returns:
-        Trained Dueling Q-network model
+        nn.Module: The trained network (actor / policy / Q-network) ready for inference.
     """
     run_name = f"{env_id}__{exp_name}__{seed}__{int(time.time())}"
 
@@ -398,7 +452,13 @@ def train_dueling_dqn(
                         ep_ret = info["episode"]["r"][i]
                         ep_len = info["episode"]["l"][i]
 
-                        logger.info("Step=%d Env=%d Return=%.2f Length=%d", step, i, ep_ret, ep_len)
+                        logger.info(
+                            "Step=%d Env=%d Return=%.2f Length=%d",
+                            step,
+                            i,
+                            ep_ret,
+                            ep_len,
+                        )
 
                         if use_wandb:
                             wandb.log(
