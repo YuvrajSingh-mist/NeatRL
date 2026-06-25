@@ -5,7 +5,7 @@ script for REINFORCE training on FrozenLake using neatrl library.
 import torch
 import torch.nn as nn
 
-from neatrl import train_reinforce
+from neatrl.reinforce_mlp import train_reinforce
 
 
 # For discrete actions

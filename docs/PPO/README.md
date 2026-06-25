@@ -7,7 +7,7 @@ This guide shows you how to use NeatRL's PPO implementation for reinforcement le
 ### Basic Training
 
 ```python
-from neatrl.ppo import train_ppo
+from neatrl.ppo_mlp import train_ppo
 
 model = train_ppo(
     env_id="LunarLander-v2",
@@ -19,7 +19,7 @@ model = train_ppo(
 ### Training with Experiment Tracking
 
 ```python
-from neatrl.ppo import train_ppo
+from neatrl.ppo_mlp import train_ppo
 
 model = train_ppo(
     env_id="LunarLander-v2",
@@ -35,7 +35,7 @@ model = train_ppo(
 ### PPO for Discrete Action Spaces
 
 ```python
-from neatrl.ppo import train_ppo
+from neatrl.ppo_mlp import train_ppo
 
 model = train_ppo(
     env_id="Taxi-v3",
@@ -52,7 +52,7 @@ model = train_ppo(
 ### PPO for Continuous Action Spaces
 
 ```python
-from neatrl.ppo import train_ppo
+from neatrl.ppo_mlp import train_ppo
 
 model = train_ppo(
     env_id="BipedalWalker-v3",
@@ -69,7 +69,7 @@ model = train_ppo(
 ### PPO for Atari Environments
 
 ```python
-from neatrl.ppo import train_ppo
+from neatrl.ppo_mlp import train_ppo
 
 model = train_ppo(
     env_id="BreakoutNoFrameskip-v4",
@@ -128,7 +128,7 @@ model = train_ppo(
 ### Lunar Lander (Discrete Actions)
 
 ```python
-from neatrl.ppo import train_ppo
+from neatrl.ppo_mlp import train_ppo
 
 model = train_ppo(
     env_id="LunarLander-v2",
@@ -144,7 +144,7 @@ model = train_ppo(
 ### Taxi (Discrete Actions)
 
 ```python
-from neatrl.ppo import train_ppo
+from neatrl.ppo_mlp import train_ppo
 
 model = train_ppo(
     env_id="Taxi-v3",
@@ -160,7 +160,7 @@ model = train_ppo(
 ### Breakout (Atari, Discrete Actions)
 
 ```python
-from neatrl.ppo import train_ppo
+from neatrl.ppo_mlp import train_ppo
 
 model = train_ppo(
     env_id="BreakoutNoFrameskip-v4",
@@ -177,7 +177,7 @@ model = train_ppo(
 ### Bipedal Walker (Continuous Actions)
 
 ```python
-from neatrl.ppo import train_ppo
+from neatrl.ppo_mlp import train_ppo
 
 model = train_ppo(
     env_id="BipedalWalker-v3",
@@ -215,7 +215,7 @@ When `use_wandb=True`, PPO logs:
 ### Custom Environment Wrappers
 
 ```python
-from neatrl.ppo import train_ppo
+from neatrl.ppo_mlp import train_ppo
 import gymnasium as gym
 
 def custom_wrapper(env):
@@ -232,7 +232,7 @@ model = train_ppo(
 ### Grid Environments
 
 ```python
-from neatrl.ppo import train_ppo
+from neatrl.ppo_mlp import train_ppo
 
 model = train_ppo(
     env_id="CliffWalking-v0",
@@ -245,7 +245,7 @@ model = train_ppo(
 ### Value Function Clipping
 
 ```python
-from neatrl.ppo import train_ppo
+from neatrl.ppo_mlp import train_ppo
 
 model = train_ppo(
     env_id="LunarLander-v2",

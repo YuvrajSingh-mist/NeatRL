@@ -7,7 +7,7 @@ and Half Cheetah is a classic continuous control benchmark with 17-dimensional s
 and 6-dimensional continuous action space.
 """
 
-from neatrl.ddpg import train_ddpg
+from neatrl.ddpg_mlp import train_ddpg
 
 
 def main():

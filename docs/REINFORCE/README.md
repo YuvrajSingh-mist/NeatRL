@@ -7,7 +7,7 @@ This guide shows you how to use NeatRL's REINFORCE algorithm implementation.
 ### Basic Training
 
 ```python
-from neatrl import train_reinforce
+from neatrl.reinforce_mlp import train_reinforce
 
 model = train_reinforce(
     env_id="CartPole-v1",
@@ -19,7 +19,7 @@ model = train_reinforce(
 ### Training with Experiment Tracking
 
 ```python
-from neatrl import train_reinforce
+from neatrl.reinforce_mlp import train_reinforce
 
 model = train_reinforce(
     env_id="CartPole-v1",
@@ -35,7 +35,7 @@ model = train_reinforce(
 ### Parallel Training
 
 ```python
-from neatrl import train_reinforce
+from neatrl.reinforce_mlp import train_reinforce
 
 model = train_reinforce(
     env_id="CartPole-v1",
@@ -51,7 +51,7 @@ model = train_reinforce(
 ### Atari Game Training
 
 ```python
-from neatrl import train_reinforce
+from neatrl.reinforce_mlp import train_reinforce
 
 model = train_reinforce(
     env_id="BreakoutNoFrameskip-v4",
@@ -69,7 +69,7 @@ model = train_reinforce(
 
 ```python
 import torch.nn as nn
-from neatrl import train_reinforce
+from neatrl.reinforce_mlp import train_reinforce
 
 class CustomPolicyNet(nn.Module):
     def __init__(self, state_space, action_space):
@@ -141,7 +141,7 @@ model = train_reinforce(
 ### Atari Games
 
 ```python
-from neatrl import train_reinforce
+from neatrl.reinforce_mlp import train_reinforce
 
 model = train_reinforce(
     env_id="BreakoutNoFrameskip-v4",
@@ -164,7 +164,7 @@ Supported Atari games include:
 ### Grid Environments
 
 ```python
-from neatrl import train_reinforce
+from neatrl.reinforce_mlp import train_reinforce
 
 model = train_reinforce(
     env_id="FrozenLake-v1",

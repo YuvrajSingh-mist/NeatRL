@@ -4,7 +4,7 @@ script for RND-PPO training on FrozenLake using neatrl library.
 
 import gymnasium as gym
 
-from neatrl import train_ppo_rnd
+from neatrl.rnd_mlp import train_ppo_rnd
 
 
 def test_rnd_ppo_frozenlake():

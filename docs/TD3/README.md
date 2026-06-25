@@ -25,7 +25,7 @@ Note: TD3 is designed for continuous action spaces. For discrete action environm
 ### Standard TD3 (Vector Observations)
 
 ```python
-from neatrl.td3 import train_td3
+from neatrl.td3_mlp import train_td3
 
 train_td3(
     env_id="HalfCheetah-v5",
@@ -37,7 +37,7 @@ train_td3(
 ### CNN TD3 (Image Observations)
 
 ```python
-from neatrl.td3 import train_td3_cnn
+from neatrl.td3_cnn import train_td3_cnn
 
 train_td3_cnn(
     env_id="CarRacing-v2",

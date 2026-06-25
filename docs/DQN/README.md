@@ -7,7 +7,7 @@ This guide shows you how to use NeatRL's DQN implementation.
 ### Basic Training
 
 ```python
-from neatrl import train_dqn
+from neatrl.dqn_mlp import train_dqn
 
 model = train_dqn(
     env_id="CartPole-v1",
@@ -19,7 +19,7 @@ model = train_dqn(
 ### Training with Experiment Tracking
 
 ```python
-from neatrl import train_dqn
+from neatrl.dqn_mlp import train_dqn
 
 model = train_dqn(
     env_id="CartPole-v1",
@@ -36,7 +36,7 @@ model = train_dqn(
 
 ```python
 import torch.nn as nn
-from neatrl import train_dqn
+from neatrl.dqn_mlp import train_dqn
 
 class AtariQNet(nn.Module):
     def __init__(self, state_space, action_space):
@@ -115,7 +115,7 @@ model = train_dqn(
 ### Grid Environments
 
 ```python
-from neatrl import train_dqn
+from neatrl.dqn_mlp import train_dqn
 
 model = train_dqn(
     env_id="FrozenLake-v1",

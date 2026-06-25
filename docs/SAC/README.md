@@ -7,7 +7,7 @@ This guide shows you how to use NeatRL's SAC implementation for continuous and d
 ### Basic Training
 
 ```python
-from neatrl.sac import train_sac
+from neatrl.sac_mlp import train_sac
 
 model = train_sac(
     env_id="Pendulum-v1",
@@ -19,7 +19,7 @@ model = train_sac(
 ### Training with Experiment Tracking
 
 ```python
-from neatrl.sac import train_sac
+from neatrl.sac_mlp import train_sac
 
 model = train_sac(
     env_id="Pendulum-v1",
@@ -35,7 +35,7 @@ model = train_sac(
 ### SAC for Atari Environments
 
 ```python
-from neatrl.sac import train_sac_cnn
+from neatrl.sac_cnn import train_sac_cnn
 
 model = train_sac_cnn(
     env_id="BreakoutNoFrameskip-v4",
@@ -99,7 +99,7 @@ model = train_sac_cnn(
 ### Atari
 
 ```python
-from neatrl.sac import train_sac_cnn
+from neatrl.sac_cnn import train_sac_cnn
 
 model = train_sac_cnn(
     env_id="BreakoutNoFrameskip-v4",

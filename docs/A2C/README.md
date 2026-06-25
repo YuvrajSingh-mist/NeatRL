@@ -18,7 +18,7 @@ Note: A2C works with both discrete and continuous action spaces.
 ### Standard A2C (Vector Observations)
 
 ```python
-from neatrl.a2c import train_a2c
+from neatrl.a2c_mlp import train_a2c
 
 train_a2c(
     env_id="Acrobot-v1",
@@ -31,7 +31,7 @@ train_a2c(
 ### CNN A2C (Image Observations)
 
 ```python
-from neatrl.a2c import train_a2c_cnn
+from neatrl.a2c_cnn import train_a2c_cnn
 
 train_a2c_cnn(
     env_id="CarRacing-v3",

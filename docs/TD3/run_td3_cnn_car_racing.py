@@ -13,7 +13,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from neatrl.td3 import train_td3_cnn
+from neatrl.td3_cnn import train_td3_cnn
 
 
 def car_racing_wrapper(env):

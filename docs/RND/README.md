@@ -7,7 +7,7 @@ This guide shows you how to use NeatRL's RND implementation, which combines PPO 
 ### Basic Training
 
 ```python
-from neatrl.rnd import train_ppo_rnd
+from neatrl.rnd_mlp import train_ppo_rnd
 
 model = train_ppo_rnd(
     env_id="CliffWalking-v0",
@@ -19,7 +19,7 @@ model = train_ppo_rnd(
 ### Training with Experiment Tracking
 
 ```python
-from neatrl.rnd import train_ppo_rnd
+from neatrl.rnd_mlp import train_ppo_rnd
 
 model = train_ppo_rnd(
     env_id="CliffWalking-v0",
@@ -35,7 +35,7 @@ model = train_ppo_rnd(
 ### RND-PPO for Atari Environments
 
 ```python
-from neatrl.rnd import train_ppo_rnd_cnn
+from neatrl.rnd_cnn import train_ppo_rnd_cnn
 
 model = train_ppo_rnd_cnn(
     env_id="CarRacing-v3",
@@ -96,7 +96,7 @@ model = train_ppo_rnd_cnn(
 ### Grid Environments
 
 ```python
-from neatrl.rnd import train_ppo_rnd
+from neatrl.rnd_mlp import train_ppo_rnd
 
 model = train_ppo_rnd(
     env_id="CliffWalking-v0",
@@ -116,7 +116,7 @@ model = train_ppo_rnd(
 ### Atari
 
 ```python
-from neatrl.rnd import train_ppo_rnd_cnn
+from neatrl.rnd_cnn import train_ppo_rnd_cnn
 
 model = train_ppo_rnd_cnn(
     env_id="BreakoutNoFrameskip-v4",

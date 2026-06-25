@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from neatrl import train_dqn
+from neatrl.dqn_mlp import train_dqn
 
 
 class FrozenLakeQNet(nn.Module):

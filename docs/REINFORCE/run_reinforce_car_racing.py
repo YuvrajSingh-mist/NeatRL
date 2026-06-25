@@ -8,7 +8,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from neatrl.reinforce import train_reinforce_cnn
+from neatrl.reinforce_cnn import train_reinforce_cnn
 
 
 class PreprocessAndFrameStack(gym.ObservationWrapper):

@@ -5,7 +5,7 @@ This example demonstrates how to use DDPG for the BipedalWalker environment.
 BipedalWalker has continuous action spaces and vector observations, making it perfect for standard DDPG.
 """
 
-from neatrl.ddpg import train_ddpg
+from neatrl.ddpg_mlp import train_ddpg
 
 
 def train_ddpg_bipedal_walker():

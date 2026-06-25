@@ -5,7 +5,7 @@ script for DQN training on Taxi using neatrl library.
 import torch
 import torch.nn as nn
 
-from neatrl import train_dqn
+from neatrl.dqn_mlp import train_dqn
 
 
 class QNet(nn.Module):

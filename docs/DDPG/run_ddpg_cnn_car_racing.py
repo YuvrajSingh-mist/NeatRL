@@ -14,7 +14,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from neatrl.ddpg import train_ddpg_cnn
+from neatrl.ddpg_cnn import train_ddpg_cnn
 
 
 def car_racing_wrapper(env):

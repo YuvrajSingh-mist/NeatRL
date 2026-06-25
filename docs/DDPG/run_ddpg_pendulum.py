@@ -10,7 +10,7 @@ from typing import Union
 import torch
 import torch.nn as nn
 
-from neatrl.ddpg import train_ddpg
+from neatrl.ddpg_mlp import train_ddpg
 
 
 class ActorNet(nn.Module):

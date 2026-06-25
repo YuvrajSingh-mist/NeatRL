@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from torch import nn
 
-from neatrl.ppo import train_ppo_cnn
+from neatrl.ppo_cnn import train_ppo_cnn
 
 
 # --- Networks ---

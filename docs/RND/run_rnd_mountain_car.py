@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from neatrl import train_ppo_rnd
+from neatrl.rnd_mlp import train_ppo_rnd
 
 
 # --- Networks ---

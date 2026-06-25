@@ -5,7 +5,7 @@ script for Dueling DQN training on LunarLander using neatrl library.
 import torch
 import torch.nn as nn
 
-from neatrl import train_dueling_dqn
+from neatrl.dueling_dqn_mlp import train_dueling_dqn
 
 
 class DuelingQNet(nn.Module):

@@ -37,7 +37,7 @@ pip install "neatrl[mujoco]"   # MuJoCo continuous control
 ### Train DQN on CartPole
 
 ```python
-from neatrl import train_dqn
+from neatrl.dqn_mlp import train_dqn
 
 model = train_dqn(
     env_id="CartPole-v1",
@@ -49,7 +49,7 @@ model = train_dqn(
 ### Train PPO on Classic Control
 
 ```python
-from neatrl import train_ppo
+from neatrl.ppo_mlp import train_ppo
 
 model = train_ppo(
     env_id="CartPole-v1",
@@ -65,7 +65,7 @@ model = train_ppo(
 ### Train SAC on Continuous Control
 
 ```python
-from neatrl import train_sac
+from neatrl.sac_mlp import train_sac
 
 model = train_sac(
     env_id="Pendulum-v1",
@@ -80,7 +80,7 @@ model = train_sac(
 ### Train SAC on Atari
 
 ```python
-from neatrl import train_sac_cnn
+from neatrl.sac_cnn import train_sac_cnn
 
 model = train_sac_cnn(
     env_id="BreakoutNoFrameskip-v4",

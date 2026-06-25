@@ -11,7 +11,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from neatrl.a2c import train_a2c_cnn
+from neatrl.a2c_cnn import train_a2c_cnn
 
 
 def car_racing_wrapper(env):

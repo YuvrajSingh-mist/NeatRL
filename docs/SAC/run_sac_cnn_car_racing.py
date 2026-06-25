@@ -13,7 +13,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from neatrl.sac import train_sac_cnn
+from neatrl.sac_cnn import train_sac_cnn
 
 LOG_STD_MIN = -20
 LOG_STD_MAX = 2

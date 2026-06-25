@@ -8,7 +8,7 @@ Breakout has image observations and discrete actions, adapted for SAC.
 import torch
 import torch.nn as nn
 
-from neatrl.sac import train_sac_cnn
+from neatrl.sac_cnn import train_sac_cnn
 
 
 class ActorNetCNN(nn.Module):

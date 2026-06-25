@@ -18,7 +18,7 @@ Note: DDPG is designed for continuous action spaces. For discrete action environ
 ### Standard DDPG (Vector Observations)
 
 ```python
-from neatrl.ddpg import train_ddpg
+from neatrl.ddpg_mlp import train_ddpg
 
 train_ddpg(
     env_id="HalfCheetah-v5",
@@ -30,7 +30,7 @@ train_ddpg(
 ### CNN DDPG (Image Observations)
 
 ```python
-from neatrl.ddpg import train_ddpg_cnn
+from neatrl.ddpg_cnn import train_ddpg_cnn
 
 train_ddpg_cnn(
     env_id="PongNoFrameskip-v4",
@@ -105,7 +105,7 @@ train_ddpg_cnn(
 ### Example: Custom Configuration
 
 ```python
-from neatrl import train_ddpg
+from neatrl.ddpg_mlp import train_ddpg
 
 model = train_ddpg(
     env_id="BipedalWalker-v3",

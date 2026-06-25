@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from neatrl.a2c import train_a2c
+from neatrl.a2c_mlp import train_a2c
 
 
 # --- Networks ---

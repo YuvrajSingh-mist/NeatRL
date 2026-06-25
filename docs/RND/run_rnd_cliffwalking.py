@@ -2,7 +2,7 @@
 script for RND-PPO training on CliffWalking using neatrl library.
 """
 
-from neatrl import train_ppo_rnd
+from neatrl.rnd_mlp import train_ppo_rnd
 
 
 def test_rnd_ppo_cliffwalking():

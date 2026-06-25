@@ -7,7 +7,7 @@ Pendulum has continuous action spaces and vector observations, making it suitabl
 
 import gymnasium as gym
 
-from neatrl.sac import train_sac
+from neatrl.sac_mlp import train_sac
 
 env = gym.make("Pendulum-v1")
 

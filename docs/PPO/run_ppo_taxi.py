@@ -2,7 +2,7 @@
 script for PPO training on Taxi using neatrl library.
 """
 
-from neatrl.ppo import train_ppo
+from neatrl.ppo_mlp import train_ppo
 
 
 def test_ppo_taxi():

@@ -5,7 +5,7 @@ script for REINFORCE training on MountainCar using neatrl library.
 import torch
 import torch.nn as nn
 
-from neatrl import train_reinforce
+from neatrl.reinforce_mlp import train_reinforce
 
 
 class PolicyNet(nn.Module):

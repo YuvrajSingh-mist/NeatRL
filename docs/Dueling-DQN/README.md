@@ -7,7 +7,7 @@ This guide shows you how to use NeatRL's Dueling DQN implementation, which separ
 ### Basic Training
 
 ```python
-from neatrl import train_dueling_dqn
+from neatrl.dueling_dqn_mlp import train_dueling_dqn
 
 model = train_dueling_dqn(
     env_id="CliffWalking-v0",
@@ -19,7 +19,7 @@ model = train_dueling_dqn(
 ### Training with Experiment Tracking
 
 ```python
-from neatrl import train_dueling_dqn
+from neatrl.dueling_dqn_mlp import train_dueling_dqn
 
 model = train_dueling_dqn(
     env_id="CliffWalking-v0",
@@ -36,7 +36,7 @@ model = train_dueling_dqn(
 
 ```python
 import torch.nn as nn
-from neatrl import train_dueling_dqn
+from neatrl.dueling_dqn_mlp import train_dueling_dqn
 
 class CustomDuelingQNet(nn.Module):
     def __init__(self, state_space, action_space):
@@ -118,7 +118,7 @@ model = train_dueling_dqn(
 ### Grid Environments
 
 ```python
-from neatrl import train_dueling_dqn
+from neatrl.dueling_dqn_mlp import train_dueling_dqn
 
 model = train_dueling_dqn(
     env_id="CliffWalking-v0",

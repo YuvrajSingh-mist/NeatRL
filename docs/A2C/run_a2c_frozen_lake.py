@@ -5,7 +5,7 @@ This example demonstrates how to use A2C for the FrozenLake environment.
 FrozenLake has discrete action spaces and grid observations, making it suitable for A2C with grid_env support.
 """
 
-from neatrl.a2c import train_a2c
+from neatrl.a2c_mlp import train_a2c
 
 
 def main():

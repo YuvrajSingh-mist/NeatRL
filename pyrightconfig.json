@@ -4,5 +4,5 @@
   "pythonVersion": "3.12",
   "typeCheckingMode": "basic",
   "reportMissingModuleSource": "none",
-  "include": ["src"]
+  "include": ["src", "docs"]
 }
