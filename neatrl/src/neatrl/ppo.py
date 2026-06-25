@@ -555,7 +555,9 @@ def train_ppo(
 
     envs = gym.vector.SyncVectorEnv(env_thunks)
     if isinstance(envs.single_observation_space, gym.spaces.Discrete):
-        obs_space_shape: Union[int, tuple[int, ...]] = (int(envs.single_observation_space.n),)  # type: ignore[attr-defined]
+        obs_space_shape: Union[int, tuple[int, ...]] = (
+            int(envs.single_observation_space.n),
+        )  # type: ignore[attr-defined]
     else:
         obs_space_shape = int(envs.single_observation_space.shape[0])
 
@@ -609,7 +611,9 @@ def train_ppo(
 
     # Tensor Storage
 
-    obs_shape_tuple = obs_space_shape if isinstance(obs_space_shape, tuple) else (obs_space_shape,)
+    obs_shape_tuple = (
+        obs_space_shape if isinstance(obs_space_shape, tuple) else (obs_space_shape,)
+    )
     obs_storage = torch.zeros(
         (Config.max_steps, Config.n_envs) + obs_shape_tuple  # type: ignore[arg-type]
     ).to(device)

@@ -1156,9 +1156,11 @@ def train_td3_cnn(
         ]
         vec_env = gym.vector.SyncVectorEnv(env_thunks)
         env = vec_env  # type: ignore[assignment]
-        is_discrete_obs = isinstance(vec_env.single_observation_space, gym.spaces.Discrete)
+        is_discrete_obs = isinstance(
+            vec_env.single_observation_space, gym.spaces.Discrete
+        )
         obs_space = vec_env.single_observation_space
-        obs_shape = int(obs_space.n) if is_discrete_obs else int(obs_space.shape[0])  # type: ignore[attr-defined]
+        obs_shape: Union[int, tuple[int, ...]] = int(obs_space.n) if is_discrete_obs else tuple(obs_space.shape)  # type: ignore[attr-defined]
         action_shape = int(
             vec_env.single_action_space.n  # type: ignore[attr-defined]
             if isinstance(vec_env.single_action_space, gym.spaces.Discrete)
@@ -1177,7 +1179,7 @@ def train_td3_cnn(
         env = env_thunk()
         is_discrete_obs = isinstance(env.observation_space, gym.spaces.Discrete)
         obs_space = env.observation_space
-        obs_shape = int(obs_space.n) if is_discrete_obs else int(obs_space.shape[0])  # type: ignore[attr-defined]
+        obs_shape = int(obs_space.n) if is_discrete_obs else tuple(obs_space.shape)  # type: ignore[attr-defined]
         action_shape = int(
             env.action_space.n  # type: ignore[attr-defined]
             if isinstance(env.action_space, gym.spaces.Discrete)

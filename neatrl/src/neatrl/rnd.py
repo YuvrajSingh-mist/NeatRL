@@ -803,8 +803,6 @@ def train_ppo_rnd_cnn(
                 intrinsic_reward_rms.var + 1e-8
             )
 
-
-
             # Step the environment
             new_obs, reward, terminated, truncated, info = envs.step(  # type: ignore[var-annotated]
                 action.cpu().numpy()
@@ -1358,7 +1356,9 @@ def train_ppo_rnd(
 
     # Tensor Storage
 
-    obs_shape_tuple = obs_space_shape if isinstance(obs_space_shape, tuple) else (obs_space_shape,)
+    obs_shape_tuple = (
+        obs_space_shape if isinstance(obs_space_shape, tuple) else (obs_space_shape,)
+    )
     obs_storage = torch.zeros(
         (Config.max_steps, Config.n_envs) + obs_shape_tuple  # type: ignore[arg-type]
     ).to(device)

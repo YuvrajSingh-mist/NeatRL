@@ -675,12 +675,6 @@ def train_sac(
         else envs.single_action_space.shape[0]
     )
 
-    action_shape = (
-        ()
-        if isinstance(envs.single_action_space, gym.spaces.Discrete)
-        else (action_space_n,)
-    )
-
     print(f"Observation Space: {obs_space_shape}, Action Space: {action_space_n}")
 
     # Create actor network
@@ -1170,12 +1164,6 @@ def train_sac_cnn(
         else envs.single_action_space.shape[0]
         if isinstance(envs.single_action_space, gym.spaces.Box)
         else envs.single_action_space.shape[0]
-    )
-
-    action_shape = (
-        ()
-        if isinstance(envs.single_action_space, gym.spaces.Discrete)
-        else (action_space_n,)
     )
 
     print(f"Observation Space: {obs_space_shape}, Action Space: {action_space_n}")
