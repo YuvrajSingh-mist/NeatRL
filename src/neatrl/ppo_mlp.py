@@ -13,8 +13,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import wandb
 from tqdm import tqdm
+
+import wandb
 
 from .cli.dashboard import Dashboard
 from .utils import configure_logging, get_logger, get_space_dims, setup_device
@@ -57,7 +58,6 @@ class Config:
     # Logging & Saving
     capture_video: bool = False  # Whether to capture evaluation videos
     use_wandb: bool = True
-    use_dashboard: bool = False  # Whether to use Weights & Biases for logging
     wandb_project: str = "cleanRL"  # W&B project name
     grid_env: bool = False  # Whether the environment uses discrete grid observations (applies OneHot wrapper)
     eval_every: int = 10000  # Frequency of evaluation during training (in updates)
@@ -301,7 +301,8 @@ def evaluate(
                         "Video capture failed for %s (%s). "
                         "Check the renderer for this environment is installed "
                         "(e.g. pip install pygame-ce for classic-control envs).",
-                        type(eval_env).__name__, type(e).__name__,
+                        type(eval_env).__name__,
+                        type(e).__name__,
                     )
                     raise
             with torch.no_grad():
@@ -566,7 +567,12 @@ def train_ppo(
     dones_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(device)
     values_storage = torch.zeros((Config.max_steps, Config.n_envs)).to(device)
 
+    actor_params = sum(p.numel() for p in actor_network.parameters())
+    critic_params = sum(p.numel() for p in critic_network.parameters())
+
     global_step = 0
+    latest_avg_return = 0.0
+    latest_ep_return = 0.0
 
     next_obs, _ = envs.reset(seed=Config.seed)  # type: ignore[var-annotated]
     next_obs = torch.Tensor(next_obs).to(device)
@@ -574,14 +580,10 @@ def train_ppo(
 
     start_time = time.time()
 
-    dashboard = (
-        Dashboard("PPO", Config.env_id or "custom", Config.total_timesteps)
-        if Config.use_dashboard
-        else None
-    )
+    dashboard = Dashboard("PPO", Config.env_id or "custom", Config.total_timesteps, config=Config)
 
     for update in tqdm(
-        range(1, num_updates + 1), desc="Training Updates", disable=Config.use_dashboard
+        range(1, num_updates + 1), desc="Training Updates", disable=True
     ):
         # Annealing the rate if instructed to do so.
         if Config.anneal_lr:
@@ -811,6 +813,7 @@ def train_ppo(
                     if done[i]:
                         ep_ret = info["episode"]["r"][i]
                         ep_len = info["episode"]["l"][i]
+                        latest_ep_return = ep_ret
 
                         if Config.use_wandb:
                             wandb.log(
@@ -824,6 +827,7 @@ def train_ppo(
                 if done:
                     ep_ret = info["episode"]["r"]
                     ep_len = info["episode"]["l"]
+                    latest_ep_return = ep_ret
                     if Config.use_wandb:
                         wandb.log(
                             {
@@ -870,6 +874,11 @@ def train_ppo(
                         "approx_kl": approx_kl.item(),
                         "clip_fraction": float(np.mean(clipfracs)),
                     },
+                    eval_stats={
+                        "avg_return": latest_avg_return,
+                        "last_return": latest_ep_return,
+                    },
+                    message=f"Actor: {actor_params:,} | Critic: {critic_params:,} params",
                 )
 
             if Config.use_wandb:
@@ -895,6 +904,7 @@ def train_ppo(
                 use_wandb=Config.use_wandb,
             )
             avg_return = np.mean(episodic_returns)
+            latest_avg_return = avg_return
             if Config.use_wandb:
                 wandb.log(
                     {"charts/val_avg_return": avg_return, "global_step": global_step}
@@ -944,7 +954,10 @@ def train_ppo(
     if Config.use_wandb:
         wandb.finish()
     if dashboard:
-        dashboard.close()
+        dashboard.close(
+            message=f"Actor: {actor_params:,} | Critic: {critic_params:,} params  |  "
+            f"Final avg_return: {latest_avg_return:.1f}"
+        )
 
     return actor_network
 

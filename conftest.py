@@ -1,4 +1,5 @@
 """Ensure src/ is on sys.path for editable installs."""
+
 import sys
 from pathlib import Path
 

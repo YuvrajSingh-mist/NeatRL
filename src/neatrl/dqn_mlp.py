@@ -12,10 +12,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import wandb
 from gymnasium.wrappers import AtariPreprocessing, FrameStackObservation
 from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
+
+import wandb
 
 from .cli.dashboard import Dashboard
 from .utils import configure_logging, get_logger, get_space_dims, setup_device
@@ -75,7 +76,6 @@ class Config:
 
     # Logging & saving
     use_wandb: bool = True
-    use_dashboard: bool = False
     wandb_project: str = "cleanRL"
     wandb_entity: str = ""
 
@@ -211,7 +211,8 @@ def evaluate(
                         "Video capture failed for %s (%s). "
                         "Check the renderer for this environment is installed "
                         "(e.g. pip install pygame-ce for classic-control envs).",
-                        type(eval_env).__name__, type(e).__name__,
+                        type(eval_env).__name__,
+                        type(e).__name__,
                     )
                     raise
 
@@ -313,6 +314,7 @@ def train_dqn(
     Returns:
         nn.Module: The trained network (actor / policy / Q-network) ready for inference.
     """
+    Config.env_id = env_id
     run_name = f"{env_id}__{exp_name}__{seed}__{int(time.time())}"
 
     # Initialize WandB
@@ -385,6 +387,8 @@ def train_dqn(
     q_network.train()
     target_net.train()
 
+    model_params = sum(p.numel() for p in q_network.parameters())
+
     replay_buffer = ReplayBuffer(
         buffer_size,
         env.single_observation_space if n_envs > 1 else env.observation_space,  # type: ignore[attr-defined]
@@ -397,14 +401,14 @@ def train_dqn(
     obs, _ = env.reset()
     start_time = time.time()
     frames = []
+    latest_avg_return = 0.0
+    latest_ep_return = 0.0
+    update_count = 0
+    latest_loss = 0.0
 
-    dashboard = (
-        Dashboard("DQN", Config.env_id or "custom", total_timesteps)
-        if Config.use_dashboard
-        else None
-    )
+    dashboard = Dashboard("DQN", Config.env_id or "custom", total_timesteps, config=Config)
 
-    for step in tqdm(range(total_timesteps)):
+    for step in tqdm(range(total_timesteps), disable=True):
         step = step * n_envs
         eps = eps_decay(step, exploration_fraction)
         rnd = random.random()
@@ -454,6 +458,7 @@ def train_dqn(
                     if done[i]:
                         ep_ret = info["episode"]["r"][i]
                         ep_len = info["episode"]["l"][i]
+                        latest_ep_return = ep_ret
 
                         logger.info(
                             "Step=%d Env=%d Return=%.2f Length=%d",
@@ -475,6 +480,7 @@ def train_dqn(
                 if done:
                     ep_ret = info["episode"]["r"]
                     ep_len = info["episode"]["l"]
+                    latest_ep_return = ep_ret
 
                     logger.info(f"Step={step}, Return={ep_ret:.2f}, Length={ep_len}")
 
@@ -567,6 +573,8 @@ def train_dqn(
                     )
 
             optimizer.step()
+            update_count += 1
+            latest_loss = loss.item()
 
             # Log loss and metrics every 100 steps
             if step % 100 == 0:
@@ -634,6 +642,7 @@ def train_dqn(
                 grid_env=grid_env,
             )
             avg_return = np.mean(episodic_returns)
+            latest_avg_return = avg_return
 
             if use_wandb:
                 wandb.log({"charts/val_avg_return": avg_return, "val_step": step})
@@ -646,19 +655,18 @@ def train_dqn(
         else:
             obs = new_obs
 
-        if step > learning_starts and step % train_frequency == 0 and step % 10 == 0:
-            logger.debug(
-                "Step %d TD Loss: %.4f SPS: %d",
-                step,
-                loss.item(),
-                int(step / (time.time() - start_time)),
+        # ── Dashboard update (every env step) ───────────────────────
+        if dashboard:
+            dashboard.update(
+                agent_steps=step,
+                epoch=update_count,
+                losses={"td_loss": latest_loss},
+                eval_stats={
+                    "avg_return": latest_avg_return,
+                    "last_return": latest_ep_return,
+                },
+                message=f"Q-Net: {model_params:,} params",
             )
-            if dashboard:
-                dashboard.update(
-                    agent_steps=step,
-                    epoch=step,
-                    losses={"td_loss": loss.item()},
-                )
 
         if use_wandb:
             wandb.log({"step": step})
@@ -678,7 +686,7 @@ def train_dqn(
             logger.info(f"Model saved at step {step} to {model_path}")
 
     # Save final video to WandB
-    if use_wandb:
+    if use_wandb and capture_video:
         train_video_path = "videos/final.mp4"
         _, frames = evaluate(
             env_id,
@@ -687,16 +695,21 @@ def train_dqn(
             seed,
             atari_wrapper=atari_wrapper,
             num_eval_eps=num_eval_eps,
-            capture_video=capture_video,
+            capture_video=True,
             grid_env=grid_env,
         )
-        imageio.mimsave(train_video_path, frames, fps=30)  # type: ignore[arg-type]
-        logger.info(f"Final training video saved to {train_video_path}")
+        if frames:
+            imageio.mimsave(train_video_path, frames, fps=30)  # type: ignore[arg-type]
+            logger.info(f"Final training video saved to {train_video_path}")
         wandb.finish()
 
     env.close()
     if dashboard:
-        dashboard.close()
+        dashboard.close(
+            message=f"Q-Net: {model_params:,} params  |  "
+            f"Updates: {update_count}  |  "
+            f"Final avg_return: {latest_avg_return:.1f}"
+        )
 
     return q_network
 

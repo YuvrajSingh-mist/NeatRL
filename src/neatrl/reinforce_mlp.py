@@ -12,7 +12,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import wandb
 from gymnasium.wrappers import (
     AtariPreprocessing,
     FrameStackObservation,
@@ -20,6 +19,8 @@ from gymnasium.wrappers import (
     NormalizeReward,
 )
 from tqdm import tqdm
+
+import wandb
 
 from .cli.dashboard import Dashboard
 from .utils import configure_logging, get_logger, get_space_dims, setup_device
@@ -84,7 +85,6 @@ class Config:
 
     # Logging & saving
     use_wandb: bool = True
-    use_dashboard: bool = False
     wandb_project: str = "cleanRL"
     wandb_entity: str = ""
     buffer_size: int = 10000
@@ -269,7 +269,8 @@ def evaluate(
                         "Video capture failed for %s (%s). "
                         "Check the renderer for this environment is installed "
                         "(e.g. pip install pygame-ce for classic-control envs).",
-                        type(eval_env).__name__, type(e).__name__,
+                        type(eval_env).__name__,
+                        type(e).__name__,
                     )
                     raise
 
@@ -347,7 +348,7 @@ def train_reinforce(
     Args:
         env_id (str | None): Gymnasium environment ID. Mutually exclusive with ``env``.
         env (gym.Env | None): Pre-created ``gym.Env`` instance. Mutually exclusive with ``env_id``.
-        total_timesteps (int): Total training episodes (REINFORCE).
+        total_timesteps (int): Total training timesteps.
         seed (int): Global random seed for reproducibility.
         lr (float): Optimiser learning rate.
         gamma (float): Discount factor γ (0 < γ ≤ 1).
@@ -504,6 +505,7 @@ def train_reinforce(
         policy_network = PolicyNet(obs_shape, action_shape).to(Config.device)
 
     optimizer = optim.Adam(policy_network.parameters(), lr=Config.lr)
+    model_params = sum(p.numel() for p in policy_network.parameters())
 
     # Print network architecture
     logger.debug("%s\n%s", "Policy-Network Architecture:", policy_network)
@@ -518,13 +520,12 @@ def train_reinforce(
 
     updates = Config.total_timesteps // Config.n_envs
 
-    dashboard = (
-        Dashboard("REINFORCE", Config.env_id or "custom", Config.total_timesteps)
-        if Config.use_dashboard
-        else None
-    )
+    latest_avg_return = 0.0
+    latest_ep_return = 0.0
 
-    for step in tqdm(range(updates)):
+    dashboard = Dashboard("REINFORCE", Config.env_id or "custom", Config.total_timesteps, config=Config)
+
+    for step in tqdm(range(updates), disable=True):
         global_step = step * Config.n_envs
         obs, _ = env.reset()
         rewards = []
@@ -645,6 +646,7 @@ def train_reinforce(
                     if done[i]:
                         ep_ret = info["episode"]["r"][i]
                         ep_len = info["episode"]["l"][i]
+                        latest_ep_return = ep_ret
 
                         if Config.use_wandb:
                             wandb.log(
@@ -657,6 +659,7 @@ def train_reinforce(
                 if done:
                     ep_ret = info["episode"]["r"]
                     ep_len = info["episode"]["l"]
+                    latest_ep_return = ep_ret
 
                     if Config.use_wandb:
                         wandb.log(
@@ -758,6 +761,11 @@ def train_reinforce(
                     agent_steps=step * Config.n_envs,
                     epoch=step,
                     losses={"policy_loss": loss.item()},
+                    eval_stats={
+                        "avg_return": latest_avg_return,
+                        "last_return": latest_ep_return,
+                    },
+                    message=f"Policy-Net: {model_params:,} params",
                 )
             if Config.use_wandb:
                 wandb.log(
@@ -782,6 +790,7 @@ def train_reinforce(
                 grid_env=Config.grid_env,
             )
             avg_return = np.mean(episodic_returns)
+            latest_avg_return = avg_return
 
             if Config.use_wandb:
                 wandb.log({"charts/val_avg_return": avg_return, "step": global_step})
@@ -804,7 +813,7 @@ def train_reinforce(
             logger.info(f"Model saved at episode {step} to {model_path}")
 
     # Save final video to WandB
-    if Config.use_wandb:
+    if Config.use_wandb and Config.capture_video:
         train_video_path = "videos/final.mp4"
         _, frames = evaluate(
             env_id=Config.env_id,
@@ -814,12 +823,13 @@ def train_reinforce(
             seed=Config.seed,
             env_wrapper=Config.env_wrapper,
             num_eval_eps=Config.num_eval_eps,
-            capture_video=Config.capture_video,
+            capture_video=True,
             atari_wrapper=Config.atari_wrapper,
             grid_env=Config.grid_env,
         )
-        imageio.mimsave(train_video_path, frames, fps=30)  # type: ignore[arg-type]
-        logger.info(f"Final training video saved to {train_video_path}")
+        if frames:
+            imageio.mimsave(train_video_path, frames, fps=30)  # type: ignore[arg-type]
+            logger.info(f"Final training video saved to {train_video_path}")
         wandb.finish()
 
     env.close()

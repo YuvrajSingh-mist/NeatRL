@@ -3,8 +3,8 @@ import torch.nn as nn
 from torch.distributions import Categorical, Normal
 
 # ── config ────────────────────────────────────────────────────────────
-ENV_ID  = "CartPole-v1"
-USE_CNN = False   # True → uses reinforce_cnn (CarRacing, Atari, etc.)
+ENV_ID = "CartPole-v1"
+USE_CNN = False  # True → uses reinforce_cnn (CarRacing, Atari, etc.)
 # ──────────────────────────────────────────────────────────────────────
 
 
@@ -13,8 +13,10 @@ class PolicyMLP(nn.Module):
         super().__init__()
         self.continuous = continuous
         self.net = nn.Sequential(
-            nn.Linear(obs_dim, 256), nn.ReLU(),
-            nn.Linear(256, 256),     nn.ReLU(),
+            nn.Linear(obs_dim, 256),
+            nn.ReLU(),
+            nn.Linear(256, 256),
+            nn.ReLU(),
             nn.Linear(256, act_dim),
         )
         if continuous:
@@ -31,9 +33,11 @@ def run(env_id=None, use_cnn=None):
     _cnn = USE_CNN if use_cnn is None else use_cnn
     if _cnn:
         from neatrl.reinforce_cnn import train_reinforce_cnn
+
         train_reinforce_cnn(env_id=env_id or ENV_ID, capture_video=False)
     else:
         from neatrl.reinforce_mlp import train_reinforce
+
         train_reinforce(env_id=env_id or ENV_ID, capture_video=False)
 
 

@@ -5,25 +5,27 @@ import importlib.util
 import pathlib
 import sys
 
-_DOCS_CLI = pathlib.Path(__file__).resolve().parent.parent.parent.parent / "docs" / "cli"
+_DOCS_CLI = (
+    pathlib.Path(__file__).resolve().parent.parent.parent.parent / "docs" / "cli"
+)
 
 _SCRIPTS = {
-    "a2c":           "a2c",
-    "a2c-cnn":       "a2c",
-    "ddpg":          "ddpg",
-    "ddpg-cnn":      "ddpg",
-    "dqn":           "dqn",
-    "dueling-dqn":   "dueling_dqn",
-    "ppo":           "ppo",
-    "ppo-cnn":       "ppo",
-    "reinforce":     "reinforce",
+    "a2c": "a2c",
+    "a2c-cnn": "a2c",
+    "ddpg": "ddpg",
+    "ddpg-cnn": "ddpg",
+    "dqn": "dqn",
+    "dueling-dqn": "dueling_dqn",
+    "ppo": "ppo",
+    "ppo-cnn": "ppo",
+    "reinforce": "reinforce",
     "reinforce-cnn": "reinforce",
-    "rnd":           "rnd",
-    "rnd-cnn":       "rnd",
-    "sac":           "sac",
-    "sac-cnn":       "sac",
-    "td3":           "td3",
-    "td3-cnn":       "td3",
+    "rnd": "rnd",
+    "rnd-cnn": "rnd",
+    "sac": "sac",
+    "sac-cnn": "sac",
+    "td3": "td3",
+    "td3-cnn": "td3",
 }
 
 

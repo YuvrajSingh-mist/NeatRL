@@ -13,8 +13,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import wandb
 from tqdm import tqdm
+
+import wandb
 
 from .cli.dashboard import Dashboard
 from .utils import configure_logging, get_logger, setup_device
@@ -61,7 +62,6 @@ class Config:
     # Logging & Saving
     capture_video: bool = False  # Whether to capture evaluation videos
     use_wandb: bool = True
-    use_dashboard: bool = False  # Whether to use Weights & Biases for logging
     wandb_project: str = "cleanRL"  # W&B project name
     grid_env: bool = True  # Whether the environment uses discrete grid observations (applies OneHot wrapper)
     eval_every: int = 10000  # Frequency of evaluation during training (in updates)
@@ -400,7 +400,8 @@ def evaluate(
                         "Video capture failed for %s (%s). "
                         "Check the renderer for this environment is installed "
                         "(e.g. pip install pygame-ce for classic-control envs).",
-                        type(eval_env).__name__, type(e).__name__,
+                        type(eval_env).__name__,
+                        type(e).__name__,
                     )
                     raise
             with torch.no_grad():
@@ -692,6 +693,9 @@ def train_ppo_rnd_cnn(
     logger.debug("%s\n%s", "\nPredictor Network Architecture:", predictor_network)
     logger.debug("%s\n%s", "\nTarget Network Architecture:", target_network)
 
+    policy_params = sum(p.numel() for p in actor_network.parameters()) + sum(p.numel() for p in critic_network.parameters())
+    rnd_params = sum(p.numel() for p in predictor_network.parameters()) + sum(p.numel() for p in target_network.parameters())
+
     # Compute derived values from passed parameters
     batch_size = Config.n_envs * Config.max_steps
     minibatch_size = batch_size // Config.num_minibatches
@@ -736,14 +740,10 @@ def train_ppo_rnd_cnn(
 
     start_time = time.time()
 
-    dashboard = (
-        Dashboard("RND-CNN", Config.env_id or "custom", Config.total_timesteps)
-        if Config.use_dashboard
-        else None
-    )
+    dashboard = Dashboard("RND-CNN", Config.env_id or "custom", Config.total_timesteps, config=Config)
 
     for update in tqdm(
-        range(1, num_updates + 1), desc="Training Updates", disable=Config.use_dashboard
+        range(1, num_updates + 1), desc="Training Updates", disable=True
     ):
         # Annealing the rate if instructed to do so.
         if Config.anneal_lr:
@@ -1148,7 +1148,10 @@ def train_ppo_rnd_cnn(
             logger.info(f"Final training video saved to {train_video_path}")
 
     if dashboard:
-        dashboard.close()
+        dashboard.close(
+            message=f"Policy: {policy_params:,} | RND: {rnd_params:,} params  |  "
+            f"Final avg_return: {latest_avg_return:.1f}"
+        )
     envs.close()
     if Config.use_wandb:
         wandb.finish()

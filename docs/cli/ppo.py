@@ -3,8 +3,8 @@ import torch.nn as nn
 from torch.distributions import Categorical, Normal
 
 # ── config ────────────────────────────────────────────────────────────
-ENV_ID  = "CartPole-v1"
-USE_CNN = False   # True → uses ppo_cnn (CarRacing, Atari, etc.)
+ENV_ID = "CartPole-v1"
+USE_CNN = False  # True → uses ppo_cnn (CarRacing, Atari, etc.)
 # ──────────────────────────────────────────────────────────────────────
 
 
@@ -13,10 +13,12 @@ class ActorCriticMLP(nn.Module):
         super().__init__()
         self.continuous = continuous
         self.shared = nn.Sequential(
-            nn.Linear(obs_dim, 256), nn.Tanh(),
-            nn.Linear(256, 256),     nn.Tanh(),
+            nn.Linear(obs_dim, 256),
+            nn.Tanh(),
+            nn.Linear(256, 256),
+            nn.Tanh(),
         )
-        self.actor  = nn.Linear(256, act_dim)
+        self.actor = nn.Linear(256, act_dim)
         self.critic = nn.Linear(256, 1)
         if continuous:
             self.log_std = nn.Parameter(torch.zeros(act_dim))
@@ -32,9 +34,11 @@ def run(env_id=None, use_cnn=None):
     _cnn = USE_CNN if use_cnn is None else use_cnn
     if _cnn:
         from neatrl.ppo_cnn import train_ppo_cnn
+
         train_ppo_cnn(env_id=env_id or ENV_ID, capture_video=False)
     else:
         from neatrl.ppo_mlp import train_ppo
+
         train_ppo(env_id=env_id or ENV_ID, capture_video=False)
 
 

@@ -13,9 +13,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import wandb
 from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
+
+import wandb
 
 from .cli.dashboard import Dashboard
 from .ddpg_mlp import ActorNet, QNet
@@ -58,7 +59,6 @@ class Config:
     # Logging & Saving
     capture_video: bool = False  # Whether to capture evaluation videos
     use_wandb: bool = True
-    use_dashboard: bool = False  # Whether to use Weights & Biases for logging
     wandb_project: str = "cleanRL"  # W&B project name
     wandb_entity: str = ""  # Your WandB username/team
     eval_every: int = 500  # Frequency of evaluation during training (in steps)
@@ -294,7 +294,8 @@ def evaluate(
                         "Video capture failed for %s (%s). "
                         "Check the renderer for this environment is installed "
                         "(e.g. pip install pygame-ce for classic-control envs).",
-                        type(eval_env).__name__, type(e).__name__,
+                        type(eval_env).__name__,
+                        type(e).__name__,
                     )
                     raise
             with torch.no_grad():
@@ -552,6 +553,9 @@ def train_ddpg_cnn(
     target_q_network.load_state_dict(q_network.state_dict())
     target_actor_net.load_state_dict(actor_net.state_dict())
 
+    actor_params = sum(p.numel() for p in actor_net.parameters())
+    critic_params = sum(p.numel() for p in q_network.parameters())
+
     # Print network architecture
     logger.debug("%s\n%s", "Actor Network Architecture:", actor_net)
     logger.debug("%s\n%s", "\nCritic Network Architecture:", q_network)
@@ -577,12 +581,10 @@ def train_ddpg_cnn(
 
     obs, _ = env.reset()
     start_time = time.time()
+    latest_avg_return = 0.0
+    latest_ep_return = 0.0
 
-    dashboard = (
-        Dashboard("DDPG-CNN", Config.env_id or "custom", Config.total_timesteps)
-        if Config.use_dashboard
-        else None
-    )
+    dashboard = Dashboard("DDPG-CNN", Config.env_id or "custom", Config.total_timesteps, config=Config)
 
     for step in tqdm(range(Config.total_timesteps)):
         # Get action from actor network with exploration noise
@@ -753,6 +755,11 @@ def train_ddpg_cnn(
                         if policy_loss is not None
                         else 0.0,
                     },
+                    eval_stats={
+                        "avg_return": latest_avg_return,
+                        "last_return": latest_ep_return,
+                    },
+                    message=f"Actor: {actor_params:,} | Critic: {critic_params:,} params",
                 )
 
             # Evaluation
@@ -774,6 +781,7 @@ def train_ddpg_cnn(
                     use_wandb=Config.use_wandb,
                 )
                 avg_return = np.mean(episodic_returns)
+                latest_avg_return = avg_return
 
                 if Config.use_wandb:
                     wandb.log(
@@ -849,7 +857,10 @@ def train_ddpg_cnn(
 
     env.close()
     if dashboard:
-        dashboard.close()
+        dashboard.close(
+            message=f"Actor: {actor_params:,} | Critic: {critic_params:,} params  |  "
+            f"Final avg_return: {latest_avg_return:.1f}"
+        )
     return actor_net
 
 

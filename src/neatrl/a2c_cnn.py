@@ -13,8 +13,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import wandb
 from tqdm import tqdm
+
+import wandb
 
 from .cli.dashboard import Dashboard
 from .utils import configure_logging, get_logger, setup_device
@@ -58,7 +59,6 @@ class Config:
     # Logging & Saving
     capture_video: bool = False  # Whether to capture evaluation videos
     use_wandb: bool = True
-    use_dashboard: bool = False  # Whether to use Weights & Biases for logging
     wandb_project: str = "cleanRL"  # W&B project name
     grid_env: bool = False  # Whether the environment uses discrete grid observations (applies OneHot wrapper)
     eval_every: int = 10000  # Frequency of evaluation during training (in updates)
@@ -294,7 +294,8 @@ def evaluate(
                         "Video capture failed for %s (%s). "
                         "Check the renderer for this environment is installed "
                         "(e.g. pip install pygame-ce for classic-control envs).",
-                        type(eval_env).__name__, type(e).__name__,
+                        type(eval_env).__name__,
+                        type(e).__name__,
                     )
                     raise
             with torch.no_grad():
@@ -528,6 +529,9 @@ def train_a2c_cnn(
     logger.debug("%s\n%s", "\nCritic Network Architecture:", critic_network)
 
     # Compute derived values from passed parameters
+    actor_params = sum(p.numel() for p in actor_network.parameters())
+    critic_params = sum(p.numel() for p in critic_network.parameters())
+
     num_updates = Config.total_timesteps // Config.n_envs
 
     # Separate optimizers for actor and critic (A2C style)
@@ -535,20 +539,18 @@ def train_a2c_cnn(
     critic_optim = optim.Adam(critic_network.parameters(), lr=Config.lr)
 
     global_step = 0
+    latest_avg_return = 0.0
+    latest_ep_return = 0.0
 
     next_obs, _ = envs.reset(seed=Config.seed)  # type: ignore[var-annotated]
     next_obs = torch.Tensor(next_obs).to(device)
 
     start_time = time.time()
 
-    dashboard = (
-        Dashboard("A2C-CNN", Config.env_id or "custom", Config.total_timesteps)
-        if Config.use_dashboard
-        else None
-    )
+    dashboard = Dashboard("A2C-CNN", Config.env_id or "custom", Config.total_timesteps, config=Config)
 
     for step in tqdm(
-        range(1, num_updates + 1), desc="Training Updates", disable=Config.use_dashboard
+        range(1, num_updates + 1), desc="Training Updates", disable=True
     ):
         # Annealing the rate if instructed to do so.
         if Config.anneal_lr:
@@ -728,6 +730,7 @@ def train_a2c_cnn(
                     if done[i]:
                         ep_ret = info["episode"]["r"][i]
                         ep_len = info["episode"]["l"][i]
+                        latest_ep_return = ep_ret
 
                         if Config.use_wandb:
                             wandb.log(
@@ -741,6 +744,7 @@ def train_a2c_cnn(
                 if done:
                     ep_ret = info["episode"]["r"]
                     ep_len = info["episode"]["l"]
+                    latest_ep_return = ep_ret
                     if Config.use_wandb:
                         wandb.log(
                             {
@@ -782,6 +786,11 @@ def train_a2c_cnn(
                         "value_loss": critic_loss.item(),
                         "entropy": entropy_loss.item(),
                     },
+                    eval_stats={
+                        "avg_return": latest_avg_return,
+                        "last_return": latest_ep_return,
+                    },
+                    message=f"Actor: {actor_params:,} | Critic: {critic_params:,} params",
                 )
 
             if Config.use_wandb:
@@ -807,6 +816,7 @@ def train_a2c_cnn(
                 use_wandb=Config.use_wandb,
             )
             avg_return = np.mean(episodic_returns)
+            latest_avg_return = avg_return
             if Config.use_wandb:
                 wandb.log(
                     {"charts/val_avg_return": avg_return, "global_step": global_step}
@@ -853,7 +863,10 @@ def train_a2c_cnn(
             logger.info(f"Final training video saved to {train_video_path}")
 
     if dashboard:
-        dashboard.close()
+        dashboard.close(
+            message=f"Actor: {actor_params:,} | Critic: {critic_params:,} params  |  "
+            f"Final avg_return: {latest_avg_return:.1f}"
+        )
     envs.close()
     if Config.use_wandb:
         wandb.finish()
