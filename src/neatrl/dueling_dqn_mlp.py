@@ -17,6 +17,7 @@ from gymnasium.wrappers import AtariPreprocessing, FrameStackObservation
 from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
 
+from .cli.dashboard import Dashboard
 from .utils import configure_logging, get_logger, get_space_dims, setup_device
 from .utils.nn_utils import (
     calculate_param_norm,
@@ -46,7 +47,7 @@ class Config:
 
     # Training parameters
     total_timesteps: int = 300000
-    learning_rate: float = 2e-4
+    lr: float = 2e-4
     buffer_size: int = 30000
     gamma: float = 0.99
     tau: float = 1.0
@@ -57,7 +58,7 @@ class Config:
     exploration_fraction: float = 0.4
     learning_starts: int = 1000
     train_frequency: int = 4
-    max_grad_norm: float = 4.0  # Maximum gradient norm for gradient clipping
+    max_grad_norm: float = 0.5  # Maximum gradient norm for gradient clipping
     num_eval_eps: int = 10
     grid_env: bool = True
 
@@ -73,7 +74,8 @@ class Config:
     custom_agent: Optional[Any] = None  # Custom neural network class or instance
 
     # Logging & saving
-    use_wandb: bool = False
+    use_wandb: bool = True
+    use_dashboard: bool = False
     wandb_project: str = "cleanRL"
     wandb_entity: str = ""
 
@@ -212,8 +214,17 @@ def evaluate(
 
         while not done:
             if capture_video:
-                frame = eval_env.render()
-                frames.append(frame)
+                try:
+                    frame = eval_env.render()
+                    frames.append(frame)
+                except Exception as e:
+                    logger.error(
+                        "Video capture failed for %s (%s). "
+                        "Check the renderer for this environment is installed "
+                        "(e.g. pip install pygame-ce for classic-control envs).",
+                        type(eval_env).__name__, type(e).__name__,
+                    )
+                    raise
 
             with torch.no_grad():
                 q_values, values, adv, feat = model(
@@ -250,7 +261,7 @@ def train_dueling_dqn(
     env_id=Config.env_id,
     total_timesteps=Config.total_timesteps,
     seed=Config.seed,
-    learning_rate=Config.learning_rate,
+    lr=Config.lr,
     buffer_size=Config.buffer_size,
     gamma=Config.gamma,
     tau=Config.tau,
@@ -282,7 +293,7 @@ def train_dueling_dqn(
         env_id (str): Gymnasium environment ID (e.g. ``'CartPole-v1'``).
         total_timesteps (int): Total environment interaction steps to train for.
         seed (int): Global random seed for reproducibility.
-        learning_rate (float): Optimiser learning rate.
+        lr (float): Optimiser learning rate.
         buffer_size (int): Replay buffer capacity (number of transitions).
         gamma (float): Discount factor γ (0 < γ ≤ 1).
         tau (float): Soft target-network update coefficient (0 < τ ≤ 1).
@@ -370,7 +381,7 @@ def train_dueling_dqn(
         target_net = DuelingQNet(obs_shape, action_shape).to(device)
 
     target_net.load_state_dict(q_network.state_dict())
-    optimizer = optim.Adam(q_network.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(q_network.parameters(), lr=lr)
     eps_decay = LinearEpsilonDecay(start_e, end_e, total_timesteps)
 
     # Print network architecture
@@ -391,6 +402,12 @@ def train_dueling_dqn(
     obs, _ = env.reset()
     start_time = time.time()
     frames = []
+
+    dashboard = (
+        Dashboard("Dueling-DQN", Config.env_id or "custom", total_timesteps)
+        if Config.use_dashboard
+        else None
+    )
 
     for step in tqdm(range(total_timesteps)):
         step = step * n_envs
@@ -620,6 +637,12 @@ def train_dueling_dqn(
             obs = new_obs
 
         logger.debug("SPS: %d", int(step / (time.time() - start_time)))
+        if dashboard and step > 0 and step > learning_starts and step % train_frequency == 0:
+            dashboard.update(
+                agent_steps=step,
+                epoch=step,
+                losses={"td_loss": loss.item()},
+            )
 
         if use_wandb:
             wandb.log(
@@ -654,6 +677,8 @@ def train_dueling_dqn(
 
     env.close()
 
+    if dashboard:
+        dashboard.close()
     return q_network
 
 

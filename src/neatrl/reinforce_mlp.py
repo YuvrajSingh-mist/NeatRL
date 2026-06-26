@@ -21,6 +21,7 @@ from gymnasium.wrappers import (
 )
 from tqdm import tqdm
 
+from .cli.dashboard import Dashboard
 from .utils import configure_logging, get_logger, get_space_dims, setup_device
 from .utils.nn_utils import (
     validate_policy_network_dimensions,
@@ -48,10 +49,10 @@ class Config:
     env_id: Optional[str] = "CartPole-v1"
 
     # Training parameters
-    episodes: int = 2000
-    learning_rate: float = 2.5e-4
+    total_timesteps: int = 2000
+    lr: float = 2.5e-4
     gamma: float = 0.99
-    max_grad_norm: float = 1.0  # Maximum gradient norm for gradient clipping
+    max_grad_norm: float = 0.5  # Maximum gradient norm for gradient clipping
     num_eval_eps: int = 10
     grid_env: bool = False
     use_entropy: bool = False
@@ -64,7 +65,7 @@ class Config:
     save_every: int = 1000
     upload_every: int = 100
     atari_wrapper: bool = False
-    n_envs: int = 4
+    n_envs: int = 1
     capture_video: bool = False
     device: Union[str, torch.device] = torch.device(
         "cuda" if torch.cuda.is_available() else "cpu"
@@ -82,7 +83,8 @@ class Config:
     log_gradients: bool = False
 
     # Logging & saving
-    use_wandb: bool = False
+    use_wandb: bool = True
+    use_dashboard: bool = False
     wandb_project: str = "cleanRL"
     wandb_entity: str = ""
     buffer_size: int = 10000
@@ -259,8 +261,17 @@ def evaluate(
 
         while not done:
             if capture_video:
-                frame = eval_env.render()
-                frames.append(frame)
+                try:
+                    frame = eval_env.render()
+                    frames.append(frame)
+                except Exception as e:
+                    logger.error(
+                        "Video capture failed for %s (%s). "
+                        "Check the renderer for this environment is installed "
+                        "(e.g. pip install pygame-ce for classic-control envs).",
+                        type(eval_env).__name__, type(e).__name__,
+                    )
+                    raise
 
             with torch.no_grad():
                 action = model.get_action(  # type: ignore[operator]
@@ -305,9 +316,9 @@ def evaluate(
 def train_reinforce(
     env_id=None,
     env=Config.env,
-    total_steps=Config.episodes,
+    total_timesteps=Config.total_timesteps,
     seed=Config.seed,
-    learning_rate=Config.learning_rate,
+    lr=Config.lr,
     gamma=Config.gamma,
     max_grad_norm=Config.max_grad_norm,
     capture_video=Config.capture_video,
@@ -336,9 +347,9 @@ def train_reinforce(
     Args:
         env_id (str | None): Gymnasium environment ID. Mutually exclusive with ``env``.
         env (gym.Env | None): Pre-created ``gym.Env`` instance. Mutually exclusive with ``env_id``.
-        total_steps (int): Total training episodes (REINFORCE).
+        total_timesteps (int): Total training episodes (REINFORCE).
         seed (int): Global random seed for reproducibility.
-        learning_rate (float): Optimiser learning rate.
+        lr (float): Optimiser learning rate.
         gamma (float): Discount factor γ (0 < γ ≤ 1).
         max_grad_norm (float): Maximum gradient-norm for clipping (0 disables clipping).
         capture_video (bool): Record evaluation episodes to video files when True.
@@ -376,9 +387,9 @@ def train_reinforce(
     Config.env = env
     Config.env_id = env_id if env_id is not None else Config.env_id
 
-    Config.episodes = total_steps
+    Config.total_timesteps = total_timesteps
     Config.seed = seed
-    Config.learning_rate = learning_rate
+    Config.lr = lr
     Config.gamma = gamma
     Config.max_grad_norm = max_grad_norm
     Config.capture_video = capture_video
@@ -492,7 +503,7 @@ def train_reinforce(
     else:
         policy_network = PolicyNet(obs_shape, action_shape).to(Config.device)
 
-    optimizer = optim.Adam(policy_network.parameters(), lr=Config.learning_rate)
+    optimizer = optim.Adam(policy_network.parameters(), lr=Config.lr)
 
     # Print network architecture
     logger.debug("%s\n%s", "Policy-Network Architecture:", policy_network)
@@ -505,7 +516,13 @@ def train_reinforce(
 
     start_time = time.time()
 
-    updates = Config.episodes // Config.n_envs
+    updates = Config.total_timesteps // Config.n_envs
+
+    dashboard = (
+        Dashboard("REINFORCE", Config.env_id or "custom", Config.total_timesteps)
+        if Config.use_dashboard
+        else None
+    )
 
     for step in tqdm(range(updates)):
         global_step = step * Config.n_envs
@@ -518,7 +535,7 @@ def train_reinforce(
         # Annealing the rate if instructed to do so.
         if Config.anneal_lr:
             frac = 1.0 - (step - 1.0) / updates
-            lrnow = frac * Config.learning_rate
+            lrnow = frac * Config.lr
             optimizer.param_groups[0]["lr"] = lrnow
 
         while True:
@@ -571,7 +588,7 @@ def train_reinforce(
                     {
                         "charts/action_mean": np.mean(action),
                         "charts/action_std": np.std(action),
-                        "charts/learning_rate": optimizer.param_groups[0]["lr"],
+                        "charts/lr": optimizer.param_groups[0]["lr"],
                         "step": global_step,
                     }
                 )
@@ -736,6 +753,12 @@ def train_reinforce(
                 loss.item(),
                 int(step / (time.time() - start_time)),
             )
+            if dashboard:
+                dashboard.update(
+                    agent_steps=step * Config.n_envs,
+                    epoch=step,
+                    losses={"policy_loss": loss.item()},
+                )
             if Config.use_wandb:
                 wandb.log(
                     {
@@ -801,6 +824,8 @@ def train_reinforce(
 
     env.close()
 
+    if dashboard:
+        dashboard.close()
     return policy_network
 
 

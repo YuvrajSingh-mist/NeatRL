@@ -19,6 +19,7 @@ NeatRL provides readable implementations of popular RL algorithms with a focus o
 
 ```bash
 pip install neatrl
+pip install "neatrl[cli]"      # Live terminal dashboard (rich, psutil)
 ```
 
 With optional environment extras:
@@ -31,6 +32,22 @@ pip install "neatrl[mujoco]"   # MuJoCo continuous control
 ```
 
 > Browse supported environments: [MuJoCo](https://gymnasium.farama.org/environments/mujoco/) · [Box2D](https://gymnasium.farama.org/environments/box2d/) · [Classic Control](https://gymnasium.farama.org/environments/classic_control/) · [Atari](https://gymnasium.farama.org/environments/atari/)
+
+## CLI
+
+Run pre-configured example scripts for any algorithm directly from the terminal:
+
+```bash
+neatrl train dqn cartpole
+neatrl train ppo lunar
+neatrl train sac pendulum
+neatrl train td3 halfcheetah
+neatrl train rnd cliffwalking
+neatrl train ddpg-cnn carracing
+```
+
+The env argument is matched fuzzy-style against the example scripts in `docs/` — `CartPole-v1`, `cartpole`, and `cartpole-v1` all resolve to the same script. Run `neatrl train <algo>` with an unknown env to see available scripts for that algorithm.
+
 
 ## Quick Start
 
@@ -178,10 +195,18 @@ Contributions are welcome. Please feel free to submit a Pull Request.
 ```bash
 git clone https://github.com/YuvrajSingh-mist/NeatRL.git
 cd NeatRL/NeatRL
-uv sync --extra dev   # installs neatrl in editable mode + dev tools
-uv run pytest         # run the test suite
-uv run ruff check src # lint
+
+# Use a non-hidden venv/ (avoids a macOS/uv flag issue with .venv/)
+uv venv venv
+uv pip install -e ".[cli,dev]" --python venv/bin/python
+source venv/bin/activate
+
+pytest tests/           # run the test suite
+ruff check src/         # lint
+neatrl train ppo lunar   # smoke test CLI
 ```
+
+> **When to re-run `uv pip install -e .`:** Only when you add/remove/rename a module file or change `pyproject.toml` dependencies. Editing existing `.py` files never requires a reinstall — the editable install picks up changes automatically.
 
 For the complete changelog, see [CHANGELOG.md](https://github.com/YuvrajSingh-mist/NeatRL/blob/master/CHANGELOG.md).
 

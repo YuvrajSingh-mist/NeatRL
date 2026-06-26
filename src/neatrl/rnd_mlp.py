@@ -16,6 +16,7 @@ import torch.optim as optim
 import wandb
 from tqdm import tqdm
 
+from .cli.dashboard import Dashboard
 from .utils import configure_logging, get_logger, get_space_dims, setup_device
 from .utils.nn_utils import (
     validate_critic_network_dimensions,
@@ -55,13 +56,12 @@ class Config:
     INT_COEFF: float = 1.0  # Intrinsic advantage coefficient for combined advantages
     num_eval_episodes: int = 5  # Number of evaluation episodes
     anneal_lr: bool = True  # Whether to anneal learning rate over time
-    max_grad_norm: float = (
-        0.0  # Maximum gradient norm for gradient clipping (0.0 to disable)
-    )
+    max_grad_norm: float = 0.5  # Maximum gradient norm for gradient clipping
 
     # Logging & Saving
-    capture_video: bool = True  # Whether to capture evaluation videos
-    use_wandb: bool = True  # Whether to use Weights & Biases for logging
+    capture_video: bool = False  # Whether to capture evaluation videos
+    use_wandb: bool = True
+    use_dashboard: bool = False  # Whether to use Weights & Biases for logging
     wandb_project: str = "cleanRL"  # W&B project name
     grid_env: bool = True  # Whether the environment uses discrete grid observations (applies OneHot wrapper)
     eval_every: int = 10000  # Frequency of evaluation during training (in updates)
@@ -392,8 +392,17 @@ def evaluate(
 
         while not done:
             if record:
-                frame: Any = eval_env.render()
-                frames.append(frame)
+                try:
+                    frame: Any = eval_env.render()
+                    frames.append(frame)
+                except Exception as e:
+                    logger.error(
+                        "Video capture failed for %s (%s). "
+                        "Check the renderer for this environment is installed "
+                        "(e.g. pip install pygame-ce for classic-control envs).",
+                        type(eval_env).__name__, type(e).__name__,
+                    )
+                    raise
             with torch.no_grad():
                 obs = torch.tensor(obs, device=device, dtype=torch.float32)
                 action, _, _ = model.get_action(obs)  # type: ignore[operator]
@@ -703,7 +712,15 @@ def train_ppo_rnd(
 
     start_time = time.time()
 
-    for update in tqdm(range(1, num_updates + 1), desc="Training Updates"):
+    dashboard = (
+        Dashboard("RND", Config.env_id or "custom", Config.total_timesteps)
+        if Config.use_dashboard
+        else None
+    )
+
+    for update in tqdm(
+        range(1, num_updates + 1), desc="Training Updates", disable=Config.use_dashboard
+    ):
         # Annealing the rate if instructed to do so.
         if Config.anneal_lr:
             frac = 1.0 - (update - 1.0) / num_updates
@@ -1029,6 +1046,15 @@ def train_ppo_rnd(
                 int(global_step / (time.time() - start_time)),
             )
 
+            if dashboard:
+                dashboard.update(
+                    agent_steps=global_step,
+                    epoch=update,
+                    losses={
+                        "policy_loss": policy_loss.item(),
+                        "rnd_loss": rnd_loss.item(),
+                    },
+                )
             if Config.use_wandb:
                 wandb.log(
                     {
@@ -1099,6 +1125,8 @@ def train_ppo_rnd(
             imageio.mimsave(train_video_path, eval_frames, fps=30)  # type: ignore[arg-type]
             logger.info(f"Final training video saved to {train_video_path}")
 
+    if dashboard:
+        dashboard.close()
     envs.close()
     if Config.use_wandb:
         wandb.finish()

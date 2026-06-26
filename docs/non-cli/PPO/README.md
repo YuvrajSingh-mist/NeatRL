@@ -4,6 +4,15 @@ This guide shows you how to use NeatRL's PPO implementation for reinforcement le
 
 ## Quick Start with PPO
 
+### CLI
+
+```bash
+neatrl train ppo CartPole-v1 --no-wandb
+neatrl train ppo-cnn BreakoutNoFrameskip-v4 --no-wandb --atari
+```
+
+### Python API
+
 ### Basic Training
 
 ```python

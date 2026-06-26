@@ -4,6 +4,15 @@ This guide shows you how to use NeatRL's Dueling DQN implementation, which separ
 
 ## Quick Start with Dueling DQN
 
+### CLI
+
+```bash
+neatrl train dueling-dqn CartPole-v1 --no-wandb
+neatrl train dueling-dqn LunarLander-v3 --no-wandb --timesteps 300000
+```
+
+### Python API
+
 ### Basic Training
 
 ```python

@@ -4,6 +4,15 @@ This guide shows you how to use NeatRL's REINFORCE algorithm implementation.
 
 ## Quick Start with REINFORCE
 
+### CLI
+
+```bash
+neatrl train reinforce CartPole-v1 --no-wandb
+neatrl train reinforce-cnn BreakoutNoFrameskip-v4 --no-wandb --atari
+```
+
+### Python API
+
 ### Basic Training
 
 ```python

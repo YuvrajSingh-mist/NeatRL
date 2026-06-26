@@ -4,6 +4,15 @@ This guide shows you how to use NeatRL's RND implementation, which combines PPO 
 
 ## Quick Start with RND
 
+### CLI
+
+```bash
+neatrl train rnd CliffWalking-v0 --no-wandb --grid-env
+neatrl train rnd-cnn BreakoutNoFrameskip-v4 --no-wandb --atari
+```
+
+### Python API
+
 ### Basic Training
 
 ```python

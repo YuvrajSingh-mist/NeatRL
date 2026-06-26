@@ -13,6 +13,17 @@ Note: DDPG is designed for continuous action spaces. For discrete action environ
 - **Exploration**: Ornstein-Uhlenbeck noise for action exploration
 - **W&B Integration**: Built-in logging and video recording
 
+## Quick Start
+
+### CLI
+
+```bash
+neatrl train ddpg Pendulum-v1 --no-wandb
+neatrl train ddpg-cnn BreakoutNoFrameskip-v4 --no-wandb --atari
+```
+
+### Python API
+
 ## Usage
 
 ### Standard DDPG (Vector Observations)

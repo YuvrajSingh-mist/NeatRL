@@ -1,5 +1,8 @@
 """NeatRL: clean, readable reinforcement learning algorithm implementations."""
 
+import warnings
+warnings.filterwarnings("ignore", message="The pynvml package is deprecated", category=FutureWarning)
+
 from .a2c_cnn import train_a2c_cnn
 from .a2c_mlp import train_a2c
 from .ddpg_cnn import train_ddpg_cnn

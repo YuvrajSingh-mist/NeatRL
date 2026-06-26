@@ -13,6 +13,17 @@ Note: A2C works with both discrete and continuous action spaces.
 - **W&B Integration**: Built-in logging and video recording
 - **Episode-based Updates**: Pure on-policy learning with full episode rollouts
 
+## Quick Start
+
+### CLI
+
+```bash
+neatrl train a2c Acrobot-v1 --no-wandb
+neatrl train a2c-cnn CarRacing-v3 --no-wandb
+```
+
+### Python API
+
 ## Usage
 
 ### Standard A2C (Vector Observations)

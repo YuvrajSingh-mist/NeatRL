@@ -4,6 +4,15 @@ This guide shows you how to use NeatRL's SAC implementation for continuous and d
 
 ## Quick Start with SAC
 
+### CLI
+
+```bash
+neatrl train sac Pendulum-v1 --no-wandb
+neatrl train sac-cnn BreakoutNoFrameskip-v4 --no-wandb --atari
+```
+
+### Python API
+
 ### Basic Training
 
 ```python

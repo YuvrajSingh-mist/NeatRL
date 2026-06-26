@@ -16,6 +16,7 @@ import wandb
 from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
 
+from .cli.dashboard import Dashboard
 from .utils import configure_logging, get_logger, get_space_dims, setup_device
 from .utils.nn_utils import (
     validate_critic_network_dimensions,
@@ -41,7 +42,7 @@ class Config:
     high: float = 1.0  # Action space limits for BipedalWalker
     # Training parameters
     total_timesteps: int = 1000000
-    learning_rate: float = 3e-4
+    lr: float = 3e-4
     buffer_size: int = 100000
     gamma: float = 0.99
     tau: float = 0.005  # Soft update parameter for target networks
@@ -53,8 +54,9 @@ class Config:
     train_frequency: int = 2
 
     # Logging & Saving
-    capture_video: bool = True  # Whether to capture evaluation videos
-    use_wandb: bool = True  # Whether to use Weights & Biases for logging
+    capture_video: bool = False  # Whether to capture evaluation videos
+    use_wandb: bool = True
+    use_dashboard: bool = False  # Whether to use Weights & Biases for logging
     wandb_project: str = "cleanRL"  # W&B project name
     wandb_entity: str = ""  # Your WandB username/team
     eval_every: int = 500  # Frequency of evaluation during training (in steps)
@@ -68,9 +70,7 @@ class Config:
     )
     grid_env: bool = False  # Whether it's a grid environment
     n_envs: int = 1  # Number of parallel environments for data collection
-    max_grad_norm: float = (
-        0.0  # Maximum gradient norm for gradient clipping (0.0 to disable)
-    )
+    max_grad_norm: float = 0.5  # Maximum gradient norm for gradient clipping
     log_gradients: bool = True  # Whether to log gradient norms to W&B
     device: str = "cpu"  # Device for training: "auto", "cpu", "cuda", or "cuda:0" etc.
 
@@ -275,8 +275,17 @@ def evaluate(
 
         while not done:
             if record:
-                frame: Any = eval_env.render()
-                frames.append(frame)
+                try:
+                    frame: Any = eval_env.render()
+                    frames.append(frame)
+                except Exception as e:
+                    logger.error(
+                        "Video capture failed for %s (%s). "
+                        "Check the renderer for this environment is installed "
+                        "(e.g. pip install pygame-ce for classic-control envs).",
+                        type(eval_env).__name__, type(e).__name__,
+                    )
+                    raise
             with torch.no_grad():
                 obs_tensor = torch.tensor(
                     np.array(obs), device=device, dtype=torch.float32
@@ -325,7 +334,7 @@ def train_ddpg(
     env: Optional[gym.Env] = None,
     total_timesteps: int = Config.total_timesteps,
     seed: int = Config.seed,
-    learning_rate: float = Config.learning_rate,
+    lr: float = Config.lr,
     buffer_size: int = Config.buffer_size,
     gamma: float = Config.gamma,
     tau: float = Config.tau,
@@ -366,7 +375,7 @@ def train_ddpg(
         env (gym.Env | None): Pre-created ``gym.Env`` instance. Mutually exclusive with ``env_id``.
         total_timesteps (int): Total environment interaction steps to train for.
         seed (int): Global random seed for reproducibility.
-        learning_rate (float): Optimiser learning rate.
+        lr (float): Optimiser learning rate.
         buffer_size (int): Replay buffer capacity (number of transitions).
         gamma (float): Discount factor γ (0 < γ ≤ 1).
         tau (float): Soft target-network update coefficient (0 < τ ≤ 1).
@@ -405,7 +414,7 @@ def train_ddpg(
     Config.env_id = env_id or env.spec.id  # type: ignore[union-attr]
     Config.total_timesteps = total_timesteps
     Config.seed = seed
-    Config.learning_rate = learning_rate
+    Config.lr = lr
     Config.buffer_size = buffer_size
     Config.gamma = gamma
     Config.tau = tau
@@ -525,8 +534,8 @@ def train_ddpg(
     logger.debug("%s\n%s", "\nCritic Network Architecture:", q_network)
 
     # Optimizers
-    actor_optim = optim.Adam(actor_net.parameters(), lr=Config.learning_rate)
-    q_optim = optim.Adam(q_network.parameters(), lr=Config.learning_rate)
+    actor_optim = optim.Adam(actor_net.parameters(), lr=Config.lr)
+    q_optim = optim.Adam(q_network.parameters(), lr=Config.lr)
 
     # Set networks to training mode
     q_network.train()
@@ -545,6 +554,12 @@ def train_ddpg(
 
     obs, _ = env.reset()
     start_time = time.time()
+
+    dashboard = (
+        Dashboard("DDPG", Config.env_id or "custom", Config.total_timesteps)
+        if Config.use_dashboard
+        else None
+    )
 
     for step in tqdm(range(Config.total_timesteps)):
         # Get action from actor network with exploration noise
@@ -693,7 +708,7 @@ def train_ddpg(
                             "losses/actor_loss": policy_loss.item()
                             if step % Config.train_frequency == 0
                             else 0.0,
-                            "charts/learning_rate": actor_optim.param_groups[0]["lr"],
+                            "charts/lr": actor_optim.param_groups[0]["lr"],
                             "rewards/rewards_mean": data.rewards.mean().item(),
                             "rewards/rewards_std": data.rewards.std().item(),
                             "global_step": step,
@@ -705,6 +720,17 @@ def train_ddpg(
                     loss.item(),
                     policy_loss.item() if step % Config.train_frequency == 0 else 0.0,
                     int(step / (time.time() - start_time)),
+                )
+            if dashboard:
+                dashboard.update(
+                    agent_steps=step,
+                    epoch=step,
+                    losses={
+                        "critic_loss": loss.item(),
+                        "actor_loss": policy_loss.item()
+                        if policy_loss is not None
+                        else 0.0,
+                    },
                 )
 
             # Evaluation
@@ -800,6 +826,8 @@ def train_ddpg(
             wandb.finish()
 
     env.close()
+    if dashboard:
+        dashboard.close()
     return actor_net
 
 

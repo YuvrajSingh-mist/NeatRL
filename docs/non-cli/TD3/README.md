@@ -20,6 +20,17 @@ Note: TD3 is designed for continuous action spaces. For discrete action environm
 2. **Delayed Policy Updates**: Updates the actor and target networks less frequently than the critic networks
 3. **Target Policy Smoothing**: Adds noise to target actions when computing target Q-values
 
+## Quick Start
+
+### CLI
+
+```bash
+neatrl train td3 Pendulum-v1 --no-wandb
+neatrl train td3-cnn BreakoutNoFrameskip-v4 --no-wandb --atari
+```
+
+### Python API
+
 ## Usage
 
 ### Standard TD3 (Vector Observations)

@@ -16,6 +16,7 @@ import torch.optim as optim
 import wandb
 from tqdm import tqdm
 
+from .cli.dashboard import Dashboard
 from .utils import configure_logging, get_logger, setup_device
 from .utils.nn_utils import (
     validate_critic_network_dimensions,
@@ -44,9 +45,7 @@ class Config:
         0.5  # Value loss coefficient in total loss (not used in pure A2C)
     )
     num_eval_episodes: int = 10  # Number of evaluation episodes
-    max_grad_norm: float = (
-        0.0  # Maximum gradient norm for gradient clipping (0.0 to disable)
-    )
+    max_grad_norm: float = 0.5  # Maximum gradient norm for gradient clipping
     max_steps: int = 128  # Maximum steps per rollout (for safety)
 
     # PPO-specific (kept for compatibility but not used in pure A2C)
@@ -57,8 +56,9 @@ class Config:
     anneal_lr: bool = False  # Learning rate annealing
 
     # Logging & Saving
-    capture_video: bool = True  # Whether to capture evaluation videos
-    use_wandb: bool = True  # Whether to use Weights & Biases for logging
+    capture_video: bool = False  # Whether to capture evaluation videos
+    use_wandb: bool = True
+    use_dashboard: bool = False  # Whether to use Weights & Biases for logging
     wandb_project: str = "cleanRL"  # W&B project name
     grid_env: bool = False  # Whether the environment uses discrete grid observations (applies OneHot wrapper)
     eval_every: int = 10000  # Frequency of evaluation during training (in updates)
@@ -286,8 +286,17 @@ def evaluate(
 
         while not done:
             if record:
-                frame: Any = eval_env.render()
-                frames.append(frame)
+                try:
+                    frame: Any = eval_env.render()
+                    frames.append(frame)
+                except Exception as e:
+                    logger.error(
+                        "Video capture failed for %s (%s). "
+                        "Check the renderer for this environment is installed "
+                        "(e.g. pip install pygame-ce for classic-control envs).",
+                        type(eval_env).__name__, type(e).__name__,
+                    )
+                    raise
             with torch.no_grad():
                 obs = torch.tensor(obs, device=device, dtype=torch.float32).unsqueeze(0)
                 action, _, _ = model.get_action(obs)  # type: ignore[operator]
@@ -532,7 +541,15 @@ def train_a2c_cnn(
 
     start_time = time.time()
 
-    for step in tqdm(range(1, num_updates + 1), desc="Training Updates"):
+    dashboard = (
+        Dashboard("A2C-CNN", Config.env_id or "custom", Config.total_timesteps)
+        if Config.use_dashboard
+        else None
+    )
+
+    for step in tqdm(
+        range(1, num_updates + 1), desc="Training Updates", disable=Config.use_dashboard
+    ):
         # Annealing the rate if instructed to do so.
         if Config.anneal_lr:
             frac = 1.0 - (step - 1.0) / num_updates
@@ -756,6 +773,16 @@ def train_a2c_cnn(
                 critic_loss.item(),
                 int(global_step / (time.time() - start_time)),
             )
+            if dashboard:
+                dashboard.update(
+                    agent_steps=global_step,
+                    epoch=step,
+                    losses={
+                        "policy_loss": policy_loss.item(),
+                        "value_loss": critic_loss.item(),
+                        "entropy": entropy_loss.item(),
+                    },
+                )
 
             if Config.use_wandb:
                 wandb.log(
@@ -825,6 +852,8 @@ def train_a2c_cnn(
             imageio.mimsave(train_video_path, eval_frames, fps=30)  # type: ignore[arg-type]
             logger.info(f"Final training video saved to {train_video_path}")
 
+    if dashboard:
+        dashboard.close()
     envs.close()
     if Config.use_wandb:
         wandb.finish()
