@@ -343,7 +343,7 @@ class Dashboard:
         header.add_column(style="white", min_width=13)
         header.add_column(style="white", min_width=13)
         header.add_row(
-            f"NeatRL 1.0.0  [{self.algo}]  [dim][l: logs][c: config][/dim]",
+            f"NeatRL 1.0.0  [{self.algo}]",
             f"CPU: [cyan]{cpu:.1f}%[/cyan]",
             f"{DT[0]}: [cyan]{gpu:.1f}%[/cyan]",
             f"DRAM: [cyan]{dram:.1f}%[/cyan]",
@@ -389,7 +389,7 @@ class Dashboard:
                         t.add_row(k, f"{v:.3f}")
                     return t
 
-                bottom = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
+                bottom = Table(box=None, show_header=False, padding=(0, 2))
                 bottom.add_column(min_width=36)
                 bottom.add_column(min_width=36)
                 bottom.add_row(col(items[:half]), col(items[half:]))
@@ -399,31 +399,16 @@ class Dashboard:
         frame.add_row(header)
         frame.add_row(monitor)
 
-        # Show message (model params etc.) as a table in the bottom area
-        if message:
-            msgTable = Table(box=None, show_header=True, padding=(0, 1))
-            msgTable.add_column("[cyan]Model[/cyan]", style="bright_white", min_width=22)
-            msgTable.add_column("[cyan]Value[/cyan]", style="white", min_width=20)
-            parts = message.split(" | ")
-            for part in parts:
-                if ":" in part:
-                    k, v = part.split(":", 1)
-                    msgTable.add_row(k.strip(), v.strip())
-                else:
-                    msgTable.add_row("Info", part)
+        # Bottom row: eval stats (left) + model params (right)
+        if message or bottom is not None:
+            msgParts = message.split(" | ") if message else []
+            msgText = "  |  ".join(p.strip() for p in msgParts)
+            bottomRow = Table(box=None, show_header=False, padding=(0, 1))
+            bottomRow.add_column(min_width=30)
+            bottomRow.add_column(min_width=34)
+            bottomRow.add_row(bottom or Text(""), Text(msgText, style="bright_white") if msgText else Text(""))
+            frame.add_row(bottomRow)
 
-            if bottom is not None:
-                merged = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
-                merged.add_column(min_width=36)
-                merged.add_column(min_width=36)
-                merged.add_row(bottom, msgTable)
-                frame.add_row(merged)
-            else:
-                frame.add_row(msgTable)
-        elif bottom is not None:
-            frame.add_row(bottom)
-
-        frame.add_row("[dim]press [b]l[/b] logs  [b]c[/b] config[/dim]")
         frame.add_row("[dim]press [b]l[/b] logs  [b]c[/b] config[/dim]")
 
         with self.console.capture() as cap:
