@@ -76,8 +76,10 @@ ignore = [
 [dependency-groups]
 dev = [
     "mypy>=1.19.0",
+    "psutil>=7.1.3",
     "pyright>=1.1.411",
     "pytest>=8.4.2",
+    "rich>=14.2.0",
     "ruff>=0.14.9",
 ]
 

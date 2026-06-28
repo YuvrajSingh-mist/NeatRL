@@ -50,7 +50,7 @@ class Config:
     env_id: Optional[str] = "CartPole-v1"
 
     # Training parameters
-    total_timesteps: int = 2000
+    total_episodes: int = 2000
     lr: float = 2.5e-4
     gamma: float = 0.99
     max_grad_norm: float = 0.5  # Maximum gradient norm for gradient clipping
@@ -317,7 +317,7 @@ def evaluate(
 def train_reinforce_cnn(
     env_id=None,
     env=Config.env,
-    total_timesteps=Config.total_timesteps,
+    total_episodes=Config.total_episodes,
     seed=Config.seed,
     lr=Config.lr,
     gamma=Config.gamma,
@@ -348,7 +348,7 @@ def train_reinforce_cnn(
     Args:
         env_id (str | None): Gymnasium environment ID. Mutually exclusive with ``env``.
         env (gym.Env | None): Pre-created ``gym.Env`` instance. Mutually exclusive with ``env_id``.
-        total_timesteps (int): Total training timesteps.
+        total_episodes (int): Total training episodes.
         seed (int): Global random seed for reproducibility.
         lr (float): Optimiser learning rate.
         gamma (float): Discount factor γ (0 < γ ≤ 1).
@@ -388,7 +388,7 @@ def train_reinforce_cnn(
     Config.env = env
     Config.env_id = env_id if env_id is not None else Config.env_id
 
-    Config.total_timesteps = total_timesteps
+    Config.total_episodes = total_episodes
     Config.seed = seed
     Config.lr = lr
     Config.gamma = gamma
@@ -548,12 +548,12 @@ def train_reinforce_cnn(
 
     start_time = time.time()
 
-    updates = Config.total_timesteps // Config.n_envs
+    updates = Config.total_episodes // Config.n_envs
 
     latest_avg_return = 0.0
     latest_ep_return = 0.0
 
-    dashboard = Dashboard("REINFORCE-CNN", Config.env_id or "custom", Config.total_timesteps, config=Config)
+    dashboard = Dashboard("REINFORCE-CNN", Config.env_id or "custom", Config.total_episodes, config=Config)
 
     for step in tqdm(range(updates), disable=True):
         global_step = step * Config.n_envs

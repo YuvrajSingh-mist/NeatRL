@@ -444,12 +444,27 @@ def train_dqn(
                     else int(q_values.argmax(dim=-1).item())
                 )
 
+        # Push chart metrics
+        if dashboard:
+            dashboard.push_many(
+                epsilon=eps,
+                q_mean=q_values.mean().item() if rnd >= eps else (
+                    q_network(torch.tensor(obs, device=device, dtype=torch.float32)).mean().item()
+                ),
+            )
+
         new_obs, reward, terminated, truncated, info = env.step(action)
         done = np.logical_or(terminated, truncated)
 
         replay_buffer.add(
             obs, new_obs, np.array(action), np.array(reward), np.array(done), [info]
         )
+
+        # Push buffer fill %
+        if dashboard:
+            dashboard.push_many(
+                buffer_fill=min(100.0 * replay_buffer.pos / replay_buffer.buffer_size, 100.0),
+            )
 
         # Log episode returns
         if "episode" in info:
@@ -476,6 +491,9 @@ def train_dqn(
                                     "charts/global_step": step,
                                 }
                             )
+                        # Push chart metrics
+                        if dashboard:
+                            dashboard.push_many(ep_return=ep_ret, ep_length=float(ep_len))
             else:
                 if done:
                     ep_ret = info["episode"]["r"]
@@ -492,6 +510,9 @@ def train_dqn(
                                 "charts/global_step": step,
                             }
                         )
+                    # Push chart metrics
+                    if dashboard:
+                        dashboard.push_many(ep_return=ep_ret, ep_length=float(ep_len))
 
         if step > learning_starts and step % train_frequency == 0:
             data = replay_buffer.sample(batch_size)
@@ -575,6 +596,10 @@ def train_dqn(
             optimizer.step()
             update_count += 1
             latest_loss = loss.item()
+
+            # Push total_loss for chart
+            if dashboard:
+                dashboard.push_many(total_loss=loss.item())
 
             # Log loss and metrics every 100 steps
             if step % 100 == 0:

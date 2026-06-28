@@ -823,6 +823,9 @@ def train_ppo(
                                     "global_step": global_step,
                                 }
                             )
+                        # Push chart metrics
+                        if dashboard:
+                            dashboard.push_many(ep_return=ep_ret, ep_length=float(ep_len))
             else:
                 if done:
                     ep_ret = info["episode"]["r"]
@@ -836,6 +839,9 @@ def train_ppo(
                                 "global_step": global_step,
                             }
                         )
+                    # Push chart metrics
+                    if dashboard:
+                        dashboard.push_many(ep_return=ep_ret, ep_length=float(ep_len))
 
         # Log losses and metrics
         if Config.use_wandb and update % 10 == 0:
@@ -864,6 +870,14 @@ def train_ppo(
                 int(global_step / (time.time() - start_time)),
             )
             if dashboard:
+                # Push PPO-specific chart metrics
+                dashboard.push_many(
+                    entropy=entropy_loss.item(),
+                    clip_fraction=float(np.mean(clipfracs)),
+                    approx_kl=approx_kl.item(),
+                    value_loss=critic_loss.item(),
+                    total_loss=loss.item(),
+                )
                 dashboard.update(
                     agent_steps=global_step,
                     epoch=update,

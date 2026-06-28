@@ -16,9 +16,17 @@ from typing import Any, Optional
 import torch
 from rich import box
 from rich.console import Console
+from rich.panel import Panel
 from rich.style import Style
 from rich.table import Table
 from rich.text import Text
+
+from .charts import (
+    dual_sparkline,
+    labeled_sparkline,
+    metric_bar,
+)
+from .history import HistoryTracker
 
 try:
     import psutil as psutilMod
@@ -28,6 +36,8 @@ except ImportError:
 
 LOGBUFSIZE = 500
 LOG_VISIBLE = 30
+HISTORY_MAXLEN = 120
+SPARKLINE_WIDTH = 24
 
 
 def deviceTag() -> tuple[str, str, str]:
@@ -146,11 +156,16 @@ class Dashboard:
         self.isFirst = True
         self.showLogs = False
         self.showConfig = False
+        self.showCharts = False  # 'v' toggles full chart view
         self.lastRenderTime = 0.0
         self.lastEpoch = 0
         self.lastLosses: dict = {}
         self.lastEvalStats: Optional[dict] = None
+        self.lastAgentSteps: int = 0
         self.logScrollOffset = 0  # 0 = newest, positive = scroll back
+
+        # History tracker for time-series charts
+        self.history = HistoryTracker(maxlen=HISTORY_MAXLEN)
 
         # Terminal raw mode
         self.fd = sys.stdin.fileno()
@@ -281,11 +296,18 @@ class Dashboard:
         if key == "l":
             self.showLogs = not self.showLogs
             self.showConfig = False
+            self.showCharts = False
             self.isFirst = True
             self.logScrollOffset = 0
         elif key == "c":
             self.showConfig = not self.showConfig
             self.showLogs = False
+            self.showCharts = False
+            self.isFirst = True
+        elif key == "v":
+            self.showCharts = not self.showCharts
+            self.showLogs = False
+            self.showConfig = False
             self.isFirst = True
         elif key == "\x1b[A":  # up arrow
             if self.showLogs:
@@ -297,9 +319,10 @@ class Dashboard:
         self.lastEpoch = epoch
         self.lastLosses = losses
         self.lastEvalStats = eval_stats
+        self.lastAgentSteps = agent_steps
 
         now = time.time()
-        if not self.isFirst and now - self.lastRenderTime < 0.1:
+        if not self.isFirst and now - self.lastRenderTime < 0.2:
             return
         self.lastRenderTime = now
 
@@ -312,6 +335,8 @@ class Dashboard:
             rendered = self.renderLogs()
         elif self.showConfig:
             rendered = self.renderConfig()
+        elif self.showCharts:
+            rendered = self.renderChartsView()
         else:
             rendered = self.renderDash(agent_steps, epoch, losses, eval_stats, message)
 
@@ -326,6 +351,10 @@ class Dashboard:
             sys.stdout.write(f"\033[{self.prevLines}A\033[J" + rendered)
         sys.stdout.flush()
         self.prevLines = lines
+
+    def push_metrics(self, **kwargs: float) -> None:
+        """Record time-series metrics into the history tracker for chart rendering."""
+        self.history.push_many(**kwargs)
 
     def renderDash(
         self, agent_steps: int, epoch: int, losses: dict,
@@ -374,6 +403,19 @@ class Dashboard:
         monitor.add_column(min_width=34)
         monitor.add_row(summary, lossTable)
 
+        # --- Universal charts: Episode Return + Episode Length sparklines ---
+        universalLines: list[str] = []
+        ep_returns = self.history.get("ep_return")
+        ep_lengths = self.history.get("ep_length")
+        if ep_returns:
+            universalLines.append(labeled_sparkline("Episode Return", ep_returns, SPARKLINE_WIDTH, "green"))
+        if ep_lengths:
+            universalLines.append(labeled_sparkline("Episode Length", ep_lengths, SPARKLINE_WIDTH, "yellow"))
+
+        # --- Algo-specific charts ---
+        algoLines = self._renderAlgoCharts()
+
+        # --- Eval stats ---
         bottom: Optional[Table] = None
         if eval_stats:
             bottomStats = {k: v for k, v in eval_stats.items() if k != "last_return"}
@@ -399,6 +441,22 @@ class Dashboard:
         frame.add_row(header)
         frame.add_row(monitor)
 
+        # Universal charts section
+        if universalLines:
+            chartBody = Text()
+            chartBody.append("[bold cyan]── Universal Metrics ──[/bold cyan]\n")
+            for line in universalLines:
+                chartBody.append(line + "\n")
+            frame.add_row(chartBody)
+
+        # Algo-specific charts section
+        if algoLines:
+            algoBody = Text()
+            algoBody.append(f"[bold cyan]── {self.algo} Metrics ──[/bold cyan]\n")
+            for line in algoLines:
+                algoBody.append(line + "\n")
+            frame.add_row(algoBody)
+
         # Bottom row: eval stats (left) + model params (right)
         if message or bottom is not None:
             msgParts = message.split(" | ") if message else []
@@ -409,7 +467,143 @@ class Dashboard:
             bottomRow.add_row(bottom or Text(""), Text(msgText, style="bright_white") if msgText else Text(""))
             frame.add_row(bottomRow)
 
-        frame.add_row("[dim]press [b]l[/b] logs  [b]c[/b] config[/dim]")
+        frame.add_row("[dim]press [b]l[/b] logs  [b]c[/b] config  [b]v[/b] charts[/dim]")
+
+        with self.console.capture() as cap:
+            self.console.print(frame)
+        return cap.get()
+
+    def _renderAlgoCharts(self) -> list[str]:
+        """Render algorithm-specific sparkline charts based on self.algo."""
+        lines: list[str] = []
+        algo = self.algo.lower()
+
+        # ── DQN / Dueling-DQN ──
+        if algo in ("dqn", "dueling-dqn"):
+            eps = self.history.get("epsilon")
+            if eps:
+                lines.append(labeled_sparkline("Epsilon (ε)", eps, SPARKLINE_WIDTH, "magenta"))
+
+            q_mean = self.history.get("q_mean")
+            if q_mean:
+                lines.append(labeled_sparkline("Mean Q-value", q_mean, SPARKLINE_WIDTH, "blue"))
+
+            buf_fill = self.history.latest("buffer_fill")
+            if buf_fill is not None:
+                lines.append(metric_bar("Buffer fill %", buf_fill, 100.0, 12, "green"))
+
+        # ── PPO ──
+        elif algo == "ppo":
+            entropy = self.history.get("entropy")
+            if entropy:
+                lines.append(labeled_sparkline("Entropy", entropy, SPARKLINE_WIDTH, "yellow"))
+
+            clip_frac = self.history.get("clip_fraction")
+            if clip_frac:
+                lines.append(labeled_sparkline("Clip Fraction", clip_frac, SPARKLINE_WIDTH, "red", fmt=".3f"))
+
+            kl = self.history.get("approx_kl")
+            if kl:
+                lines.append(labeled_sparkline("KL Divergence", kl, SPARKLINE_WIDTH, "magenta", fmt=".4f"))
+
+            val_loss = self.history.get("value_loss")
+            if val_loss:
+                lines.append(labeled_sparkline("Value Loss", val_loss, SPARKLINE_WIDTH, "blue"))
+
+        # ── SAC ──
+        elif algo == "sac":
+            alpha = self.history.get("alpha")
+            if alpha:
+                lines.append(labeled_sparkline("Alpha (entropy)", alpha, SPARKLINE_WIDTH, "yellow", fmt=".4f"))
+
+            q1 = self.history.get("q1_mean")
+            q2 = self.history.get("q2_mean")
+            if q1 and q2:
+                dual = dual_sparkline(q1, q2, SPARKLINE_WIDTH, "cyan", "magenta")
+                v1 = q1[-1] if q1 else 0
+                v2 = q2[-1] if q2 else 0
+                lines.append(f"  {'Q1/Q2 Mean':<18} {dual}  {v1:>7.2f}:{v2:<7.2f}")
+
+            actor_loss = self.history.get("actor_loss")
+            if actor_loss:
+                lines.append(labeled_sparkline("Actor Loss", actor_loss, SPARKLINE_WIDTH, "green"))
+
+        # ── Universal loss sparkline ──
+        loss_vals = self.history.get("total_loss")
+        if loss_vals and len(loss_vals) >= 2:
+            lines.append(labeled_sparkline("Training Loss", loss_vals, SPARKLINE_WIDTH, "red", fmt=".4f"))
+
+        return lines
+
+    def renderChartsView(self) -> str:
+        """Dedicated full-screen charts view with larger sparklines."""
+        header = Table(box=None, show_header=False, padding=(0, 1))
+        header.add_column(style="bold cyan", min_width=22)
+        header.add_column(style="white")
+        header.add_row(
+            f"NeatRL 1.0.0  [{self.algo}]  [yellow][CHARTS][/yellow]  [dim][v: back][/dim]",
+            f"Steps: {abbrev(self.lastAgentSteps)}  |  History: {HISTORY_MAXLEN} pts",
+        )
+
+        body = Text()
+        wide = SPARKLINE_WIDTH + 12  # wider sparklines for detail view
+
+        # ── Universal ──
+        body.append("[bold cyan]══ Universal Metrics ══[/bold cyan]\n\n")
+        ep_ret = self.history.get("return")
+        if ep_ret:
+            body.append(labeled_sparkline("Episode Return", ep_ret, wide, "green") + "\n")
+        ep_len = self.history.get("ep_length")
+        if ep_len:
+            body.append(labeled_sparkline("Episode Length", ep_len, wide, "yellow") + "\n")
+        loss = self.history.get("total_loss")
+        if loss:
+            body.append(labeled_sparkline("Training Loss", loss, wide, "red", fmt=".4f") + "\n")
+
+        # ── Algo-specific ──
+        algo = self.algo.lower()
+        body.append(f"\n[bold cyan]══ {self.algo} Metrics ══[/bold cyan]\n\n")
+
+        if algo in ("dqn", "dueling-dqn"):
+            eps = self.history.get("epsilon")
+            if eps:
+                body.append(labeled_sparkline("Epsilon (ε)", eps, wide, "magenta") + "\n")
+            q_mean = self.history.get("q_mean")
+            if q_mean:
+                body.append(labeled_sparkline("Mean Q-value", q_mean, wide, "blue") + "\n")
+            buf = self.history.latest("buffer_fill")
+            if buf is not None:
+                body.append(metric_bar("Buffer fill %", buf, 100, 20, "green") + "\n")
+
+        elif algo == "ppo":
+            for name, color, fmt_str in [
+                ("entropy", "yellow", ".3f"),
+                ("clip_fraction", "red", ".3f"),
+                ("approx_kl", "magenta", ".4f"),
+                ("value_loss", "blue", ".4f"),
+            ]:
+                vals = self.history.get(name)
+                if vals:
+                    body.append(labeled_sparkline(name.replace("_", " ").title(), vals, wide, color, fmt_str) + "\n")
+
+        elif algo == "sac":
+            alpha = self.history.get("alpha")
+            if alpha:
+                body.append(labeled_sparkline("Alpha (entropy)", alpha, wide, "yellow", ".4f") + "\n")
+            q1 = self.history.get("q1_mean")
+            q2 = self.history.get("q2_mean")
+            if q1 and q2:
+                dual = dual_sparkline(q1, q2, wide, "cyan", "magenta")
+                body.append(f"  {'Q1 / Q2 Mean':<18} {dual}  {q1[-1]:>7.2f} : {q2[-1]:<7.2f}\n")
+            actor_loss = self.history.get("actor_loss")
+            if actor_loss:
+                body.append(labeled_sparkline("Actor Loss", actor_loss, wide, "green") + "\n")
+
+        frame = Table(box=box.ROUNDED, show_header=False, padding=(0, 1), expand=False)
+        frame.add_column()
+        frame.add_row(header)
+        frame.add_row(body)
+        frame.add_row("[dim]press [b]v[/b] back  [b]l[/b] logs  [b]c[/b] config[/dim]")
 
         with self.console.capture() as cap:
             self.console.print(frame)

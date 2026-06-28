@@ -767,6 +767,9 @@ def train_sac(
                                         "global_step": step,
                                     }
                                 )
+                            # Push chart metrics
+                            if dashboard:
+                                dashboard.push_many(ep_return=ep_ret, ep_length=float(ep_len))
                 else:
                     if done:
                         ep_ret = info["episode"]["r"]
@@ -779,6 +782,9 @@ def train_sac(
                                     "global_step": step,
                                 }
                             )
+                        # Push chart metrics
+                        if dashboard:
+                            dashboard.push_many(ep_return=ep_ret, ep_length=float(ep_len))
 
             # Log losses and metrics
             if step % 1000 == 0 and step > Config.learning_starts:
@@ -793,6 +799,14 @@ def train_sac(
                     sps,
                 )
                 if dashboard:
+                    # Push SAC-specific chart metrics
+                    dashboard.push_many(
+                        alpha=float(alpha),
+                        q1_mean=current_q1.mean().item(),
+                        q2_mean=current_q2.mean().item(),
+                        actor_loss=actor_loss.item(),
+                        total_loss=(q1_loss.item() + q2_loss.item()) / 2.0,
+                    )
                     dashboard.update(
                         agent_steps=step,
                         epoch=step,
