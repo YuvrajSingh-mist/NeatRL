@@ -724,7 +724,7 @@ def train_ppo_cnn(
                 )
                 policy_loss = -torch.min(pg_loss1, pg_loss2).mean()
 
-                current_values = critic_network(b_obs[mb_inds])
+                current_values = critic_network(b_obs[mb_inds]).reshape(-1)
 
                 # Value clipping
                 if Config.value_clip:
@@ -737,14 +737,10 @@ def train_ppo_cnn(
                     v_loss_clipped = (v_clipped - b_returns[mb_inds]) ** 2
                     v_loss_max = torch.max(v_loss_unclipped, v_loss_clipped)
 
-                    critic_loss = Config.VALUE_COEFF * 0.5 * v_loss_max.mean()
+                    critic_loss = 0.5 * v_loss_max.mean()
 
                 else:
-                    critic_loss = (
-                        Config.VALUE_COEFF
-                        * 0.5
-                        * F.mse_loss(current_values.squeeze(), b_returns[mb_inds])
-                    )
+                    critic_loss = 0.5 * F.mse_loss(current_values, b_returns[mb_inds])
 
                 entropy_loss = dist.entropy().mean()
 
