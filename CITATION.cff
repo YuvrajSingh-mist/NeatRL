@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+message: If you use NeatRL (library, algorithms, or experiments), please cite it as below.
+title: "NeatRL: Readable Single-File Reinforcement Learning Implementations in PyTorch"
+type: software
+authors:
+  - family-names: Singh
+    given-names: Yuvraj
+    orcid: "https://orcid.org/0009-0005-4120-555X"
+date-released: "2026-10-07"
+year: 2026
+url: "https://github.com/YuvrajSingh-mist/NeatRL"
+repository-code: "https://github.com/YuvrajSingh-mist/NeatRL"
+license: MIT
+keywords:
+  - reinforcement-learning
+  - deep-reinforcement-learning
+  - pytorch
+  - dqn
+  - ppo
+  - sac
+  - td3
+preferred-citation:
+  type: generic
+  title: "NeatRL: Readable Single-File Reinforcement Learning Implementations in PyTorch"
+  authors:
+    - family-names: Singh
+      given-names: Yuvraj
+  year: 2026
+  url: "https://github.com/YuvrajSingh-mist/NeatRL"
+  howpublished: "\\url{https://github.com/YuvrajSingh-mist/NeatRL}"
