@@ -206,6 +206,21 @@ neatrl train ppo lunar   # smoke test CLI
 
 For the complete changelog, see [CHANGELOG.md](https://github.com/YuvrajSingh-mist/NeatRL/blob/master/CHANGELOG.md).
 
+## Citation
+
+If you use `NeatRL` in academic work, please cite it as below. The concept DOI always resolves to the newest archived version (see [`CITATION.cff`](CITATION.cff) for the machine-readable form).
+
+```bibtex
+@software{singh2026neatrl,
+  title     = {NeatRL: Readable Single-File Reinforcement Learning Implementations in PyTorch},
+  author    = {Singh, Yuvraj},
+  year      = {2026},
+  publisher = {Zenodo},
+  doi       = {10.5281/zenodo.23198154},
+  url       = {https://github.com/YuvrajSingh-mist/NeatRL}
+}
+```
+
 ## License
 
 This project is licensed under the [Apache License 2.0](LICENSE) for code, and [CC BY 4.0](LICENSE-DATASET) for documentation, diagrams, benchmark results and published artifacts. See [NOTICE](NOTICE) and [CITATION.cff](CITATION.cff).
