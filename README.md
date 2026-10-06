@@ -56,11 +56,7 @@ The env argument is matched fuzzy-style against the example scripts in `docs/` â
 ```python
 from neatrl.dqn_mlp import train_dqn
 
-model = train_dqn(
-    env_id="CartPole-v1",
-    total_timesteps=10000,
-    seed=42
-)
+model = train_dqn(env_id="CartPole-v1", total_timesteps=10000, seed=42)
 ```
 
 ### Train PPO on Classic Control
@@ -71,11 +67,11 @@ from neatrl.ppo_mlp import train_ppo
 model = train_ppo(
     env_id="CartPole-v1",
     total_timesteps=50000,
-    n_envs=4,           # Parallel environments
-    GAE=0.95,           # Generalized Advantage Estimation lambda
-    clip_value=0.2,     # PPO clipping parameter
-    use_wandb=True,     # Track with WandB
-    seed=42
+    n_envs=4,  # Parallel environments
+    GAE=0.95,  # Generalized Advantage Estimation lambda
+    clip_value=0.2,  # PPO clipping parameter
+    use_wandb=True,  # Track with WandB
+    seed=42,
 )
 ```
 
@@ -87,10 +83,10 @@ from neatrl.sac_mlp import train_sac
 model = train_sac(
     env_id="Pendulum-v1",
     total_timesteps=50000,
-    alpha=0.2,           # Entropy regularization coefficient
-    autotune_alpha=True, # Automatically tune alpha
-    use_wandb=True,      # Track with WandB
-    seed=42
+    alpha=0.2,  # Entropy regularization coefficient
+    autotune_alpha=True,  # Automatically tune alpha
+    use_wandb=True,  # Track with WandB
+    seed=42,
 )
 ```
 
@@ -106,7 +102,7 @@ model = train_sac_cnn(
     autotune_alpha=True,
     atari_wrapper=True,  # Automatic Atari preprocessing
     use_wandb=True,
-    seed=42
+    seed=42,
 )
 ```
 
@@ -212,7 +208,7 @@ For the complete changelog, see [CHANGELOG.md](https://github.com/YuvrajSingh-mi
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the [Apache License 2.0](LICENSE) for code, and [CC BY 4.0](LICENSE-DATASET) for documentation, diagrams, benchmark results and published artifacts. See [NOTICE](NOTICE) and [CITATION.cff](CITATION.cff).
 
 ---
 
