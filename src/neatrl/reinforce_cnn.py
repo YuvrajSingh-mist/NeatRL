@@ -12,6 +12,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import wandb
 from gymnasium.wrappers import (
     AtariPreprocessing,
     FrameStackObservation,
@@ -19,8 +20,6 @@ from gymnasium.wrappers import (
     NormalizeReward,
 )
 from tqdm import tqdm
-
-import wandb
 
 from .cli.dashboard import Dashboard
 from .utils import configure_logging, get_logger, setup_device
@@ -553,7 +552,9 @@ def train_reinforce_cnn(
     latest_avg_return = 0.0
     latest_ep_return = 0.0
 
-    dashboard = Dashboard("REINFORCE-CNN", Config.env_id or "custom", Config.total_episodes, config=Config)
+    dashboard = Dashboard(
+        "REINFORCE-CNN", Config.env_id or "custom", Config.total_episodes, config=Config
+    )
 
     for step in tqdm(range(updates), disable=True):
         global_step = step * Config.n_envs

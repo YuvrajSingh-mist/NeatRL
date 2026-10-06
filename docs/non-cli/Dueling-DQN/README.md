@@ -18,11 +18,7 @@ neatrl train dueling-dqn LunarLander-v3 --no-wandb --timesteps 300000
 ```python
 from neatrl.dueling_dqn_mlp import train_dueling_dqn
 
-model = train_dueling_dqn(
-    env_id="CliffWalking-v0",
-    total_timesteps=10000,
-    seed=42
-)
+model = train_dueling_dqn(env_id="CliffWalking-v0", total_timesteps=10000, seed=42)
 ```
 
 ### Training with Experiment Tracking
@@ -37,7 +33,7 @@ model = train_dueling_dqn(
     capture_video=True,
     use_wandb=True,
     wandb_project="my-rl-experiments",
-    exp_name="dueling-dqn-cliffwalking"
+    exp_name="dueling-dqn-cliffwalking",
 )
 ```
 
@@ -47,24 +43,16 @@ model = train_dueling_dqn(
 import torch.nn as nn
 from neatrl.dueling_dqn_mlp import train_dueling_dqn
 
+
 class CustomDuelingQNet(nn.Module):
     def __init__(self, state_space, action_space):
         super().__init__()
         self.features = nn.Sequential(
-            nn.Linear(state_space, 128),
-            nn.ReLU(),
-            nn.Linear(128, 128),
-            nn.ReLU()
+            nn.Linear(state_space, 128), nn.ReLU(), nn.Linear(128, 128), nn.ReLU()
         )
-        self.values = nn.Sequential(
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Linear(64, 1)
-        )
+        self.values = nn.Sequential(nn.Linear(128, 64), nn.ReLU(), nn.Linear(64, 1))
         self.adv = nn.Sequential(
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Linear(64, action_space)
+            nn.Linear(128, 64), nn.ReLU(), nn.Linear(64, action_space)
         )
 
     def forward(self, x):
@@ -74,13 +62,14 @@ class CustomDuelingQNet(nn.Module):
         q_values = values + adv - adv.mean(dim=1, keepdim=True)
         return q_values, values, adv, feat
 
+
 model = train_dueling_dqn(
     env_id="LunarLander-v2",
     total_timesteps=100000,
     seed=42,
     custom_agent=CustomDuelingQNet(8, 4),
     use_wandb=True,
-    exp_name="custom-dueling-lunar"
+    exp_name="custom-dueling-lunar",
 )
 ```
 
@@ -135,7 +124,7 @@ model = train_dueling_dqn(
     seed=42,
     grid_env=True,
     use_wandb=True,
-    exp_name="dueling-dqn-cliffwalking"
+    exp_name="dueling-dqn-cliffwalking",
 )
 ```
 
@@ -171,7 +160,7 @@ model = train_dueling_dqn(
     use_wandb=True,
     wandb_project="my-rl-project",
     wandb_entity="your-username",
-    exp_name="cliffwalking-experiment"
+    exp_name="cliffwalking-experiment",
 )
 ```
 

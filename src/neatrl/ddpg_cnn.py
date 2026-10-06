@@ -13,10 +13,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import wandb
 from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
-
-import wandb
 
 from .cli.dashboard import Dashboard
 from .ddpg_mlp import ActorNet, QNet
@@ -584,7 +583,9 @@ def train_ddpg_cnn(
     latest_avg_return = 0.0
     latest_ep_return = 0.0
 
-    dashboard = Dashboard("DDPG-CNN", Config.env_id or "custom", Config.total_timesteps, config=Config)
+    dashboard = Dashboard(
+        "DDPG-CNN", Config.env_id or "custom", Config.total_timesteps, config=Config
+    )
 
     for step in tqdm(range(Config.total_timesteps)):
         # Get action from actor network with exploration noise

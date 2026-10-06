@@ -1,7 +1,5 @@
 """Rich-based sparkline chart renderers for terminal dashboard."""
 
-from typing import Optional
-
 BAR_CHARS = " ▁▂▃▄▅▆▇█"
 
 

@@ -18,11 +18,7 @@ neatrl train reinforce-cnn BreakoutNoFrameskip-v4 --no-wandb --atari
 ```python
 from neatrl.reinforce_mlp import train_reinforce
 
-model = train_reinforce(
-    env_id="CartPole-v1",
-    total_steps=2000,
-    seed=42
-)
+model = train_reinforce(env_id="CartPole-v1", total_steps=2000, seed=42)
 ```
 
 ### Training with Experiment Tracking
@@ -37,7 +33,7 @@ model = train_reinforce(
     capture_video=True,
     use_wandb=True,
     wandb_project="my-rl-experiments",
-    exp_name="reinforce-cartpole-v1"
+    exp_name="reinforce-cartpole-v1",
 )
 ```
 
@@ -53,7 +49,7 @@ model = train_reinforce(
     seed=42,
     use_wandb=True,
     wandb_project="parallel-experiments",
-    exp_name="reinforce-cartpole-parallel"
+    exp_name="reinforce-cartpole-parallel",
 )
 ```
 
@@ -70,7 +66,7 @@ model = train_reinforce(
     n_envs=4,
     use_wandb=True,
     wandb_project="atari-experiments",
-    exp_name="reinforce-breakout"
+    exp_name="reinforce-breakout",
 )
 ```
 
@@ -79,6 +75,7 @@ model = train_reinforce(
 ```python
 import torch.nn as nn
 from neatrl.reinforce_mlp import train_reinforce
+
 
 class CustomPolicyNet(nn.Module):
     def __init__(self, state_space, action_space):
@@ -98,13 +95,14 @@ class CustomPolicyNet(nn.Module):
         action = dist.sample()
         return action, dist.log_prob(action)
 
+
 model = train_reinforce(
     env_id="CartPole-v1",
     total_steps=2000,
     seed=42,
     custom_agent=CustomPolicyNet(4, 2),
     use_wandb=True,
-    exp_name="reinforce-cartpole-custom"
+    exp_name="reinforce-cartpole-custom",
 )
 ```
 
@@ -157,7 +155,7 @@ model = train_reinforce(
     total_steps=2000,
     atari_wrapper=True,
     n_envs=4,
-    seed=42
+    seed=42,
 )
 ```
 
@@ -181,7 +179,7 @@ model = train_reinforce(
     seed=42,
     grid_env=True,
     use_wandb=True,
-    exp_name="reinforce-frozenlake"
+    exp_name="reinforce-frozenlake",
 )
 ```
 
@@ -194,7 +192,7 @@ model = train_reinforce(
     use_wandb=True,
     wandb_project="my-rl-project",
     wandb_entity="your-username",
-    exp_name="cartpole-experiment"
+    exp_name="cartpole-experiment",
 )
 ```
 

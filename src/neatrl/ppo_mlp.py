@@ -13,9 +13,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from tqdm import tqdm
-
 import wandb
+from tqdm import tqdm
 
 from .cli.dashboard import Dashboard
 from .utils import configure_logging, get_logger, get_space_dims, setup_device
@@ -580,7 +579,9 @@ def train_ppo(
 
     start_time = time.time()
 
-    dashboard = Dashboard("PPO", Config.env_id or "custom", Config.total_timesteps, config=Config)
+    dashboard = Dashboard(
+        "PPO", Config.env_id or "custom", Config.total_timesteps, config=Config
+    )
 
     for update in tqdm(
         range(1, num_updates + 1), desc="Training Updates", disable=True
@@ -821,7 +822,9 @@ def train_ppo(
                             )
                         # Push chart metrics
                         if dashboard:
-                            dashboard.push_many(ep_return=ep_ret, ep_length=float(ep_len))
+                            dashboard.push_many(
+                                ep_return=ep_ret, ep_length=float(ep_len)
+                            )
             else:
                 if done:
                     ep_ret = info["episode"]["r"]

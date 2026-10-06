@@ -12,10 +12,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import wandb
 from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
-
-import wandb
 
 from .cli.dashboard import Dashboard
 from .utils import configure_logging, get_logger, setup_device
@@ -591,7 +590,9 @@ def train_sac_cnn(
     target_q2_network.load_state_dict(q2_network.state_dict())
 
     actor_params = sum(p.numel() for p in actor_net.parameters())
-    critic_params = sum(p.numel() for p in q1_network.parameters()) + sum(p.numel() for p in q2_network.parameters())
+    critic_params = sum(p.numel() for p in q1_network.parameters()) + sum(
+        p.numel() for p in q2_network.parameters()
+    )
 
     # Print network architecture
     logger.debug("%s\n%s", "Actor Network Architecture:", actor_net)
@@ -630,8 +631,11 @@ def train_sac_cnn(
 
     obs, _ = envs.reset()  # type: ignore[var-annotated]
     start_time = time.time()
+    latest_avg_return = 0.0
 
-    dashboard = Dashboard("SAC-CNN", Config.env_id or "custom", Config.total_timesteps, config=Config)
+    dashboard = Dashboard(
+        "SAC-CNN", Config.env_id or "custom", Config.total_timesteps, config=Config
+    )
 
     for step in tqdm(range(Config.total_timesteps)):
         # Sample action from stochastic policy

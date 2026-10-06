@@ -38,11 +38,7 @@ neatrl train td3-cnn BreakoutNoFrameskip-v4 --no-wandb --atari
 ```python
 from neatrl.td3_mlp import train_td3
 
-train_td3(
-    env_id="HalfCheetah-v5",
-    total_timesteps=1000000,
-    use_wandb=True
-)
+train_td3(env_id="HalfCheetah-v5", total_timesteps=1000000, use_wandb=True)
 ```
 
 ### CNN TD3 (Image Observations)
@@ -50,11 +46,7 @@ train_td3(
 ```python
 from neatrl.td3_cnn import train_td3_cnn
 
-train_td3_cnn(
-    env_id="CarRacing-v2",
-    total_timesteps=100000,
-    use_wandb=True
-)
+train_td3_cnn(env_id="CarRacing-v2", total_timesteps=100000, use_wandb=True)
 ```
 
 ## Network Architectures
@@ -129,10 +121,7 @@ Both Q1 and Q2 share the same architecture:
 
 ```python
 train_td3(
-    env_id="Pendulum-v1",
-    total_timesteps=50000,
-    learning_starts=1000,
-    eval_every=5000
+    env_id="Pendulum-v1", total_timesteps=50000, learning_starts=1000, eval_every=5000
 )
 ```
 
@@ -150,7 +139,7 @@ train_td3(
     exploration_noise=0.1,
     train_frequency=2,
     target_network_frequency=1,
-    use_wandb=True
+    use_wandb=True,
 )
 ```
 
@@ -163,7 +152,7 @@ train_td3_cnn(
     learning_rate=1e-4,
     batch_size=32,
     learning_starts=5000,
-    atari_wrapper=False
+    atari_wrapper=False,
 )
 ```
 
@@ -171,6 +160,7 @@ train_td3_cnn(
 
 ```python
 import torch.nn as nn
+
 
 class CustomActor(nn.Module):
     def __init__(self, state_dim, action_dim):
@@ -181,16 +171,15 @@ class CustomActor(nn.Module):
             nn.Linear(400, 300),
             nn.ReLU(),
             nn.Linear(300, action_dim),
-            nn.Tanh()
+            nn.Tanh(),
         )
 
     def forward(self, x):
         return self.net(x)
 
+
 train_td3(
-    env_id="HalfCheetah-v5",
-    actor_class=CustomActor,
-    q_network_class=CustomCritic
+    env_id="HalfCheetah-v5", actor_class=CustomActor, q_network_class=CustomCritic
 )
 ```
 

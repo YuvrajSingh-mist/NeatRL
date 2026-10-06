@@ -31,11 +31,7 @@ neatrl train ddpg-cnn BreakoutNoFrameskip-v4 --no-wandb --atari
 ```python
 from neatrl.ddpg_mlp import train_ddpg
 
-train_ddpg(
-    env_id="HalfCheetah-v5",
-    total_timesteps=1000000,
-    use_wandb=True
-)
+train_ddpg(env_id="HalfCheetah-v5", total_timesteps=1000000, use_wandb=True)
 ```
 
 ### CNN DDPG (Image Observations)
@@ -43,11 +39,7 @@ train_ddpg(
 ```python
 from neatrl.ddpg_cnn import train_ddpg_cnn
 
-train_ddpg_cnn(
-    env_id="PongNoFrameskip-v4",
-    total_timesteps=100000,
-    use_wandb=True
-)
+train_ddpg_cnn(env_id="PongNoFrameskip-v4", total_timesteps=100000, use_wandb=True)
 ```
 
 ## Network Architectures
@@ -133,7 +125,7 @@ model = train_ddpg(
     exp_name="bipedal-walker-custom",
     capture_video=True,
     eval_every=1000,
-    num_eval_episodes=5
+    num_eval_episodes=5,
 )
 ```
 

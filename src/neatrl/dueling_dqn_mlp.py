@@ -12,11 +12,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import wandb
 from gymnasium.wrappers import AtariPreprocessing, FrameStackObservation
 from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
-
-import wandb
 
 from .cli.dashboard import Dashboard
 from .utils import configure_logging, get_logger, get_space_dims, setup_device
@@ -411,7 +410,9 @@ def train_dueling_dqn(
     update_count = 0
     latest_loss = 0.0
 
-    dashboard = Dashboard("Dueling-DQN", Config.env_id or "custom", total_timesteps, config=Config)
+    dashboard = Dashboard(
+        "Dueling-DQN", Config.env_id or "custom", total_timesteps, config=Config
+    )
 
     for step in tqdm(range(total_timesteps), disable=True):
         step = step * n_envs
@@ -439,9 +440,11 @@ def train_dueling_dqn(
 
         # Push chart metrics
         if dashboard:
-            _q_for_metric = q_values if rnd >= eps else q_network(
-                torch.tensor(obs, device=device, dtype=torch.float32)
-            )[0]
+            _q_for_metric = (
+                q_values
+                if rnd >= eps
+                else q_network(torch.tensor(obs, device=device, dtype=torch.float32))[0]
+            )
             dashboard.push_many(
                 epsilon=eps,
                 q_mean=_q_for_metric.mean().item(),
@@ -457,7 +460,9 @@ def train_dueling_dqn(
         # Push buffer fill %
         if dashboard:
             dashboard.push_many(
-                buffer_fill=min(100.0 * replay_buffer.pos / replay_buffer.buffer_size, 100.0),
+                buffer_fill=min(
+                    100.0 * replay_buffer.pos / replay_buffer.buffer_size, 100.0
+                ),
             )
 
         # Log episode returns
@@ -487,7 +492,9 @@ def train_dueling_dqn(
                             )
                         # Push chart metrics
                         if dashboard:
-                            dashboard.push_many(ep_return=ep_ret, ep_length=float(ep_len))
+                            dashboard.push_many(
+                                ep_return=ep_ret, ep_length=float(ep_len)
+                            )
             else:
                 if done:
                     ep_ret = info["episode"]["r"]

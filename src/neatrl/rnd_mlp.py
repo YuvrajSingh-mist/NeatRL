@@ -13,9 +13,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from tqdm import tqdm
-
 import wandb
+from tqdm import tqdm
 
 from .cli.dashboard import Dashboard
 from .utils import configure_logging, get_logger, get_space_dims, setup_device
@@ -666,8 +665,12 @@ def train_ppo_rnd(
     logger.debug("%s\n%s", "\nPredictor Network Architecture:", predictor_network)
     logger.debug("%s\n%s", "\nTarget Network Architecture:", target_network)
 
-    policy_params = sum(p.numel() for p in actor_network.parameters()) + sum(p.numel() for p in critic_network.parameters())
-    rnd_params = sum(p.numel() for p in predictor_network.parameters()) + sum(p.numel() for p in target_network.parameters())
+    policy_params = sum(p.numel() for p in actor_network.parameters()) + sum(
+        p.numel() for p in critic_network.parameters()
+    )
+    rnd_params = sum(p.numel() for p in predictor_network.parameters()) + sum(
+        p.numel() for p in target_network.parameters()
+    )
 
     # Compute derived values from passed parameters
     batch_size = Config.n_envs * Config.max_steps
@@ -715,8 +718,11 @@ def train_ppo_rnd(
     next_done = torch.zeros(Config.n_envs).to(device)
 
     start_time = time.time()
+    latest_avg_return = 0.0
 
-    dashboard = Dashboard("RND", Config.env_id or "custom", Config.total_timesteps, config=Config)
+    dashboard = Dashboard(
+        "RND", Config.env_id or "custom", Config.total_timesteps, config=Config
+    )
 
     for update in tqdm(
         range(1, num_updates + 1), desc="Training Updates", disable=True

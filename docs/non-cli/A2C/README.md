@@ -31,12 +31,7 @@ neatrl train a2c-cnn CarRacing-v3 --no-wandb
 ```python
 from neatrl.a2c_mlp import train_a2c
 
-train_a2c(
-    env_id="Acrobot-v1",
-    total_timesteps=500000,
-    lr=3e-4,
-    use_wandb=True
-)
+train_a2c(env_id="Acrobot-v1", total_timesteps=500000, lr=3e-4, use_wandb=True)
 ```
 
 ### CNN A2C (Image Observations)
@@ -51,7 +46,7 @@ train_a2c_cnn(
     use_wandb=True,
     env_wrapper=car_racing_wrapper,
     actor_class=ActorNet,
-    critic_class=CriticNet
+    critic_class=CriticNet,
 )
 ```
 

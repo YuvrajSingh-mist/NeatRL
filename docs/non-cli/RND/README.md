@@ -18,11 +18,7 @@ neatrl train rnd-cnn BreakoutNoFrameskip-v4 --no-wandb --atari
 ```python
 from neatrl.rnd_mlp import train_ppo_rnd
 
-model = train_ppo_rnd(
-    env_id="CliffWalking-v0",
-    total_timesteps=10000,
-    seed=42
-)
+model = train_ppo_rnd(env_id="CliffWalking-v0", total_timesteps=10000, seed=42)
 ```
 
 ### Training with Experiment Tracking
@@ -37,7 +33,7 @@ model = train_ppo_rnd(
     capture_video=True,
     use_wandb=True,
     wandb_project="my-rl-experiments",
-    exp_name="rnd-ppo-cliffwalking"
+    exp_name="rnd-ppo-cliffwalking",
 )
 ```
 
@@ -47,11 +43,7 @@ model = train_ppo_rnd(
 from neatrl.rnd_cnn import train_ppo_rnd_cnn
 
 model = train_ppo_rnd_cnn(
-    env_id="CarRacing-v3",
-    total_timesteps=500000,
-    seed=42,
-    n_envs=4,
-    use_wandb=True
+    env_id="CarRacing-v3", total_timesteps=500000, seed=42, n_envs=4, use_wandb=True
 )
 ```
 
@@ -113,7 +105,7 @@ model = train_ppo_rnd(
     seed=42,
     grid_env=True,
     use_wandb=True,
-    exp_name="rnd-ppo-cliffwalking"
+    exp_name="rnd-ppo-cliffwalking",
 )
 ```
 
@@ -134,7 +126,7 @@ model = train_ppo_rnd_cnn(
     n_envs=8,
     atari_wrapper=True,
     use_wandb=True,
-    exp_name="rnd-ppo-breakout"
+    exp_name="rnd-ppo-breakout",
 )
 ```
 
@@ -165,7 +157,7 @@ model = train_ppo_rnd(
     total_timesteps=50000,
     use_wandb=True,
     wandb_project="my-rl-project",
-    exp_name="cliffwalking-experiment"
+    exp_name="cliffwalking-experiment",
 )
 ```
 

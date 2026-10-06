@@ -18,11 +18,7 @@ neatrl train sac-cnn BreakoutNoFrameskip-v4 --no-wandb --atari
 ```python
 from neatrl.sac_mlp import train_sac
 
-model = train_sac(
-    env_id="Pendulum-v1",
-    total_timesteps=10000,
-    seed=42
-)
+model = train_sac(env_id="Pendulum-v1", total_timesteps=10000, seed=42)
 ```
 
 ### Training with Experiment Tracking
@@ -37,7 +33,7 @@ model = train_sac(
     capture_video=True,
     use_wandb=True,
     wandb_project="my-rl-experiments",
-    exp_name="sac-pendulum"
+    exp_name="sac-pendulum",
 )
 ```
 
@@ -51,7 +47,7 @@ model = train_sac_cnn(
     total_timesteps=100000,
     seed=42,
     atari_wrapper=True,
-    use_wandb=True
+    use_wandb=True,
 )
 ```
 
@@ -119,7 +115,7 @@ model = train_sac_cnn(
     atari_wrapper=True,
     use_wandb=True,
     wandb_project="atari-experiments",
-    exp_name="sac-breakout"
+    exp_name="sac-breakout",
 )
 ```
 
@@ -153,7 +149,7 @@ model = train_sac(
     total_timesteps=50000,
     use_wandb=True,
     wandb_project="my-rl-project",
-    exp_name="pendulum-experiment"
+    exp_name="pendulum-experiment",
 )
 ```
 

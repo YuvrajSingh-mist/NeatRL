@@ -18,11 +18,7 @@ neatrl train ppo-cnn BreakoutNoFrameskip-v4 --no-wandb --atari
 ```python
 from neatrl.ppo_mlp import train_ppo
 
-model = train_ppo(
-    env_id="LunarLander-v2",
-    total_timesteps=10000,
-    seed=42
-)
+model = train_ppo(env_id="LunarLander-v2", total_timesteps=10000, seed=42)
 ```
 
 ### Training with Experiment Tracking
@@ -37,7 +33,7 @@ model = train_ppo(
     capture_video=True,
     use_wandb=True,
     wandb_project="my-rl-experiments",
-    exp_name="ppo-lunar-lander"
+    exp_name="ppo-lunar-lander",
 )
 ```
 
@@ -54,7 +50,7 @@ model = train_ppo(
     max_steps=128,
     use_wandb=True,
     wandb_project="cleanRL",
-    exp_name="ppo-taxi"
+    exp_name="ppo-taxi",
 )
 ```
 
@@ -71,7 +67,7 @@ model = train_ppo(
     max_steps=128,
     use_wandb=True,
     wandb_project="cleanRL",
-    exp_name="ppo-bipedal-walker"
+    exp_name="ppo-bipedal-walker",
 )
 ```
 
@@ -89,7 +85,7 @@ model = train_ppo(
     atari_wrapper=True,
     use_wandb=True,
     wandb_project="cleanRL",
-    exp_name="ppo-breakout"
+    exp_name="ppo-breakout",
 )
 ```
 
@@ -146,7 +142,7 @@ model = train_ppo(
     n_envs=4,
     max_steps=512,
     use_wandb=True,
-    exp_name="ppo-lunar-lander"
+    exp_name="ppo-lunar-lander",
 )
 ```
 
@@ -162,7 +158,7 @@ model = train_ppo(
     n_envs=4,
     max_steps=128,
     use_wandb=True,
-    exp_name="ppo-taxi"
+    exp_name="ppo-taxi",
 )
 ```
 
@@ -179,7 +175,7 @@ model = train_ppo(
     max_steps=128,
     atari_wrapper=True,
     use_wandb=True,
-    exp_name="ppo-breakout"
+    exp_name="ppo-breakout",
 )
 ```
 
@@ -195,7 +191,7 @@ model = train_ppo(
     n_envs=8,
     max_steps=512,
     use_wandb=True,
-    exp_name="ppo-bipedal-walker"
+    exp_name="ppo-bipedal-walker",
 )
 ```
 
@@ -227,14 +223,14 @@ When `use_wandb=True`, PPO logs:
 from neatrl.ppo_mlp import train_ppo
 import gymnasium as gym
 
+
 def custom_wrapper(env):
     env = gym.wrappers.ResizeObservation(env, (84, 84))
     return env
 
+
 model = train_ppo(
-    env_id="YourCustomEnv-v0",
-    total_timesteps=100000,
-    env_wrapper=custom_wrapper
+    env_id="YourCustomEnv-v0", total_timesteps=100000, env_wrapper=custom_wrapper
 )
 ```
 
@@ -244,10 +240,7 @@ model = train_ppo(
 from neatrl.ppo_mlp import train_ppo
 
 model = train_ppo(
-    env_id="CliffWalking-v0",
-    total_timesteps=50000,
-    grid_env=True,
-    use_wandb=True
+    env_id="CliffWalking-v0", total_timesteps=50000, grid_env=True, use_wandb=True
 )
 ```
 
@@ -261,7 +254,7 @@ model = train_ppo(
     total_timesteps=200000,
     value_clip=True,
     clip_value=0.2,
-    use_wandb=True
+    use_wandb=True,
 )
 ```
 

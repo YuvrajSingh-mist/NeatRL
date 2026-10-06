@@ -12,10 +12,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import wandb
 from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
-
-import wandb
 
 from .cli.dashboard import Dashboard
 from .td3_mlp import ActorNet, QNet
@@ -593,7 +592,9 @@ def train_td3_cnn(
     target_actor_net.load_state_dict(actor_net.state_dict())
 
     actor_params = sum(p.numel() for p in actor_net.parameters())
-    critic_params = sum(p.numel() for p in q1_network.parameters()) + sum(p.numel() for p in q2_network.parameters())
+    critic_params = sum(p.numel() for p in q1_network.parameters()) + sum(
+        p.numel() for p in q2_network.parameters()
+    )
 
     # Print network architecture
     logger.debug("%s\n%s", "Actor Network Architecture:", actor_net)
@@ -630,7 +631,9 @@ def train_td3_cnn(
     obs, _ = env.reset()  # type: ignore[union-attr]
     start_time = time.time()
 
-    dashboard = Dashboard("TD3-CNN", Config.env_id or "custom", Config.total_timesteps, config=Config)
+    dashboard = Dashboard(
+        "TD3-CNN", Config.env_id or "custom", Config.total_timesteps, config=Config
+    )
 
     # Enable anomaly detection for debugging inplace operations
     torch.autograd.set_detect_anomaly(True)

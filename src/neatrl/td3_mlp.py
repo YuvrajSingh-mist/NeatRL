@@ -12,10 +12,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import wandb
 from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
-
-import wandb
 
 from .cli.dashboard import Dashboard
 from .utils import configure_logging, get_logger, get_space_dims, setup_device
@@ -561,7 +560,9 @@ def train_td3(
     target_actor_net.load_state_dict(actor_net.state_dict())
 
     actor_params = sum(p.numel() for p in actor_net.parameters())
-    critic_params = sum(p.numel() for p in q1_network.parameters()) + sum(p.numel() for p in q2_network.parameters())
+    critic_params = sum(p.numel() for p in q1_network.parameters()) + sum(
+        p.numel() for p in q2_network.parameters()
+    )
 
     # Print network architecture
     logger.debug("%s\n%s", "Actor Network Architecture:", actor_net)
@@ -598,12 +599,14 @@ def train_td3(
     obs, _ = env.reset()
     start_time = time.time()
     updates = Config.total_timesteps // Config.n_envs
+    latest_avg_return = 0.0
+    latest_ep_return = 0.0
 
-    dashboard = Dashboard("TD3", Config.env_id or "custom", Config.total_timesteps, config=Config)
+    dashboard = Dashboard(
+        "TD3", Config.env_id or "custom", Config.total_timesteps, config=Config
+    )
 
-    for step in tqdm(
-        range(updates), desc="Training Updates", disable=True
-    ):
+    for step in tqdm(range(updates), desc="Training Updates", disable=True):
         # Get action from actor network with exploration noise
         with torch.no_grad():
             action = actor_net.get_action(  # type: ignore[operator]

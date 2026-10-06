@@ -13,9 +13,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from tqdm import tqdm
-
 import wandb
+from tqdm import tqdm
 
 from .cli.dashboard import Dashboard
 from .utils import configure_logging, get_logger, setup_device
@@ -547,11 +546,11 @@ def train_a2c_cnn(
 
     start_time = time.time()
 
-    dashboard = Dashboard("A2C-CNN", Config.env_id or "custom", Config.total_timesteps, config=Config)
+    dashboard = Dashboard(
+        "A2C-CNN", Config.env_id or "custom", Config.total_timesteps, config=Config
+    )
 
-    for step in tqdm(
-        range(1, num_updates + 1), desc="Training Updates", disable=True
-    ):
+    for step in tqdm(range(1, num_updates + 1), desc="Training Updates", disable=True):
         # Annealing the rate if instructed to do so.
         if Config.anneal_lr:
             frac = 1.0 - (step - 1.0) / num_updates
