@@ -225,20 +225,6 @@ If you use `NeatRL` in academic work, please cite it as below. The concept DOI a
 
 This project is licensed under the [Apache License 2.0](LICENSE) for code, and [CC BY 4.0](LICENSE-DATASET) for documentation, diagrams, benchmark results and published artifacts. See [NOTICE](NOTICE) and [CITATION.cff](CITATION.cff).
 
-<!-- support-footer -->
----
-
-<div align="center">
-
-## Support the work
-
-If this project saved you time, you can fuel more like it.
-
-[![Sponsor: GitHub](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/YuvrajSingh-mist) [![Buy me a coffee](https://img.shields.io/badge/Buy_me_a_coffee-FFDD00?logo=buymeacoffee&logoColor=black)](https://ko-fi.com/O7W120DR8R)
-
-</div>
-
-
 ---
 
 **Made with ❤️ for the RL community**
