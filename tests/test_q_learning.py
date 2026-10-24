@@ -63,7 +63,9 @@ class TestMakeEnv:
 
 class TestEpsilonDecay:
     def test_starts_near_start_e(self):
-        eps = epsilon_by_step(0, 1000, start_e=1.0, end_e=0.05, exploration_fraction=0.5)
+        eps = epsilon_by_step(
+            0, 1000, start_e=1.0, end_e=0.05, exploration_fraction=0.5
+        )
         assert eps == pytest.approx(1.0)
 
     def test_ends_at_end_e(self):
@@ -73,9 +75,7 @@ class TestEpsilonDecay:
         assert eps == pytest.approx(0.05)
 
     def test_monotone_decrease(self):
-        values = [
-            epsilon_by_step(s, 1000, 1.0, 0.05, 0.5) for s in range(0, 500, 50)
-        ]
+        values = [epsilon_by_step(s, 1000, 1.0, 0.05, 0.5) for s in range(0, 500, 50)]
         assert values == sorted(values, reverse=True)
 
 

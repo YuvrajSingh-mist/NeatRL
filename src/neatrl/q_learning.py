@@ -170,11 +170,7 @@ def evaluate(
             video = np.transpose(video, (0, 3, 1, 2))
             if wandb.run is not None:
                 wandb.log(
-                    {
-                        "videos/eval_policy": wandb.Video(
-                            video, fps=5, format="mp4"
-                        )
-                    }
+                    {"videos/eval_policy": wandb.Video(video, fps=5, format="mp4")}
                 )
             frames.extend(ep_frames)
 
