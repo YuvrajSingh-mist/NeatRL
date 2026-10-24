@@ -18,6 +18,7 @@ _SCRIPTS = {
     "dueling-dqn": "dueling_dqn",
     "ppo": "ppo",
     "ppo-cnn": "ppo",
+    "q-learning": "q_learning",
     "reinforce": "reinforce",
     "reinforce-cnn": "reinforce",
     "rnd": "rnd",
@@ -48,6 +49,7 @@ def main() -> None:
         epilog=(
             "Examples:\n"
             "  neatrl train dqn CartPole-v1\n"
+            "  neatrl train q-learning FrozenLake-v1\n"
             "  neatrl train ppo LunarLander-v3\n"
             "  neatrl train sac Pendulum-v1\n"
             "  neatrl train td3-cnn CarRacing-v3\n"

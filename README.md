@@ -65,6 +65,21 @@ from neatrl.dqn_mlp import train_dqn
 model = train_dqn(env_id="CartPole-v1", total_timesteps=10000, seed=42)
 ```
 
+### Train tabular Q-learning on FrozenLake
+
+```python
+from neatrl.q_learning import train_q_learning
+
+q_table = train_q_learning(
+    env_id="FrozenLake-v1",
+    total_timesteps=50000,
+    seed=42,
+    use_wandb=False,
+)
+```
+
+Works on simple discrete Gym envs only (`FrozenLake`, `CliffWalking`, `Taxi`, …). For continuous observations use DQN.
+
 ### Train PPO on Classic Control
 
 ```python

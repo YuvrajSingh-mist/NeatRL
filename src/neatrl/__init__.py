@@ -14,6 +14,7 @@ from .dqn_mlp import train_dqn
 from .dueling_dqn_mlp import train_dueling_dqn
 from .ppo_cnn import train_ppo_cnn
 from .ppo_mlp import train_ppo
+from .q_learning import train_q_learning
 from .reinforce_cnn import train_reinforce_cnn
 from .reinforce_mlp import train_reinforce
 from .rnd_cnn import train_ppo_rnd_cnn
@@ -25,6 +26,7 @@ from .td3_mlp import train_td3
 
 __all__ = [
     "train_dqn",
+    "train_q_learning",
     "train_reinforce",
     "train_dueling_dqn",
     "train_ppo_rnd",
