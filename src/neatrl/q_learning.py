@@ -70,16 +70,7 @@ def _require_discrete(env: gym.Env) -> tuple[int, int]:
 
 
 def make_env(env_id: str, seed: int, idx: int = 0):
-    """Return a thunk that constructs and seeds a Gymnasium environment.
-
-    Args:
-        env_id: Gymnasium environment ID.
-        seed: Base random seed; actual seed is ``seed + idx``.
-        idx: Worker index added to the seed.
-
-    Returns:
-        Callable[[], gym.Env]: Zero-argument thunk that creates the environment.
-    """
+    """Return a thunk that builds and seeds a Gymnasium environment."""
 
     def thunk():
         env = gym.make(env_id, render_mode="rgb_array")
@@ -119,19 +110,7 @@ def evaluate(
     num_eval_eps: int = 10,
     capture_video: bool = False,
 ):
-    """Run greedy evaluation episodes; return episode returns and optional frames.
-
-    Args:
-        env_id: Gymnasium environment ID.
-        q_table: Q-table of shape ``(n_states, n_actions)``.
-        seed: Random seed for the evaluation environment.
-        num_eval_eps: Number of episodes to run.
-        capture_video: Record frames when True.
-
-    Returns:
-        tuple[list[float], list]: Episode returns and recorded RGB frames
-            (empty if ``capture_video`` is False).
-    """
+    """Run evaluation episodes; return episodic returns (and optional frames)."""
     eval_env = make_env(env_id=env_id, seed=seed, idx=0)()
     eval_env.action_space.seed(seed)
     _require_discrete(eval_env)

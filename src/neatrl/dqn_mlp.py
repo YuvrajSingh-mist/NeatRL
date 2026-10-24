@@ -38,8 +38,8 @@ except ImportError:
 # ===== CONFIGURATION =====
 @dataclass
 class Config:
-    # Experiment settings
     """Hyperparameters and settings for DQN training."""
+    # Experiment settings
 
     exp_name: str = "DQN"
     seed: int = 42
@@ -89,14 +89,7 @@ class QNet(nn.Module):
         self.q_value = nn.Linear(512, action_space)
 
     def forward(self, x):
-        """Forward pass — returns network output(s).
-
-        Args:
-            x (torch.Tensor): Input tensor.
-
-        Returns:
-            torch.Tensor | tuple[torch.Tensor, ...]: Network output(s).
-        """
+        """Forward pass — returns network output(s)."""
         return self.q_value(torch.relu(self.fc2(torch.relu(self.fc1(x)))))
 
 
@@ -111,14 +104,7 @@ class LinearEpsilonDecay(nn.Module):
         self.end_eps = end_eps
 
     def forward(self, current_timestep, decay_factor):
-        """Forward pass — returns network output(s).
-
-        Args:
-            x (torch.Tensor): Input tensor.
-
-        Returns:
-            torch.Tensor | tuple[torch.Tensor, ...]: Network output(s).
-        """
+        """Forward pass — returns network output(s)."""
         slope = (self.end_eps - self.initial_eps) / (
             self.total_timesteps * decay_factor
         )
@@ -126,18 +112,7 @@ class LinearEpsilonDecay(nn.Module):
 
 
 def make_env(env_id, seed, idx, atari_wrapper=False, grid_env=False):
-    """Return a thunk that constructs and seeds a Gymnasium environment.
-
-    Args:
-        env_id (str): Gymnasium environment ID.
-        seed (int): Base random seed; actual seed is ``seed + idx``.
-        idx (int): Worker index added to the seed.
-        atari_wrapper (bool): Apply Atari preprocessing wrappers when True.
-        grid_env (bool): Apply one-hot observation encoding for grid environments.
-
-    Returns:
-        Callable[[], gym.Env]: A zero-argument thunk that creates the environment.
-    """
+    """Return a thunk that builds and seeds a Gymnasium environment."""
 
     def thunk():
         """Create environment with video recording"""
@@ -169,22 +144,7 @@ def evaluate(
     capture_video=False,
     grid_env=False,
 ):
-    """Run evaluation episodes using a greedy policy and return rewards and optional frames.
-
-    Args:
-        env_id (str): Gymnasium environment ID for the evaluation environment.
-        model (nn.Module): The Q-network to evaluate (greedy action selection).
-        device (torch.device | str): Device on which to run the network.
-        seed (int): Random seed for the evaluation environment.
-        atari_wrapper (bool): Apply Atari preprocessing wrappers when True.
-        num_eval_eps (int): Number of episodes to run.
-        capture_video (bool): Record frames when True.
-        grid_env (bool): Apply one-hot encoding for grid environments.
-
-    Returns:
-        tuple[list[float], list]: A list of total rewards per episode and a list of
-            recorded RGB frames (empty if capture_video is False).
-    """
+    """Run evaluation episodes; return episodic returns (and optional frames)."""
     eval_env = make_env(
         idx=0, env_id=env_id, seed=seed, atari_wrapper=atari_wrapper, grid_env=grid_env
     )()
@@ -280,38 +240,8 @@ def train_dqn(
 ):
     """Train a DQN agent on a Gymnasium environment.
 
-    Args:
-        env_id (str): Gymnasium environment ID (e.g. ``'CartPole-v1'``).
-        total_timesteps (int): Total environment interaction steps to train for.
-        seed (int): Global random seed for reproducibility.
-        lr (float): Optimiser learning rate.
-        buffer_size (int): Replay buffer capacity (number of transitions).
-        gamma (float): Discount factor γ (0 < γ ≤ 1).
-        tau (float): Soft target-network update coefficient (0 < τ ≤ 1).
-        target_network_frequency (int): Sync target networks every this many steps.
-        batch_size (int): Mini-batch size sampled from the replay buffer.
-        start_e (float): Initial epsilon for epsilon-greedy exploration.
-        end_e (float): Final epsilon after decay.
-        exploration_fraction (float): Fraction of total_timesteps over which epsilon decays.
-        learning_starts (int): Random-action steps before gradient updates begin.
-        train_frequency (int): Update the network every this many steps.
-        max_grad_norm (float): Maximum gradient-norm for clipping (0 disables clipping).
-        capture_video (bool): Record evaluation episodes to video files when True.
-        use_wandb (bool): Log training metrics to Weights & Biases when True.
-        wandb_project (str): W&B project name (used when use_wandb=True).
-        wandb_entity (str): W&B entity/username (used when use_wandb=True).
-        exp_name (str): Run name used for log directories and W&B.
-        eval_every (int): Evaluate every this many environment steps.
-        save_every (int): Save a model checkpoint every this many steps.
-        atari_wrapper (bool): Apply Atari preprocessing (grayscale, frame-stack) when True.
-        custom_agent (nn.Module | None): Custom ``nn.Module`` instance replacing the default Q-network.
-        num_eval_eps (int): Number of episodes per evaluation.
-        n_envs (int): Number of parallel vectorised environments.
-        device (str | torch.device): PyTorch device string (``'cpu'``, ``'cuda'``, ``'mps'``).
-        grid_env (bool): Use one-hot observation encoding for grid environments.
-
-    Returns:
-        nn.Module: The trained network (actor / policy / Q-network) ready for inference.
+    Hyperparameters match the signature.
+    Returns the trained network ready for inference.
     """
     Config.env_id = env_id
     run_name = f"{env_id}__{exp_name}__{seed}__{int(time.time())}"

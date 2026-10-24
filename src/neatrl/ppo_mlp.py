@@ -79,16 +79,7 @@ class Config:
 def layer_init(
     layer: nn.Module, std: float = np.sqrt(2), bias_const: float = 0.0
 ) -> nn.Module:
-    """Apply orthogonal init (weight) and constant init (bias) to a linear layer.
-
-    Args:
-        layer (nn.Linear): The linear layer to initialise.
-        std (float): Orthogonal init gain (standard deviation scaling). Defaults to sqrt(2).
-        bias_const (float): Constant value for bias initialisation. Defaults to 0.0.
-
-    Returns:
-        nn.Linear: The initialised layer (mutated in-place and returned).
-    """
+    """Apply orthogonal weight init and constant bias init to a linear layer."""
     torch.nn.init.orthogonal_(layer.weight, std)  # type: ignore[arg-type]
     torch.nn.init.constant_(layer.bias, bias_const)  # type: ignore[arg-type]
     return layer
@@ -110,14 +101,7 @@ class ActorNet(nn.Module):
         self.out = layer_init(nn.Linear(32, action_space))
 
     def forward(self, x: torch.Tensor) -> torch.distributions.Distribution:
-        """Forward pass — returns network output(s).
-
-        Args:
-            x (torch.Tensor): Input tensor.
-
-        Returns:
-            torch.Tensor | tuple[torch.Tensor, ...]: Network output(s).
-        """
+        """Forward pass — returns network output(s)."""
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
@@ -131,15 +115,7 @@ class ActorNet(nn.Module):
         self,
         x: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.distributions.Distribution]:
-        """Sample an action and return it with log-probability and optional entropy.
-
-        Args:
-            x (torch.Tensor): Observation tensor.
-
-        Returns:
-            tuple[torch.Tensor, torch.Tensor] | tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-                Sampled action, log-probability, and (for stochastic policies) entropy.
-        """
+        """Sample an action and return it with log-probability and optional entropy."""
         dist = self.forward(x)
 
         action = dist.sample()
@@ -160,14 +136,7 @@ class CriticNet(nn.Module):
         self.value = layer_init(nn.Linear(16, 1))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass — returns network output(s).
-
-        Args:
-            x (torch.Tensor): Input tensor.
-
-        Returns:
-            torch.Tensor | tuple[torch.Tensor, ...]: Network output(s).
-        """
+        """Forward pass — returns network output(s)."""
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
@@ -184,21 +153,7 @@ def make_env(
     env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = None,
     env: Optional[gym.Env] = None,
 ) -> Callable[[], gym.Env]:
-    """Return a thunk that constructs and seeds a Gymnasium environment.
-
-    Args:
-        env_id (str): Gymnasium environment ID. Ignored when ``env`` is provided.
-        seed (int): Base random seed; actual seed is ``seed + idx``.
-        idx (int): Worker index added to the seed. Defaults to 0.
-        render_mode (str | None): Render mode passed to ``gym.make``. Defaults to None.
-        grid_env (bool): Apply one-hot observation encoding for grid environments.
-        atari_wrapper (bool): Apply Atari preprocessing wrappers when True.
-        env_wrapper (Callable | None): Optional extra wrapper applied after creation.
-        env (gym.Env | None): Pre-built environment; skips ``gym.make`` when provided.
-
-    Returns:
-        Callable[[], gym.Env]: A zero-argument thunk that creates the environment.
-    """
+    """Return a thunk that builds and seeds a Gymnasium environment."""
 
     def thunk():
         """Environment factory thunk (called by SyncVectorEnv)."""
@@ -250,27 +205,8 @@ def evaluate(
     env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = None,
     use_wandb: bool = False,
 ) -> tuple[list[float], list[np.ndarray]]:
+    """Run evaluation episodes; return episodic returns (and optional frames)."""
     # Create evaluation environment
-    """Run evaluation episodes and return episodic returns (and optional video frames).
-
-    Args:
-        model (nn.Module): The policy network to evaluate.
-        device (torch.device | str): Device on which to run the network.
-        env_id (str): Gymnasium environment ID for the evaluation environment.
-        env (gym.Env | None): Pre-created environment; skips ``gym.make`` when provided.
-        seed (int): Random seed for the evaluation environment. Defaults to 42.
-        num_eval_eps (int): Number of episodes to run.
-        record (bool): Record frames when True.
-        render_mode (str | None): Render mode passed to the environment.
-        grid_env (bool): Apply one-hot encoding for grid environments.
-        atari_wrapper (bool): Apply Atari preprocessing wrappers when True.
-        env_wrapper (Callable | None): Optional extra wrapper applied after creation.
-        use_wandb (bool): Upload recorded video to Weights & Biases when True.
-
-    Returns:
-        tuple[list[float], list]: A list of total rewards per episode and a list of
-            recorded RGB frames (empty if capture_video is False).
-    """
     eval_env = make_env(
         env_id if env is None else "",
         seed,
@@ -378,47 +314,12 @@ def train_ppo(
     device: str = Config.device,
     value_clip: bool = False,
 ) -> nn.Module:
-    # Update Config with passed arguments
-    """Train a PPO agent on a vectorised environment, returning the trained actor.
+    """Train a PPO agent on a vectorised environment.
 
-    Args:
-    env_id (str | None): Gymnasium environment ID (e.g. ``'CartPole-v1'``). Mutually exclusive with ``env``.
-    env (gym.Env | None): Pre-created ``gym.Env`` instance. Mutually exclusive with ``env_id``.
-    total_timesteps (int): Total environment interaction steps to train for.
-    seed (int): Global random seed for reproducibility.
-    lr (float): Optimiser learning rate.
-    gamma (float): Discount factor γ (0 < γ ≤ 1).
-    GAE (float): Generalised Advantage Estimation λ (0 = TD, 1 = MC).
-    n_envs (int): Number of parallel vectorised environments.
-    max_steps (int): Rollout steps collected per worker per update.
-    PPO_EPOCHS (int): Epochs of surrogate-objective optimisation per rollout.
-    clip_value (float): PPO clipping parameter ε.
-    ENTROPY_COEFF (float): Entropy bonus coefficient.
-    VALUE_COEFF (float): Value-function loss coefficient.
-    capture_video (bool): Record evaluation episodes to video files when True.
-    use_wandb (bool): Log training metrics to Weights & Biases when True.
-    wandb_project (str): W&B project name (used when use_wandb=True).
-    exp_name (str): Run name used for log directories and W&B.
-    grid_env (bool): Use one-hot observation encoding for grid environments.
-    max_grad_norm (float): Maximum gradient-norm for clipping (0 disables clipping).
-    eval_every (int): Evaluate every this many environment steps.
-    save_every (int): Save a model checkpoint every this many steps.
-    atari_wrapper (bool): Apply Atari preprocessing (grayscale, frame-stack) when True.
-    env_wrapper (Callable | None): Optional callable wrapping the environment after creation.
-    actor_class (type | nn.Module): Custom ``nn.Module`` class or instance replacing the default actor.
-    critic_class (type | nn.Module): Custom ``nn.Module`` class or instance replacing the default critic.
-    num_minibatches (int): Minibatches per policy-update epoch.
-    log_gradients (bool): Log per-layer gradient norms to W&B when True.
-    num_eval_episodes (int): Number of episodes per evaluation.
-    anneal_lr (bool): Linearly anneal the learning rate to zero when True.
-    normalize_obs (bool): Normalise observations with a running mean/std when True.
-    normalize_reward (bool): Normalise rewards with a running std when True.
-    device (str): PyTorch device string (``'cpu'``, ``'cuda'``, ``'mps'``).
-    value_clip (bool): Clip the value-function loss when True.
-
-    Returns:
-        nn.Module: The trained network (actor / policy / Q-network) ready for inference.
+    Pass either ``env_id`` or ``env``. Hyperparameters match the signature.
+    Returns the trained network ready for inference.
     """
+    # Update Config with passed arguments
     Config.env_id = env_id
     Config.total_timesteps = total_timesteps
     Config.seed = seed

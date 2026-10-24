@@ -97,14 +97,7 @@ class ActorNetCNN(nn.Module):
     def forward(self, x):
         # x shape: (batch, height, width, channels) -> permute to (batch, channels, height, width)
         # x = x.permute(0, 3, 1, 2)
-        """Forward pass — returns network output(s).
-
-        Args:
-            x (torch.Tensor): Input tensor.
-
-        Returns:
-            torch.Tensor | tuple[torch.Tensor, ...]: Network output(s).
-        """
+        """Forward pass — returns network output(s)."""
         x = torch.nn.functional.relu(self.conv1(x))
         x = torch.nn.functional.relu(self.conv2(x))
         x = torch.nn.functional.relu(self.conv3(x))
@@ -116,15 +109,7 @@ class ActorNetCNN(nn.Module):
         return mean, log_std
 
     def get_action(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        """Sample an action using the reparameterization trick and return it with log-probability.
-
-        Args:
-            x (torch.Tensor): Observation tensor.
-
-        Returns:
-            tuple[torch.Tensor, torch.Tensor]: Sampled action (tanh-squashed) and
-                corresponding log-probability with correction for tanh squashing.
-        """
+        """Sample an action using the reparameterization trick and return it with log-probability."""
         mean, log_std = self.forward(x)
         std = log_std.exp()
 
@@ -160,16 +145,8 @@ class QNetCNN(nn.Module):
         self.out = nn.Linear(512, 1)
 
     def forward(self, state, action):
+        """Forward pass — returns the Q-value for the given state-action pair."""
         # Process state through conv layers
-        """Forward pass — returns the Q-value for the given state-action pair.
-
-        Args:
-            state (torch.Tensor): State observation tensor.
-            act (torch.Tensor): Action tensor.
-
-        Returns:
-            torch.Tensor: Scalar Q-value for each state-action pair in the batch.
-        """
         state = state.permute(
             0, 3, 1, 2
         )  # (batch, height, width, channels) -> (batch, channels, height, width)
@@ -198,22 +175,8 @@ def make_env(
     env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = None,
     env: Optional[gym.Env] = None,
 ) -> Callable[[], gym.Env]:
+    """Return a thunk that builds and seeds a Gymnasium environment."""
     # Validate that only one of env_id or env is provided
-    """Return a thunk that constructs and seeds a Gymnasium environment.
-
-    Args:
-        env_id (str): Gymnasium environment ID. Ignored when ``env`` is provided.
-        seed (int): Base random seed; actual seed is ``seed + idx``.
-        idx (int): Worker index added to the seed. Defaults to 0.
-        render_mode (str | None): Render mode passed to ``gym.make``. Defaults to None.
-        grid_env (bool): Apply one-hot observation encoding for grid environments.
-        atari_wrapper (bool): Apply Atari preprocessing wrappers when True.
-        env_wrapper (Callable | None): Optional extra wrapper applied after creation.
-        env (gym.Env | None): Pre-built environment; skips ``gym.make`` when provided.
-
-    Returns:
-        Callable[[], gym.Env]: A zero-argument thunk that creates the environment.
-    """
     if env_id and env is not None:
         raise ValueError(
             "Cannot provide both env_id and env. Use env_id for Gymnasium environments or env for custom environments."
@@ -272,27 +235,8 @@ def evaluate(
     env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = None,
     use_wandb: bool = False,
 ) -> tuple[list[float], list[np.ndarray]]:
+    """Run evaluation episodes; return episodic returns (and optional frames)."""
     # Validate that only one of env_id or env is provided
-    """Run evaluation episodes and return episodic returns (and optional video frames).
-
-    Args:
-        model (nn.Module): The policy network to evaluate.
-        device (torch.device | str): Device on which to run the network.
-        env_id (str): Gymnasium environment ID for the evaluation environment.
-        env (gym.Env | None): Pre-created environment; skips ``gym.make`` when provided.
-        seed (int): Random seed for the evaluation environment. Defaults to 42.
-        num_eval_eps (int): Number of episodes to run.
-        record (bool): Record frames when True.
-        render_mode (str | None): Render mode passed to the environment.
-        grid_env (bool): Apply one-hot encoding for grid environments.
-        atari_wrapper (bool): Apply Atari preprocessing wrappers when True.
-        env_wrapper (Callable | None): Optional extra wrapper applied after creation.
-        use_wandb (bool): Upload recorded video to Weights & Biases when True.
-
-    Returns:
-        tuple[list[float], list]: A list of total rewards per episode and a list of
-            recorded RGB frames (empty if capture_video is False).
-    """
     if env_id and env is not None:
         raise ValueError(
             "Cannot provide both env_id and env. Use env_id for Gymnasium environments or env for custom environments."
@@ -408,47 +352,12 @@ def train_sac_cnn(
     actor_class: Any = ActorNetCNN,
     q_network_class: Any = QNetCNN,
 ) -> nn.Module:
-    # Update Config with passed arguments
     """Train a CNN-based SAC agent on pixel observations.
 
-    Args:
-        env_id (str | None): Gymnasium environment ID. Mutually exclusive with ``env``.
-        env (gym.Env | None): Pre-created ``gym.Env`` instance. Mutually exclusive with ``env_id``.
-        total_timesteps (int): Total environment interaction steps to train for.
-        seed (int): Global random seed for reproducibility.
-        lr (float): Optimiser learning rate.
-        buffer_size (int): Replay buffer capacity (number of transitions).
-        gamma (float): Discount factor γ (0 < γ ≤ 1).
-        tau (float): Soft target-network update coefficient (0 < τ ≤ 1).
-        target_network_frequency (int): Sync target networks every this many steps.
-        batch_size (int): Mini-batch size sampled from the replay buffer.
-        alpha (float): Initial entropy regularisation coefficient α.
-        autotune_alpha (bool): Automatically tune α via a dual-variable update when True.
-        target_entropy_scale (float): Target entropy = target_entropy_scale × action_dim.
-        learning_starts (int): Random-action steps before gradient updates begin.
-        policy_frequency (int): Update the actor every this many critic updates.
-        capture_video (bool): Record evaluation episodes to video files when True.
-        use_wandb (bool): Log training metrics to Weights & Biases when True.
-        wandb_project (str): W&B project name (used when use_wandb=True).
-        wandb_entity (str): W&B entity/username (used when use_wandb=True).
-        exp_name (str): Run name used for log directories and W&B.
-        eval_every (int): Evaluate every this many environment steps.
-        save_every (int): Save a model checkpoint every this many steps.
-        num_eval_episodes (int): Number of episodes per evaluation.
-        n_envs (int): Number of parallel vectorised environments.
-        max_grad_norm (float): Maximum gradient-norm for clipping (0 disables clipping).
-        log_gradients (bool): Log per-layer gradient norms to W&B when True.
-        device (str): PyTorch device string (``'cpu'``, ``'cuda'``, ``'mps'``).
-        grid_env (bool): Use one-hot observation encoding for grid environments.
-        atari_wrapper (bool): Apply Atari preprocessing (grayscale, frame-stack) when True.
-        env_wrapper (Callable | None): Optional callable wrapping the environment after creation.
-        normalize_reward (bool): Normalise rewards with a running std when True.
-        actor_class (type | nn.Module): Custom ``nn.Module`` class or instance replacing the default actor.
-        q_network_class (type | nn.Module): Custom class or instance for the twin Q-networks (SAC).
-
-    Returns:
-        nn.Module: The trained network (actor / policy / Q-network) ready for inference.
+    Pass either ``env_id`` or ``env``. Hyperparameters match the signature.
+    Returns the trained network ready for inference.
     """
+    # Update Config with passed arguments
     Config.env_id = env_id or env.spec.id  # type: ignore[union-attr]
     Config.total_timesteps = total_timesteps
     Config.seed = seed

@@ -41,8 +41,8 @@ except ImportError:
 # ===== CONFIGURATION =====
 @dataclass
 class Config:
-    # Experiment settings
     """Hyperparameters and settings for REINFORCE training."""
+    # Experiment settings
 
     exp_name: str = "REINFORCE"
     seed: int = 42
@@ -111,28 +111,13 @@ class PolicyNet(nn.Module):
         self.out = nn.Linear(16, action_space)
 
     def forward(self, x):
-        """Forward pass — returns network output(s).
-
-        Args:
-            x (torch.Tensor): Input tensor.
-
-        Returns:
-            torch.Tensor | tuple[torch.Tensor, ...]: Network output(s).
-        """
+        """Forward pass — returns network output(s)."""
         x = self.out(self.fc3(torch.relu(self.fc2(torch.relu(self.fc1(x))))))
         x = torch.nn.functional.softmax(x, dim=-1)  # Apply softmax to get probabilities
         return x
 
     def get_action(self, x):
-        """Sample an action and return it with log-probability and optional entropy.
-
-        Args:
-            x (torch.Tensor): Observation tensor.
-
-        Returns:
-            tuple[torch.Tensor, torch.Tensor] | tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-                Sampled action, log-probability, and (for stochastic policies) entropy.
-        """
+        """Sample an action and return it with log-probability and optional entropy."""
         action_probs = self.forward(x)
         dist = torch.distributions.Categorical(
             action_probs
@@ -152,21 +137,7 @@ def make_env(
     env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = None,
     env: Optional[gym.Env] = None,
 ) -> Callable[[], gym.Env]:
-    """Return a thunk that constructs and seeds a Gymnasium environment.
-
-    Args:
-        env_id (str): Gymnasium environment ID. Ignored when ``env`` is provided.
-        seed (int): Base random seed; actual seed is ``seed + idx``.
-        idx (int): Worker index added to the seed. Defaults to 0.
-        render_mode (str | None): Render mode passed to ``gym.make``. Defaults to None.
-        grid_env (bool): Apply one-hot observation encoding for grid environments.
-        atari_wrapper (bool): Apply Atari preprocessing wrappers when True.
-        env_wrapper (Callable | None): Optional extra wrapper applied after creation.
-        env (gym.Env | None): Pre-built environment; skips ``gym.make`` when provided.
-
-    Returns:
-        Callable[[], gym.Env]: A zero-argument thunk that creates the environment.
-    """
+    """Return a thunk that builds and seeds a Gymnasium environment."""
 
     def thunk():
         """Environment factory thunk (called by SyncVectorEnv)."""
@@ -216,26 +187,7 @@ def evaluate(
     atari_wrapper=False,
     grid_env=False,
 ):
-    """Run evaluation episodes and return episodic returns (and optional video frames).
-
-    Args:
-        model (nn.Module): The policy network to evaluate.
-        device (torch.device | str): Device on which to run the network.
-        env_id (str): Gymnasium environment ID for the evaluation environment.
-        env (gym.Env | None): Pre-created environment; skips ``gym.make`` when provided.
-        seed (int): Random seed for the evaluation environment. Defaults to 42.
-        num_eval_eps (int): Number of episodes to run.
-        record (bool): Record frames when True.
-        render_mode (str | None): Render mode passed to the environment.
-        grid_env (bool): Apply one-hot encoding for grid environments.
-        atari_wrapper (bool): Apply Atari preprocessing wrappers when True.
-        env_wrapper (Callable | None): Optional extra wrapper applied after creation.
-        use_wandb (bool): Upload recorded video to Weights & Biases when True.
-
-    Returns:
-        tuple[list[float], list]: A list of total rewards per episode and a list of
-            recorded RGB frames (empty if capture_video is False).
-    """
+    """Run evaluation episodes; return episodic returns (and optional frames)."""
     eval_env = make_env(
         env_id=env_id,
         env=env,
@@ -344,37 +296,8 @@ def train_reinforce_cnn(
 ):
     """Train a CNN-based REINFORCE agent on pixel observations.
 
-    Args:
-        env_id (str | None): Gymnasium environment ID. Mutually exclusive with ``env``.
-        env (gym.Env | None): Pre-created ``gym.Env`` instance. Mutually exclusive with ``env_id``.
-        total_episodes (int): Total training episodes.
-        seed (int): Global random seed for reproducibility.
-        lr (float): Optimiser learning rate.
-        gamma (float): Discount factor γ (0 < γ ≤ 1).
-        max_grad_norm (float): Maximum gradient-norm for clipping (0 disables clipping).
-        capture_video (bool): Record evaluation episodes to video files when True.
-        use_wandb (bool): Log training metrics to Weights & Biases when True.
-        wandb_project (str): W&B project name (used when use_wandb=True).
-        wandb_entity (str): W&B entity/username (used when use_wandb=True).
-        exp_name (str): Run name used for log directories and W&B.
-        eval_every (int): Evaluate every this many environment steps.
-        save_every (int): Save a model checkpoint every this many steps.
-        atari_wrapper (bool): Apply Atari preprocessing (grayscale, frame-stack) when True.
-        custom_agent (nn.Module | None): Custom ``nn.Module`` instance replacing the default policy network.
-        num_eval_eps (int): Number of episodes per evaluation.
-        n_envs (int): Number of parallel vectorised environments.
-        device (str): PyTorch device string (``'cpu'``, ``'cuda'``, ``'mps'``).
-        grid_env (bool): Use one-hot observation encoding for grid environments.
-        use_entropy (bool): Add an entropy bonus to the policy-gradient loss when True.
-        entropy_coeff (float): Entropy-bonus coefficient (active when use_entropy=True).
-        normalize_obs (bool): Normalise observations with a running mean/std when True.
-        normalize_reward (bool): Normalise rewards with a running std when True.
-        log_gradients (bool): Log per-layer gradient norms to W&B when True.
-        anneal_lr (bool): Linearly anneal the learning rate to zero when True.
-        env_wrapper (Callable | None): Optional callable wrapping the environment after creation.
-
-    Returns:
-        nn.Module: The trained network (actor / policy / Q-network) ready for inference.
+    Pass either ``env_id`` or ``env``. Hyperparameters match the signature.
+    Returns the trained network ready for inference.
     """
     run_name = f"{Config.env_id}__{Config.exp_name}__{Config.seed}__{int(time.time())}"
 

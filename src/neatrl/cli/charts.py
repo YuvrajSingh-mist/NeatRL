@@ -22,16 +22,7 @@ def _scale(values: list[float], width: int) -> list[float]:
 
 
 def sparkline(values: list[float], width: int = 20, color: str = "cyan") -> str:
-    """Render a single-line sparkline from a list of values.
-
-    Args:
-        values: The time-series values.
-        width: Width in characters.
-        color: Rich color tag (e.g. "cyan", "green", "yellow").
-
-    Returns:
-        A Rich-markup string of the sparkline.
-    """
+    """Render a single-line sparkline from a list of values."""
     if not values:
         return f"[{color}]{'─' * width}[/{color}]"
     scaled = _scale(values, width)
