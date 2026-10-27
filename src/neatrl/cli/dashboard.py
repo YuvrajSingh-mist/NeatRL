@@ -2,6 +2,7 @@
 
 import atexit
 import dataclasses
+import io
 import logging
 import os
 import re
@@ -171,10 +172,16 @@ class Dashboard:
         # History tracker for time-series charts
         self.history = HistoryTracker(maxlen=HISTORY_MAXLEN)
 
-        # Terminal raw mode
-        self.fd = sys.stdin.fileno()
+        # Terminal raw mode. This is best effort: stdin is a pseudo-file under
+        # pytest capture, notebooks and some CI runners, where fileno() raises
+        # instead of returning a descriptor.
+        self.fd = None
+        try:
+            self.fd = sys.stdin.fileno()
+        except (OSError, ValueError, AttributeError, io.UnsupportedOperation):
+            pass
         self.oldTerm = None
-        if os.isatty(self.fd):
+        if self.fd is not None and os.isatty(self.fd):
             self.oldTerm = termios.tcgetattr(self.fd)
             tty.setcbreak(self.fd)
             oldTermCopy = self.oldTerm
@@ -696,7 +703,7 @@ class Dashboard:
         return cap.get()
 
     def close(self, message: str = "Training complete.") -> None:
-        if self.oldTerm is not None and os.isatty(self.fd):
+        if self.oldTerm is not None and self.fd is not None and os.isatty(self.fd):
             termios.tcsetattr(self.fd, termios.TCSADRAIN, self.oldTerm)
         root = logging.getLogger()
         root.removeHandler(self.logHandler)

@@ -42,6 +42,7 @@ except ImportError:
 @dataclass
 class Config:
     """Hyperparameters and settings for REINFORCE training."""
+
     # Experiment settings
 
     exp_name: str = "REINFORCE"

@@ -15,6 +15,9 @@ _SCRIPTS = {
     "ddpg": "ddpg",
     "ddpg-cnn": "ddpg",
     "dqn": "dqn",
+    "dqn-cnn": "dqn",
+    "double-dqn": "double_dqn",
+    "double-dqn-cnn": "double_dqn",
     "dueling-dqn": "dueling_dqn",
     "ppo": "ppo",
     "ppo-cnn": "ppo",
@@ -49,6 +52,8 @@ def main() -> None:
         epilog=(
             "Examples:\n"
             "  neatrl train dqn CartPole-v1\n"
+            "  neatrl train dqn-cnn ALE/Pong-v5\n"
+            "  neatrl train double-dqn-cnn ALE/Pong-v5\n"
             "  neatrl train q-learning FrozenLake-v1\n"
             "  neatrl train ppo LunarLander-v3\n"
             "  neatrl train sac Pendulum-v1\n"

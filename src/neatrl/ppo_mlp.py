@@ -723,7 +723,7 @@ def train_ppo(
                             )
                         # Push chart metrics
                         if dashboard:
-                            dashboard.push_many(
+                            dashboard.push_metrics(
                                 ep_return=ep_ret, ep_length=float(ep_len)
                             )
             else:
@@ -741,7 +741,9 @@ def train_ppo(
                         )
                     # Push chart metrics
                     if dashboard:
-                        dashboard.push_many(ep_return=ep_ret, ep_length=float(ep_len))
+                        dashboard.push_metrics(
+                            ep_return=ep_ret, ep_length=float(ep_len)
+                        )
 
         # Log losses and metrics
         if Config.use_wandb and update % 10 == 0:
@@ -771,7 +773,7 @@ def train_ppo(
             )
             if dashboard:
                 # Push PPO-specific chart metrics
-                dashboard.push_many(
+                dashboard.push_metrics(
                     entropy=entropy_loss.item(),
                     clip_fraction=float(np.mean(clipfracs)),
                     approx_kl=approx_kl.item(),

@@ -682,7 +682,7 @@ def train_sac(
                                 )
                             # Push chart metrics
                             if dashboard:
-                                dashboard.push_many(
+                                dashboard.push_metrics(
                                     ep_return=ep_ret, ep_length=float(ep_len)
                                 )
                 else:
@@ -699,7 +699,7 @@ def train_sac(
                             )
                         # Push chart metrics
                         if dashboard:
-                            dashboard.push_many(
+                            dashboard.push_metrics(
                                 ep_return=ep_ret, ep_length=float(ep_len)
                             )
 
@@ -717,7 +717,7 @@ def train_sac(
                 )
                 if dashboard:
                     # Push SAC-specific chart metrics
-                    dashboard.push_many(
+                    dashboard.push_metrics(
                         alpha=float(alpha),
                         q1_mean=current_q1.mean().item(),
                         q2_mean=current_q2.mean().item(),

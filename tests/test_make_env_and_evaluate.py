@@ -128,3 +128,63 @@ class TestEvaluateDDPG:
             record=False,
         )
         assert frames == []
+
+
+# ─── Trainer callback / checkpointing contract ───────────────────────────────
+
+
+class TestDVNTrainerCallbacks:
+    """Regression tests for hooks the overestimation demo relies on."""
+
+    def test_eval_callback_receives_model_and_save_zero_is_safe(self):
+        from neatrl.dqn_mlp import train_dqn
+
+        seen = []
+        train_dqn(
+            env_id="CartPole-v1",
+            total_timesteps=220,
+            seed=0,
+            learning_starts=50,
+            buffer_size=500,
+            batch_size=32,
+            train_frequency=10,
+            target_network_frequency=50,
+            eval_every=100,
+            save_every=0,  # used to raise ZeroDivisionError
+            num_eval_eps=1,
+            use_wandb=False,
+            capture_video=False,
+            device="cpu",
+            eval_callback=lambda step, metrics: seen.append((step, metrics)),
+        )
+
+        assert seen, "eval_callback was never called"
+        step, metrics = seen[0]
+        assert isinstance(step, int)
+        assert "avg_return" in metrics
+        # The demo measures the Q-values of the network being trained.
+        assert isinstance(metrics["model"], torch.nn.Module)
+
+    def test_double_dqn_eval_callback_receives_model(self):
+        from neatrl.double_dqn_mlp import train_double_dqn
+
+        seen = []
+        train_double_dqn(
+            env_id="CartPole-v1",
+            total_timesteps=220,
+            seed=0,
+            learning_starts=50,
+            buffer_size=500,
+            batch_size=32,
+            train_frequency=10,
+            target_network_frequency=50,
+            eval_every=100,
+            save_every=0,
+            num_eval_eps=1,
+            use_wandb=False,
+            capture_video=False,
+            device="cpu",
+            eval_callback=lambda step, metrics: seen.append(metrics),
+        )
+
+        assert seen and isinstance(seen[0]["model"], torch.nn.Module)

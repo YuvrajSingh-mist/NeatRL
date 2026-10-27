@@ -12,8 +12,9 @@ from dataclasses import dataclass
 
 import gymnasium as gym
 import numpy as np
-import wandb
 from tqdm import tqdm
+
+import wandb
 
 from .utils import configure_logging, get_logger
 
@@ -282,7 +283,7 @@ def train_q_learning(
             if dashboard:
                 dashboard.push_metrics(ep_return=ep_ret, ep_length=float(ep_len))
 
-        if step > 0 and step % eval_every == 0:
+        if eval_every > 0 and step > 0 and step % eval_every == 0:
             episodic_returns, _ = evaluate(
                 env_id,
                 q_table,
@@ -326,7 +327,7 @@ def train_q_learning(
                 }
             )
 
-        if step > 0 and step % save_every == 0:
+        if save_every > 0 and step > 0 and step % save_every == 0:
             model_path = f"runs/{run_name}/models/q_table_step_{step}.npy"
             np.save(model_path, q_table)
             logger.info("Q-table saved at step %d to %s", step, model_path)

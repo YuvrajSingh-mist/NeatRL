@@ -18,23 +18,33 @@ def calculate_param_norm(model: nn.Module) -> float:
 
 
 def validate_q_network_dimensions(
-    q_network: nn.Module, obs_dim: int, action_dim: int
+    q_network: nn.Module,
+    obs_dim: Union[int, tuple[int, ...]],
+    action_dim: int,
 ) -> None:
     """Validate Q-network input/output dims against the env spaces."""
-    # Find first Linear layer for input dimension
-    first_layer = None
-    for module in q_network.modules():
-        if isinstance(module, nn.Linear):
-            first_layer = module
-            break
-    if first_layer is None:
-        raise ValueError(
-            "Q-network must have at least one Linear layer for dimension validation."
-        )
-    if first_layer.in_features != obs_dim:
-        raise ValueError(
-            f"Q-network input dimension {first_layer.in_features} does not match observation dimension {obs_dim}."
-        )
+    if isinstance(obs_dim, tuple):
+        # For Atari-like image inputs, require a convolutional trunk.
+        has_conv = any(isinstance(module, nn.Conv2d) for module in q_network.modules())
+        if not has_conv:
+            logger.warning(
+                "Observation is multi-dimensional but network has no Conv2d layers."
+            )
+    else:
+        # Find first Linear layer for input dimension
+        first_layer = None
+        for module in q_network.modules():
+            if isinstance(module, nn.Linear):
+                first_layer = module
+                break
+        if first_layer is None:
+            raise ValueError(
+                "Q-network must have at least one Linear layer for dimension validation."
+            )
+        if first_layer.in_features != obs_dim:
+            raise ValueError(
+                f"Q-network input dimension {first_layer.in_features} does not match observation dimension {obs_dim}."
+            )
 
     # Find last Linear layer for output dimension
     last_layer = None

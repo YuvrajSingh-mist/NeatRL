@@ -12,10 +12,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import wandb
 from gymnasium.wrappers import AtariPreprocessing, FrameStackObservation
 from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
+
+import wandb
 
 from .cli.dashboard import Dashboard
 from .utils import configure_logging, get_logger, get_space_dims, setup_device
@@ -39,6 +40,7 @@ except ImportError:
 @dataclass
 class Config:
     """Hyperparameters and settings for Dueling DQN training."""
+
     # Experiment settings
 
     exp_name: str = "Dueling-DQN"
@@ -127,7 +129,13 @@ def make_env(env_id, seed, idx, atari_wrapper=False, grid_env=False):
 
     def thunk():
         """Create environment with video recording"""
-        env = gym.make(env_id, render_mode="rgb_array")
+        make_kwargs: dict = {"render_mode": "rgb_array"}
+        if atari_wrapper:
+            # AtariPreprocessing does the frame skipping itself, and the
+            # paper's setup disables sticky actions.
+            make_kwargs["frameskip"] = 1
+            make_kwargs["repeat_action_probability"] = 0.0
+        env = gym.make(env_id, **make_kwargs)
 
         # Special handling for discrete states (like CliffWalking)
         if grid_env:
@@ -375,7 +383,7 @@ def train_dueling_dqn(
                 if rnd >= eps
                 else q_network(torch.tensor(obs, device=device, dtype=torch.float32))[0]
             )
-            dashboard.push_many(
+            dashboard.push_metrics(
                 epsilon=eps,
                 q_mean=_q_for_metric.mean().item(),
             )
@@ -389,7 +397,7 @@ def train_dueling_dqn(
 
         # Push buffer fill %
         if dashboard:
-            dashboard.push_many(
+            dashboard.push_metrics(
                 buffer_fill=min(
                     100.0 * replay_buffer.pos / replay_buffer.buffer_size, 100.0
                 ),
@@ -422,7 +430,7 @@ def train_dueling_dqn(
                             )
                         # Push chart metrics
                         if dashboard:
-                            dashboard.push_many(
+                            dashboard.push_metrics(
                                 ep_return=ep_ret, ep_length=float(ep_len)
                             )
             else:
@@ -443,7 +451,9 @@ def train_dueling_dqn(
                         )
                     # Push chart metrics
                     if dashboard:
-                        dashboard.push_many(ep_return=ep_ret, ep_length=float(ep_len))
+                        dashboard.push_metrics(
+                            ep_return=ep_ret, ep_length=float(ep_len)
+                        )
 
         if step > learning_starts and step % train_frequency == 0:
             data = replay_buffer.sample(batch_size)
@@ -525,7 +535,7 @@ def train_dueling_dqn(
 
             # Push total_loss for chart
             if dashboard:
-                dashboard.push_many(total_loss=loss.item())
+                dashboard.push_metrics(total_loss=loss.item())
 
             # Log loss and metrics every 100 steps
             if step % 100 == 0:
@@ -583,7 +593,7 @@ def train_dueling_dqn(
                 )
 
         # Model evaluation & saving
-        if step % eval_every == 0:
+        if eval_every > 0 and step % eval_every == 0:
             episodic_returns, _ = evaluate(
                 env_id,
                 q_network,
@@ -629,7 +639,7 @@ def train_dueling_dqn(
                 }
             )
 
-        if step % save_every == 0 and step > 0:
+        if save_every > 0 and step % save_every == 0 and step > 0:
             model_path = f"runs/{run_name}/models/dueling_dqn_model_step_{step}.pth"
             os.makedirs(os.path.dirname(model_path), exist_ok=True)
             torch.save(q_network.state_dict(), model_path)

@@ -152,6 +152,10 @@ The docs include:
   - Improved learning stability
   - Better performance on complex environments
 
+- **Double DQN** - Q-learning target with decoupled action selection/evaluation
+  - Removes the upward bias of the `max` in the DQN target
+  - Same API and hyperparameters as DQN (`double_dqn_mlp`, `double_dqn_cnn`)
+
 - **REINFORCE** - Policy gradient method for discrete and continuous action spaces
   - Atari game support with automatic CNN architecture
   - Parallel environment training (`n_envs` support)

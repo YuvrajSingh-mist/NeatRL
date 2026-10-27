@@ -10,6 +10,9 @@ from .a2c_cnn import train_a2c_cnn
 from .a2c_mlp import train_a2c
 from .ddpg_cnn import train_ddpg_cnn
 from .ddpg_mlp import train_ddpg
+from .double_dqn_cnn import train_double_dqn_cnn
+from .double_dqn_mlp import train_double_dqn
+from .dqn_cnn import train_dqn_cnn
 from .dqn_mlp import train_dqn
 from .dueling_dqn_mlp import train_dueling_dqn
 from .ppo_cnn import train_ppo_cnn
@@ -26,6 +29,9 @@ from .td3_mlp import train_td3
 
 __all__ = [
     "train_dqn",
+    "train_dqn_cnn",
+    "train_double_dqn",
+    "train_double_dqn_cnn",
     "train_q_learning",
     "train_reinforce",
     "train_dueling_dqn",

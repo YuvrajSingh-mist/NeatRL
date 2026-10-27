@@ -13,7 +13,5 @@ neatrl train q-learning FrozenLake-v1
 ```python
 from neatrl.q_learning import train_q_learning
 
-q_table = train_q_learning(
-    env_id="FrozenLake-v1", total_timesteps=50_000, use_wandb=False
-)
+q_table = train_q_learning(env_id="FrozenLake-v1", total_timesteps=50_000, use_wandb=False)
 ```

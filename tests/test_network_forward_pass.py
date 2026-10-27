@@ -40,6 +40,52 @@ class TestDQNNetworks:
         assert _no_nan(net(torch.randn(BATCH, OBS_DISC)))
 
 
+# ─── DQN (CNN / Atari) ───────────────────────────────────────────────────────
+
+OBS_IMAGE = (4, 84, 84)  # 4 stacked 84x84 grayscale frames
+
+
+class TestDQNCNNNetworks:
+    def test_qnet_cnn_output_shape_uint8(self):
+        from neatrl.dqn_cnn import QNetCNN
+
+        net = QNetCNN(OBS_IMAGE, ACT_DISC)
+        obs = torch.zeros((BATCH, *OBS_IMAGE), dtype=torch.uint8)
+        assert net(obs).shape == (BATCH, ACT_DISC)
+
+    def test_qnet_cnn_accepts_float_input(self):
+        from neatrl.dqn_cnn import QNetCNN
+
+        net = QNetCNN(OBS_IMAGE, ACT_DISC)
+        out = net(torch.rand(BATCH, *OBS_IMAGE))
+        assert out.shape == (BATCH, ACT_DISC)
+        assert _no_nan(out)
+
+    def test_qnet_cnn_infers_other_screen_sizes(self):
+        from neatrl.dqn_cnn import QNetCNN
+
+        net = QNetCNN((4, 96, 96), ACT_DISC)
+        out = net(torch.zeros((BATCH, 4, 96, 96), dtype=torch.uint8))
+        assert out.shape == (BATCH, ACT_DISC)
+
+    def test_qnet_cnn_no_nan(self):
+        from neatrl.dqn_cnn import QNetCNN
+
+        net = QNetCNN(OBS_IMAGE, ACT_DISC)
+        obs = torch.randint(0, 255, (BATCH, *OBS_IMAGE), dtype=torch.uint8)
+        assert _no_nan(net(obs))
+
+    def test_qnet_cnn_uint8_and_float_match_after_scaling(self):
+        from neatrl.dqn_cnn import QNetCNN
+
+        net = QNetCNN(OBS_IMAGE, ACT_DISC).eval()
+        obs = torch.randint(0, 255, (1, *OBS_IMAGE), dtype=torch.uint8)
+        with torch.no_grad():
+            from_uint8 = net(obs)
+            from_float = net(obs.float() / 255.0)
+        assert torch.allclose(from_uint8, from_float, atol=1e-5)
+
+
 # ─── Dueling DQN ─────────────────────────────────────────────────────────────
 
 
@@ -280,3 +326,91 @@ class TestRunningMeanStd:
         rms = RunningMeanStd()
         rms.update_from_moments(batch_mean=5.0, batch_var=1.0, batch_count=10)
         assert rms.count > 1e-4  # count was updated
+
+
+# ─── Double DQN target ───────────────────────────────────────────────────────
+
+
+def _zeroed_qnet(obs_dim: int, act_dim: int, q_values: list[float]):
+    """Build a QNet whose Q-values are pinned to ``q_values`` for any input.
+
+    All weights are zero and the second hidden layer is biased to one, so the
+    head sees an all-ones feature vector and action ``i`` scores ``q_values[i]``.
+    """
+    from neatrl.double_dqn_mlp import QNet
+
+    net = QNet(obs_dim, act_dim)
+    for param in net.parameters():
+        param.data.zero_()
+    net.fc2.bias.data.fill_(1.0)
+    for action, value in enumerate(q_values):
+        net.q_value.weight.data[action, 0] = value
+    return net
+
+
+class TestDoubleDQNTarget:
+    def test_matches_manual_double_target(self):
+        from neatrl.double_dqn_mlp import QNet, double_dqn_target
+
+        torch.manual_seed(0)
+        online = QNet(OBS_DISC, ACT_DISC)
+        torch.manual_seed(1)
+        target = QNet(OBS_DISC, ACT_DISC)
+
+        next_obs = torch.randn(BATCH, OBS_DISC)
+        rewards = torch.randn(BATCH, 1)
+        dones = torch.zeros(BATCH, 1)
+
+        out = double_dqn_target(online, target, next_obs, rewards, dones, 0.99)
+        best = online(next_obs).argmax(dim=1, keepdim=True)
+        expected = rewards.flatten() + 0.99 * target(next_obs).gather(1, best).squeeze(
+            1
+        )
+
+        assert torch.allclose(out, expected)
+        assert out.shape == (BATCH,)
+        assert not out.requires_grad
+
+    def test_selects_with_online_net_and_evaluates_with_target_net(self):
+        # Online prefers action 0, target scores action 1 much higher, so the
+        # double target must ignore the target's max.
+        from neatrl.double_dqn_mlp import double_dqn_target
+
+        online = _zeroed_qnet(1, 2, [1.0, 0.0])
+        target = _zeroed_qnet(1, 2, [0.0, 5.0])
+
+        next_obs = torch.tensor([[1.0]])
+        rewards = torch.zeros(1, 1)
+        dones = torch.zeros(1, 1)
+
+        double_target = double_dqn_target(online, target, next_obs, rewards, dones, 0.5)
+        plain_target = 0.5 * target(next_obs).max(dim=1)[0]
+
+        assert torch.allclose(double_target, torch.zeros(1))
+        assert double_target.item() < plain_target.item()
+
+    def test_terminal_transitions_do_not_bootstrap(self):
+        from neatrl.double_dqn_mlp import QNet, double_dqn_target
+
+        online = QNet(OBS_DISC, ACT_DISC)
+        target = QNet(OBS_DISC, ACT_DISC)
+        rewards = torch.randn(BATCH, 1)
+        dones = torch.ones(BATCH, 1)
+
+        out = double_dqn_target(
+            online, target, torch.randn(BATCH, OBS_DISC), rewards, dones, 0.99
+        )
+        assert torch.allclose(out, rewards.flatten())
+
+    def test_cnn_variant_shapes(self):
+        from neatrl.double_dqn_cnn import QNetCNN, double_dqn_target
+
+        online = QNetCNN(OBS_IMAGE, ACT_DISC)
+        target = QNetCNN(OBS_IMAGE, ACT_DISC)
+        obs = torch.zeros((BATCH, *OBS_IMAGE), dtype=torch.uint8)
+        rewards = torch.ones(BATCH, 1)
+        dones = torch.zeros(BATCH, 1)
+
+        out = double_dqn_target(online, target, obs, rewards, dones, 0.99)
+        assert out.shape == (BATCH,)
+        assert _no_nan(out)

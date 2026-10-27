@@ -2,6 +2,7 @@
 
 import os
 import random
+import sys
 import time
 from dataclasses import dataclass
 from typing import Any, Optional, Union
@@ -12,10 +13,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import wandb
 from gymnasium.wrappers import AtariPreprocessing, FrameStackObservation
 from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
+
+import wandb
 
 from .cli.dashboard import Dashboard
 from .utils import configure_logging, get_logger, get_space_dims, setup_device
@@ -39,6 +41,7 @@ except ImportError:
 @dataclass
 class Config:
     """Hyperparameters and settings for DQN training."""
+
     # Experiment settings
 
     exp_name: str = "DQN"
@@ -116,7 +119,13 @@ def make_env(env_id, seed, idx, atari_wrapper=False, grid_env=False):
 
     def thunk():
         """Create environment with video recording"""
-        env = gym.make(env_id, render_mode="rgb_array")
+        make_kwargs: dict = {"render_mode": "rgb_array"}
+        if atari_wrapper:
+            # AtariPreprocessing does the frame skipping itself, and the
+            # paper's setup disables sticky actions.
+            make_kwargs["frameskip"] = 1
+            make_kwargs["repeat_action_probability"] = 0.0
+        env = gym.make(env_id, **make_kwargs)
 
         # Special handling for FrozenLake discrete states
         if grid_env:
@@ -155,12 +164,18 @@ def evaluate(
     returns = []
     frames = []
 
+    # Some envs (e.g. CliffWalking-v0) are registered without a TimeLimit, so a
+    # policy that circles forever would never set terminated/truncated. Cap the
+    # episode so evaluation always terminates.
+    spec = getattr(eval_env, "spec", None)
+    max_steps = getattr(spec, "max_episode_steps", None) or 10_000
+
     for _ in range(num_eval_eps):
         obs, _ = eval_env.reset()
         done = False
         episode_reward = 0.0
 
-        while not done:
+        for _step in range(max_steps):
             if capture_video:
                 try:
                     frame = eval_env.render()
@@ -185,6 +200,8 @@ def evaluate(
             obs, reward, terminated, truncated, _ = eval_env.step(action)
             done = terminated or truncated
             episode_reward += float(reward)
+            if done:
+                break
 
         returns.append(episode_reward)
 
@@ -237,10 +254,13 @@ def train_dqn(
     n_envs=Config.n_envs,
     device=Config.device,
     grid_env=Config.grid_env,
+    eval_callback=None,
 ):
     """Train a DQN agent on a Gymnasium environment.
 
     Hyperparameters match the signature.
+    ``eval_callback`` receives ``(step, metrics)`` after every evaluation, where
+    ``metrics["model"]`` is the network currently being trained.
     Returns the trained network ready for inference.
     """
     Config.env_id = env_id
@@ -335,9 +355,12 @@ def train_dqn(
     update_count = 0
     latest_loss = 0.0
 
-    dashboard = Dashboard(
-        "DQN", Config.env_id or "custom", total_timesteps, config=Config
-    )
+    # Only show the interactive dashboard on a TTY; otherwise let logs through.
+    dashboard = None
+    if sys.stdout.isatty():
+        dashboard = Dashboard(
+            "DQN", Config.env_id or "custom", total_timesteps, config=Config
+        )
 
     for step in tqdm(range(total_timesteps), disable=True):
         step = step * n_envs
@@ -377,7 +400,7 @@ def train_dqn(
 
         # Push chart metrics
         if dashboard:
-            dashboard.push_many(
+            dashboard.push_metrics(
                 epsilon=eps,
                 q_mean=q_values.mean().item()
                 if rnd >= eps
@@ -397,7 +420,7 @@ def train_dqn(
 
         # Push buffer fill %
         if dashboard:
-            dashboard.push_many(
+            dashboard.push_metrics(
                 buffer_fill=min(
                     100.0 * replay_buffer.pos / replay_buffer.buffer_size, 100.0
                 ),
@@ -430,7 +453,7 @@ def train_dqn(
                             )
                         # Push chart metrics
                         if dashboard:
-                            dashboard.push_many(
+                            dashboard.push_metrics(
                                 ep_return=ep_ret, ep_length=float(ep_len)
                             )
             else:
@@ -451,7 +474,9 @@ def train_dqn(
                         )
                     # Push chart metrics
                     if dashboard:
-                        dashboard.push_many(ep_return=ep_ret, ep_length=float(ep_len))
+                        dashboard.push_metrics(
+                            ep_return=ep_ret, ep_length=float(ep_len)
+                        )
 
         if step > learning_starts and step % train_frequency == 0:
             data = replay_buffer.sample(batch_size)
@@ -538,7 +563,7 @@ def train_dqn(
 
             # Push total_loss for chart
             if dashboard:
-                dashboard.push_many(total_loss=loss.item())
+                dashboard.push_metrics(total_loss=loss.item())
 
             # Log loss and metrics every 100 steps
             if step % 100 == 0:
@@ -594,7 +619,7 @@ def train_dqn(
                 )
 
         # Model evaluation & saving
-        if step % eval_every == 0:
+        if eval_every > 0 and step % eval_every == 0:
             episodic_returns, _ = evaluate(
                 env_id,
                 q_network,
@@ -613,6 +638,10 @@ def train_dqn(
             logger.info(
                 f"Evaluation returns: {episodic_returns}, Average: {avg_return:.2f}"
             )
+            if eval_callback is not None:
+                eval_callback(
+                    step, {"avg_return": float(avg_return), "model": q_network}
+                )
 
         if done.all():
             obs, _ = env.reset()
@@ -643,11 +672,11 @@ def train_dqn(
                 }
             )
 
-        if step % save_every == 0 and step > 0:
-            model_path = f"runs/{run_name}/models/dqn_model_step_{step}.pth"
-            os.makedirs(os.path.dirname(model_path), exist_ok=True)
-            torch.save(q_network.state_dict(), model_path)
-            logger.info(f"Model saved at step {step} to {model_path}")
+            if save_every > 0 and step % save_every == 0 and step > 0:
+                model_path = f"runs/{run_name}/models/dqn_model_step_{step}.pth"
+                os.makedirs(os.path.dirname(model_path), exist_ok=True)
+                torch.save(q_network.state_dict(), model_path)
+                logger.info(f"Model saved at step {step} to {model_path}")
 
     # Save final video to WandB
     if use_wandb and capture_video:

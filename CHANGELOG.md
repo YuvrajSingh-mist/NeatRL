@@ -2,6 +2,69 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added - Atari DQN-CNN
+- **`dqn_cnn.py` / `train_dqn_cnn()`**: DQN with the convolutional network and
+  Atari preprocessing from Mnih et al. (2015)
+  - 84x84 grayscale frames, 4-frame stacks, frame skip 4, no-op starts, sticky
+    actions disabled and rewards clipped to `{-1, 0, 1}`
+  - Target network copied every 10k steps, epsilon annealed 1.0 → 0.1
+  - Evaluation logs `values/mean_max_q` next to
+    `values/true_discounted_return` so the overestimation gap is directly
+    readable while training
+  - New CLI alias: `neatrl train dqn-cnn ALE/Pong-v5`
+
+### Added - Double DQN
+- **`double_dqn_mlp.py` / `train_double_dqn()`** and
+  **`double_dqn_cnn.py` / `train_double_dqn_cnn()`**: the Double DQN target of
+  van Hasselt et al. (2016), `R + gamma * Q_target(s', argmax_a Q_online(s', a))`
+  - Drop-in replacements for `train_dqn` / `train_dqn_cnn`; same
+    preprocessing and hyperparameters, only the bootstrap target differs
+  - `double_dqn_target()` helper in both modules, unit-tested against a manual
+    target computation and against terminal transitions
+  - `eval_callback` hook on `train_dqn`, `train_dqn_cnn`, `train_double_dqn`
+    and `train_double_dqn_cnn`; the metrics dict carries `model`, so callers
+    can measure the network being trained
+  - New CLI aliases: `neatrl train double-dqn CartPole-v1` and
+    `neatrl train double-dqn-cnn ALE/Pong-v5`
+- **`docs/non-cli/DQN/overestimation_demo.py`**: reproduces the Figure 3
+  protocol of van Hasselt et al. (2016), comparing `max_a Q(s, a)` with the
+  discounted return the greedy policy actually earns, for DQN and Double DQN
+  side by side (MLP or CNN depending on the environment, live CSV + plot output)
+  - `--grid-env` one-hot encodes discrete observations so FrozenLake,
+    CliffWalking and Taxi can be used
+- **`docs/non-cli/DQN/overestimation_results.md`**: measured results and plots
+  for CartPole, LunarLander and Pong, plus the protocol and its failure modes
+- **`scripts/check_dqn_family.py`**: sweeps all four trainers over 18
+  env/trainer pairs (discrete, continuous and image observations) and verifies
+  the returned network on a real observation
+- **`scripts/check_tui_pty.py`**: runs each trainer inside a pseudo-terminal
+  because the Dashboard only activates on a TTY, then asserts ANSI frames were
+  drawn and the l/c/v views cycle
+
+### Fixed
+- `evaluate()` in `dqn_mlp` and `dqn_cnn` looped forever on environments
+  registered without a `TimeLimit` (e.g. `CliffWalking-v0`), because a policy
+  that circles never sets `terminated`/`truncated`. Episodes are now capped at
+  the spec's `max_episode_steps`, falling back to 10,000 steps.
+- `estimate_values` (DQN-CNN) compared the mean of `max_a Q(s, a)` over every
+  visited state against a single per-episode `G_0`, which measures two
+  different quantities and hid the bias. It now pairs each state with the
+  discounted return that followed it, matching Figure 3 of van Hasselt et al.
+  (2016).
+- `Dashboard` no longer crashes when stdin has no file descriptor (pytest,
+  notebooks, some CI runners); terminal raw mode is skipped in that case.
+- `train_dqn(save_every=0)` raised `ZeroDivisionError`; checkpointing is now
+  skipped, matching the other trainers. The same guard was added for
+  `eval_every=0` in `dqn_mlp`, `dueling_dqn_mlp` and `q_learning` (and for
+  `save_every=0` in `dueling_dqn_mlp` / `q_learning`).
+- `Dashboard.push_many` calls in `dqn_mlp`, `dueling_dqn_mlp`, `ppo_mlp` and
+  `sac_mlp` now use the existing `push_metrics` method, so training no longer
+  crashes on the first dashboard update.
+- `validate_q_network_dimensions` now accepts image observation shapes and
+  checks for a convolutional trunk, matching the other validators.
+
 ## [0.5.0] - 2025-12-24
 
 ### Added - PPO Algorithm Implementation
