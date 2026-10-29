@@ -242,7 +242,9 @@ def make_env(
         env_to_use = gym.wrappers.RecordEpisodeStatistics(env_to_use)
         if Config.normalize_reward:
             env_to_use = gym.wrappers.NormalizeReward(env_to_use)
-        if grid_env:
+        # Discrete observations (grid worlds) must be one-hot encoded
+        # before a Linear trunk; detect it instead of trusting grid_env.
+        if isinstance(env_to_use.observation_space, gym.spaces.Discrete):
             env_to_use = OneHotWrapper(
                 env_to_use,
                 obs_shape=env_to_use.observation_space.n,  # type: ignore[attr-defined]
@@ -297,7 +299,12 @@ def evaluate(
         done = False
         rewards = 0.0
 
-        while not done:
+        # A policy that circles forever never sets terminated/truncated on envs
+        # registered without a TimeLimit (CliffWalking-v0), so cap the episode.
+        spec = getattr(eval_env, "spec", None)
+        max_steps = getattr(spec, "max_episode_steps", None) or 10_000
+
+        for _step in range(max_steps):
             if record:
                 try:
                     frame: Any = eval_env.render()
@@ -320,6 +327,8 @@ def evaluate(
 
             obs, rewards_curr, terminated, truncated, info = eval_env.step(action)
             done = terminated or truncated
+            if done:
+                break
             rewards += float(rewards_curr)
 
         returns.append(rewards)
@@ -761,9 +770,14 @@ def train_ppo_rnd(
 
                 # --- PPO Policy and Value Loss ---
 
-                _, new_log_probs, dist = actor_network.get_action(  # type: ignore[operator]
-                    b_obs[mb_inds], b_actions[mb_inds]
+                _, _, dist = actor_network.get_action(  # type: ignore[operator]
+                    b_obs[mb_inds]
                 )
+                # get_action() no longer accepts the action to score (1.0.0), so
+                # re-evaluate the stored actions against the fresh distribution.
+                new_log_probs = dist.log_prob(b_actions[mb_inds])
+                if new_log_probs.ndim > 1:
+                    new_log_probs = new_log_probs.sum(dim=-1)
                 ratio = torch.exp(new_log_probs - b_logprobs[mb_inds])
 
                 with torch.no_grad():

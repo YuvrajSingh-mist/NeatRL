@@ -125,7 +125,12 @@ def evaluate(
         episode_reward = 0.0
         ep_frames: list = []
 
-        while not done:
+        # A policy that circles forever never sets terminated/truncated on envs
+        # registered without a TimeLimit (CliffWalking-v0), so cap the episode.
+        spec = getattr(eval_env, "spec", None)
+        max_steps = getattr(spec, "max_episode_steps", None) or 10_000
+
+        for _step in range(max_steps):
             if capture_video:
                 try:
                     frame = eval_env.render()
@@ -141,6 +146,8 @@ def evaluate(
             action = int(np.argmax(q_table[int(obs)]))
             obs, reward, terminated, truncated, _ = eval_env.step(action)
             done = bool(terminated or truncated)
+            if done:
+                break
             episode_reward += float(reward)
 
         returns.append(episode_reward)
@@ -339,7 +346,8 @@ def train_q_learning(
     if use_wandb:
         wandb.finish()
 
-    env.close()
+    if env is not None:
+        env.close()
     if dashboard:
         dashboard.close(
             message=(

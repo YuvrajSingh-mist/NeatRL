@@ -4,6 +4,58 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-10-30
+
+Every algorithm was run through `neatrl train` on two environments each (40
+runs). Seventeen of the first 40 failed; this release fixes all of them.
+
+### Fixed
+- **`neatrl train dueling-dqn` hung forever on its own default environment.**
+  `evaluate()` looped until the episode ended, but `CliffWalking-v0` is
+  registered without a `TimeLimit`. Evaluation now stops at the env's
+  `max_episode_steps` (10,000 if unset) in all ten trainers that were missing
+  the cap: `dueling_dqn_mlp`, `q_learning`, `ddpg_mlp`, `ddpg_cnn`,
+  `sac_mlp`, `sac_cnn`, `td3_mlp`, `td3_cnn`, `reinforce_mlp`,
+  `reinforce_cnn`.
+- **`rnd` and `rnd-cnn` crashed on the first PPO update** with
+  `TypeError: get_action() takes 2 positional arguments but 3 were given`.
+  Internal callers still passed the action to score, which 1.0.0 removed; they
+  now score the stored actions against the returned distribution.
+- **`dueling-dqn` crashed with `IndexError: Dimension out of range`** as soon
+  as training left the random-action phase, because the Q-network was called
+  with one observation that had no batch dimension.
+- **`grid_env` no longer has to match the environment.** Discrete observation
+  spaces are one-hot encoded automatically, so
+  `neatrl train dueling-dqn CartPole-v1` and `... rnd CartPole-v1` work, and
+  `grid_env=True` on a `Box` env no longer raises
+  `AttributeError: 'Box' object has no attribute 'n'`.
+- **`ddpg-cnn` and `td3-cnn` were silently training MLPs** — their default
+  networks were `ActorNet`/`QNet` imported from the MLP modules. They now
+  default to `ActorNetCNN`/`QNetCNN`.
+- **`td3-cnn` used its 512-dim hidden state as the action**; the output layer
+  was constructed but never applied.
+- **`ddpg-cnn`, `sac-cnn` and `td3-cnn` failed on `CarRacing-v3` (96x96)**
+  because the conv trunk hard-coded the 84x84 Atari flattened size and
+  assumed channel-first input. A shared trunk in `neatrl.utils.nn_utils` now
+  measures its own output size and accepts both HWC and CHW frames.
+- **`a2c-cnn`, `ppo-cnn`, `reinforce-cnn` and `rnd-cnn` could not start at
+  all** — their networks were `nn.Linear` layers handed a tuple observation
+  shape. They use the same image trunk and now run on image observations.
+- **Every run with no `env` argument crashed on exit** with
+  `AttributeError: 'NoneType' object has no attribute 'close'`, because ten
+  trainers called `env.close()` when `env` was `None`. Guarded.
+- **`a2c` and `a2c-cnn` ignored `--steps`**, collecting whole episodes per
+  update: `--steps 200` on Pong ran ~132,000 steps. They now stop at
+  `total_timesteps`.
+
+### Changed
+- The `-cnn` aliases default to image environments: `a2c-cnn`, `ppo-cnn`,
+  `reinforce-cnn`, `rnd-cnn` use `ALE/Pong-v5`; `ddpg-cnn`, `sac-cnn`,
+  `td3-cnn` use `CarRacing-v3`. Install `neatrl[atari]` or `neatrl[box2d]` for
+  those environments.
+- Discrete observation spaces are one-hot encoded by inspecting the space
+  instead of trusting the `grid_env` flag.
+
 ## [2.0.3] - 2026-10-29
 
 ### Fixed

@@ -21,6 +21,7 @@ import wandb
 from .cli import Dashboard
 from .utils import configure_logging, get_logger, setup_device
 from .utils.nn_utils import (
+    observation_input_layer,
     validate_critic_network_dimensions,
     validate_policy_network_dimensions,
 )
@@ -95,7 +96,9 @@ class ActorNet(nn.Module):
     ) -> None:
         super().__init__()
 
-        self.fc1 = layer_init(nn.Linear(state_space, 32))  # type: ignore[arg-type]
+        self.fc1 = observation_input_layer(state_space, 32)
+        if isinstance(self.fc1, nn.Linear):
+            layer_init(self.fc1)
         self.fc2 = layer_init(nn.Linear(32, 32))
         self.fc3 = layer_init(nn.Linear(32, 16))
         self.out = layer_init(nn.Linear(16, action_space))
@@ -128,7 +131,9 @@ class CriticNet(nn.Module):
 
     def __init__(self, state_space: Union[int, tuple[int, ...]]) -> None:
         super().__init__()
-        self.fc1 = layer_init(nn.Linear(state_space, 32))  # type: ignore[arg-type]
+        self.fc1 = observation_input_layer(state_space, 32)
+        if isinstance(self.fc1, nn.Linear):
+            layer_init(self.fc1)
         self.fc2 = layer_init(nn.Linear(32, 32))
         self.fc3 = layer_init(nn.Linear(32, 16))
         self.value = layer_init(nn.Linear(16, 1))
@@ -166,7 +171,9 @@ def make_env(
         env_to_use = gym.wrappers.RecordEpisodeStatistics(env_to_use)
         if Config.normalize_reward:
             env_to_use = gym.wrappers.NormalizeReward(env_to_use)
-        if grid_env:
+        # Discrete observations (grid worlds) must be one-hot encoded
+        # before a Linear trunk; detect it instead of trusting grid_env.
+        if isinstance(env_to_use.observation_space, gym.spaces.Discrete):
             env_to_use = OneHotWrapper(
                 env_to_use,
                 obs_shape=env_to_use.observation_space.n,  # type: ignore[attr-defined]
@@ -221,7 +228,12 @@ def evaluate(
         done = False
         rewards = 0.0
 
-        while not done:
+        # A policy that circles forever never sets terminated/truncated on envs
+        # registered without a TimeLimit (CliffWalking-v0), so cap the episode.
+        spec = getattr(eval_env, "spec", None)
+        max_steps = getattr(spec, "max_episode_steps", None) or 10_000
+
+        for _step in range(max_steps):
             if record:
                 try:
                     frame: Any = eval_env.render()
@@ -246,6 +258,8 @@ def evaluate(
 
             obs, rewards_curr, terminated, truncated, info = eval_env.step(action)
             done = terminated or truncated
+            if done:
+                break
             rewards += float(rewards_curr)
 
         returns.append(rewards)
@@ -464,6 +478,10 @@ def train_a2c_cnn(
         )
 
     for step in tqdm(range(1, num_updates + 1), desc="Training Updates", disable=True):
+        # The rollout collects whole episodes, which can far exceed the requested
+        # budget; stop once total_timesteps is reached so --steps is honoured.
+        if global_step >= Config.total_timesteps:
+            break
         # Annealing the rate if instructed to do so.
         if Config.anneal_lr:
             frac = 1.0 - (step - 1.0) / num_updates
@@ -530,6 +548,8 @@ def train_a2c_cnn(
             next_obs = torch.Tensor(new_obs).to(device)
 
             if np.all(done):
+                break
+            if global_step >= Config.total_timesteps:
                 break
 
         # Convert lists to tensors

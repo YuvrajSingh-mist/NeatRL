@@ -128,7 +128,9 @@ def make_env(env_id, seed, idx, atari_wrapper=False, grid_env=False):
         env = gym.make(env_id, **make_kwargs)
 
         # Special handling for FrozenLake discrete states
-        if grid_env:
+        # Discrete observations (grid worlds) must be one-hot encoded
+        # before a Linear trunk; detect it instead of trusting grid_env.
+        if isinstance(env.observation_space, gym.spaces.Discrete):
             env = OneHotWrapper(env, obs_shape=env.observation_space.n)  # type: ignore[attr-defined]
 
         if atari_wrapper:
@@ -696,7 +698,8 @@ def train_dqn(
             logger.info(f"Final training video saved to {train_video_path}")
         wandb.finish()
 
-    env.close()
+    if env is not None:
+        env.close()
     if dashboard:
         dashboard.close(
             message=f"Q-Net: {model_params:,} params  |  "

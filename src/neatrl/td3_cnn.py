@@ -19,9 +19,9 @@ from tqdm import tqdm
 import wandb
 
 from .cli import Dashboard
-from .td3_mlp import ActorNet, QNet
 from .utils import configure_logging, get_logger, setup_device
 from .utils.nn_utils import (
+    ImageFeatures,
     validate_critic_network_dimensions,
     validate_policy_network_dimensions,
 )
@@ -90,30 +90,23 @@ class ActorNetCNN(nn.Module):
     def __init__(self, obs_shape, action_space):
         super().__init__()
         # Convolutional layers for image processing
-        self.conv1 = nn.Conv2d(obs_shape[0], 32, kernel_size=8, stride=4)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
+        self.features = ImageFeatures(obs_shape)
 
-        self.fc1 = nn.Linear(64 * 7 * 7, 512)
+        self.fc1 = nn.Linear(self.features.out_dim, 512)
         self.out = nn.Linear(512, action_space)
 
     def forward(self, x):
-        """Forward pass — returns network output(s)."""
+        """Forward pass — returns the action for the given observation."""
         # x shape: (batch, channels, height, width)
-        x = torch.nn.functional.relu(self.conv1(x))
-        x = torch.nn.functional.relu(self.conv2(x))
-        x = torch.nn.functional.relu(self.conv3(x))
-        x = x.view(x.size(0), -1)  # Flatten
+        x = self.features(x)
         x = torch.nn.functional.relu(self.fc1(x))
-
+        x = torch.tanh(self.out(x))  # Output between -1 and 1
+        x = x * 1.0  # Scale to action limits
         return x
 
     def get_action(self, x):
-        """Sample an action and return it with log-probability and optional entropy."""
-        x = self.forward(x)
-        x = torch.tanh(x)  # Output between -1 and 1
-        x = x * 1.0  # Scale to action limits
-        return x
+        """Return the deterministic action for the given observation."""
+        return self.forward(x)
 
 
 class QNetCNN(nn.Module):
@@ -122,12 +115,10 @@ class QNetCNN(nn.Module):
     def __init__(self, obs_shape, action_space):
         super().__init__()
         # Convolutional layers for image processing
-        self.conv1 = nn.Conv2d(obs_shape[0], 32, kernel_size=8, stride=4)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
+        self.features = ImageFeatures(obs_shape)
 
         # State processing
-        self.state_fc = nn.Linear(64 * 7 * 7, 512)
+        self.state_fc = nn.Linear(self.features.out_dim, 512)
 
         # Action processing
         self.action_fc = nn.Linear(action_space, 512)
@@ -139,10 +130,7 @@ class QNetCNN(nn.Module):
     def forward(self, state, action):
         """Forward pass — returns the Q-value for the given state-action pair."""
         # Process state through conv layers
-        x = torch.nn.functional.relu(self.conv1(state))
-        x = torch.nn.functional.relu(self.conv2(x))
-        x = torch.nn.functional.relu(self.conv3(x))
-        x = x.view(x.size(0), -1)  # Flatten
+        x = self.features(state)
         state_features = torch.nn.functional.relu(self.state_fc(x))
 
         # Process action
@@ -184,7 +172,9 @@ def make_env(
         if env is None:
             env_to_use = gym.wrappers.RecordEpisodeStatistics(env_to_use)
 
-        if grid_env:
+        # Discrete observations (grid worlds) must be one-hot encoded
+        # before a Linear trunk; detect it instead of trusting grid_env.
+        if isinstance(env_to_use.observation_space, gym.spaces.Discrete):
             env_to_use = OneHotWrapper(
                 env_to_use,
                 obs_shape=env_to_use.observation_space.n,  # type: ignore[attr-defined]
@@ -249,7 +239,12 @@ def evaluate(
         done = False
         rewards = 0.0
 
-        while not done:
+        # A policy that circles forever never sets terminated/truncated on envs
+        # registered without a TimeLimit (CliffWalking-v0), so cap the episode.
+        spec = getattr(eval_env, "spec", None)
+        max_steps = getattr(spec, "max_episode_steps", None) or 10_000
+
+        for _step in range(max_steps):
             if record:
                 try:
                     frame: Any = eval_env.render()
@@ -280,6 +275,8 @@ def evaluate(
 
             obs, rewards_curr, terminated, truncated, info = eval_env.step(action)
             done = terminated or truncated
+            if done:
+                break
             rewards += float(rewards_curr)
 
         returns.append(rewards)
@@ -341,8 +338,8 @@ def train_td3_cnn(
     atari_wrapper: bool = False,
     env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = None,
     normalize_reward: bool = Config.normalize_reward,
-    actor_class: Any = ActorNet,
-    q_network_class: Any = QNet,
+    actor_class: Any = ActorNetCNN,
+    q_network_class: Any = QNetCNN,
 ) -> nn.Module:
     """Train a CNN-based TD3 agent on pixel observations.
 
@@ -846,7 +843,8 @@ def train_td3_cnn(
             logger.info(f"Final training video saved to {train_video_path}")
             wandb.finish()
 
-    env.close()  # type: ignore[union-attr]
+    if env is not None:
+        env.close()
     if dashboard:
         dashboard.close(
             message=f"Actor: {actor_params:,} | Critics: {critic_params:,} params  |  "

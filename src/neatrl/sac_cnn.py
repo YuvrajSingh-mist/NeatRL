@@ -21,6 +21,7 @@ import wandb
 from .cli import Dashboard
 from .utils import configure_logging, get_logger, setup_device
 from .utils.nn_utils import (
+    ImageFeatures,
     validate_critic_network_dimensions,
     validate_policy_network_dimensions,
 )
@@ -88,11 +89,9 @@ class ActorNetCNN(nn.Module):
     def __init__(self, obs_shape, action_space):
         super().__init__()
         # Convolutional layers for image processing
-        self.conv1 = nn.Conv2d(obs_shape[0], 32, kernel_size=8, stride=4)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
+        self.features = ImageFeatures(obs_shape)
 
-        self.fc1 = nn.Linear(64 * 7 * 7, 512)
+        self.fc1 = nn.Linear(self.features.out_dim, 512)
         self.mean = nn.Linear(512, action_space)
         self.log_std = nn.Linear(512, action_space)
 
@@ -100,10 +99,7 @@ class ActorNetCNN(nn.Module):
         # x shape: (batch, height, width, channels) -> permute to (batch, channels, height, width)
         # x = x.permute(0, 3, 1, 2)
         """Forward pass — returns network output(s)."""
-        x = torch.nn.functional.relu(self.conv1(x))
-        x = torch.nn.functional.relu(self.conv2(x))
-        x = torch.nn.functional.relu(self.conv3(x))
-        x = x.reshape(x.size(0), -1)  # Flatten
+        x = self.features(x)
         x = torch.nn.functional.relu(self.fc1(x))
         mean = self.mean(x)
         log_std = self.log_std(x)
@@ -132,12 +128,10 @@ class QNetCNN(nn.Module):
     def __init__(self, obs_shape, action_space):
         super().__init__()
         # Convolutional layers for image processing
-        self.conv1 = nn.Conv2d(obs_shape[0], 32, kernel_size=8, stride=4)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
+        self.features = ImageFeatures(obs_shape)
 
         # State processing
-        self.state_fc = nn.Linear(64 * 7 * 7, 512)
+        self.state_fc = nn.Linear(self.features.out_dim, 512)
 
         # Action processing
         self.action_fc = nn.Linear(action_space, 512)
@@ -152,10 +146,7 @@ class QNetCNN(nn.Module):
         state = state.permute(
             0, 3, 1, 2
         )  # (batch, height, width, channels) -> (batch, channels, height, width)
-        x = torch.nn.functional.relu(self.conv1(state))
-        x = torch.nn.functional.relu(self.conv2(x))
-        x = torch.nn.functional.relu(self.conv3(x))
-        x = x.reshape(x.size(0), -1)  # Flatten
+        x = self.features(state)
         state_features = torch.nn.functional.relu(self.state_fc(x))
 
         # Process action
@@ -197,7 +188,9 @@ def make_env(
         if env is None:
             env_to_use = gym.wrappers.RecordEpisodeStatistics(env_to_use)
 
-        if grid_env:
+        # Discrete observations (grid worlds) must be one-hot encoded
+        # before a Linear trunk; detect it instead of trusting grid_env.
+        if isinstance(env_to_use.observation_space, gym.spaces.Discrete):
             env_to_use = OneHotWrapper(
                 env_to_use,
                 obs_shape=env_to_use.observation_space.n,  # type: ignore[attr-defined]
@@ -264,7 +257,12 @@ def evaluate(
         done = False
         rewards = 0.0
 
-        while not done:
+        # A policy that circles forever never sets terminated/truncated on envs
+        # registered without a TimeLimit (CliffWalking-v0), so cap the episode.
+        spec = getattr(eval_env, "spec", None)
+        max_steps = getattr(spec, "max_episode_steps", None) or 10_000
+
+        for _step in range(max_steps):
             if record:
                 try:
                     frame: Any = eval_env.render()
@@ -293,6 +291,8 @@ def evaluate(
 
             obs, rewards_curr, terminated, truncated, info = eval_env.step(action)
             done = terminated or truncated
+            if done:
+                break
             rewards += float(rewards_curr)
 
         returns.append(rewards)
@@ -846,7 +846,8 @@ def train_sac_cnn(
             logger.info(f"Final training video saved to {train_video_path}")
             wandb.finish()
 
-    env.close()  # type: ignore[union-attr]
+    if env is not None:
+        env.close()
     if dashboard:
         dashboard.close(
             message=f"Actor: {actor_params:,} | Critics: {critic_params:,} params  |  "

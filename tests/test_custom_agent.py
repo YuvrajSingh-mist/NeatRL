@@ -118,14 +118,20 @@ class TestMakeEnvFlags:
         assert env.observation_space.shape == (16,)
         env.close()
 
-    def test_grid_env_false_keeps_discrete_obs(self):
-        """Without grid_env, FrozenLake obs remains Discrete."""
+    def test_discrete_obs_is_one_hot_without_grid_env(self):
+        """A Discrete observation space is one-hot encoded even without grid_env.
+
+        The flag used to be required, so a Box-observation env passed with
+        ``grid_env=True`` (as the CLI recipes did) crashed inside the wrapper.
+        Encoding is now driven by the observation space itself.
+        """
         import gymnasium as gym
 
         from neatrl.dqn_mlp import make_env
 
         env = make_env("FrozenLake-v1", seed=0, idx=0, grid_env=False)()
-        assert isinstance(env.observation_space, gym.spaces.Discrete)
+        assert isinstance(env.observation_space, gym.spaces.Box)
+        assert env.observation_space.shape == (16,)
         env.close()
 
     def test_grid_env_obs_is_float32_one_hot(self):

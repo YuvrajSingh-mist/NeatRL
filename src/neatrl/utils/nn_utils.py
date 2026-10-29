@@ -3,6 +3,7 @@
 import logging
 from typing import Optional, Union
 
+import torch
 import torch.nn as nn
 
 logger = logging.getLogger(__name__)
@@ -235,3 +236,69 @@ def validate_feature_network_dimensions(
         raise ValueError(
             f"Feature-network output dimension {last_layer.out_features} does not match expected feature dimension {feature_dim}."
         )
+
+
+class ImageFeatures(nn.Module):
+    """Convolutional trunk that infers its output size for any image geometry.
+
+    The CNN trainers used to hard-code the flattened size for 84x84 Atari
+    frames (`64 * 7 * 7`), so any other resolution -- CarRacing's 96x96, for
+    one -- raised a shape-mismatch error on the first forward pass. This trunk
+    measures its own output instead, and accepts both channel-first
+    (Atari preprocessing) and channel-last (CarRacing) observations.
+    """
+
+    def __init__(self, obs_shape: tuple[int, ...]) -> None:
+        super().__init__()
+        shape = tuple(int(s) for s in obs_shape)
+        if len(shape) == 2:
+            shape = (1, *shape)
+        if len(shape) != 3:
+            raise ValueError(f"expected an image observation shape, got {obs_shape}")
+
+        # Atari preprocessing yields (C, H, W); CarRacing yields (H, W, C).
+        if shape[0] in (1, 3, 4):
+            self.channel_last = False
+            channels, height, width = shape
+        else:
+            self.channel_last = True
+            height, width, channels = shape
+
+        self.trunk = nn.Sequential(
+            nn.Conv2d(channels, 32, kernel_size=8, stride=4),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+        with torch.no_grad():
+            probe = torch.zeros(1, channels, height, width)
+            self.out_dim = int(self.trunk(probe).shape[1])
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:  # type: ignore[override]
+        """Encode a batch of frames into a flat feature vector."""
+        x = x.float()
+        if x.ndim == 3:
+            x = x.unsqueeze(0)
+        if x.max() > 1.5:  # uint8 frames
+            x = x / 255.0
+        if self.channel_last:
+            x = x.permute(0, 3, 1, 2)
+        return self.trunk(x)
+
+
+def observation_input_layer(
+    obs_shape: Union[int, tuple[int, ...]], out_features: int
+) -> nn.Module:
+    """Build the first layer of a network for a vector or image observation.
+
+    Image observations get a convolutional trunk followed by a linear
+    projection; flat observations keep the original single ``nn.Linear``.
+    """
+    shape = (obs_shape,) if isinstance(obs_shape, int) else tuple(obs_shape)
+    if len(shape) >= 2:
+        encoder = ImageFeatures(shape)
+        return nn.Sequential(encoder, nn.Linear(encoder.out_dim, out_features))
+    return nn.Linear(int(shape[0]), out_features)

@@ -26,6 +26,7 @@ import wandb
 from .cli import Dashboard
 from .utils import configure_logging, get_logger, setup_device
 from .utils.nn_utils import (
+    observation_input_layer,
     validate_policy_network_dimensions,
 )
 from .utils.wrappers import OneHotWrapper
@@ -108,7 +109,7 @@ class PolicyNet(nn.Module):
     def __init__(self, state_space, action_space):
         super().__init__()
         logger.info(f"State space: {state_space}, Action space: {action_space}")
-        self.fc1 = nn.Linear(state_space, 32)
+        self.fc1 = observation_input_layer(state_space, 32)
         self.fc2 = nn.Linear(32, 32)
         self.fc3 = nn.Linear(32, 16)
         self.out = nn.Linear(16, action_space)
@@ -156,7 +157,9 @@ def make_env(
         env_to_use = gym.wrappers.RecordEpisodeStatistics(env_to_use)
         if Config.normalize_reward:
             env_to_use = NormalizeReward(env_to_use)
-        if grid_env:
+        # Discrete observations (grid worlds) must be one-hot encoded
+        # before a Linear trunk; detect it instead of trusting grid_env.
+        if isinstance(env_to_use.observation_space, gym.spaces.Discrete):
             env_to_use = OneHotWrapper(
                 env_to_use,
                 obs_shape=env_to_use.observation_space.n,  # type: ignore[attr-defined]
@@ -213,7 +216,12 @@ def evaluate(
         done = False
         episode_reward = 0.0
 
-        while not done:
+        # A policy that circles forever never sets terminated/truncated on envs
+        # registered without a TimeLimit (CliffWalking-v0), so cap the episode.
+        spec = getattr(eval_env, "spec", None)
+        max_steps = getattr(spec, "max_episode_steps", None) or 10_000
+
+        for _step in range(max_steps):
             if capture_video:
                 try:
                     frame = eval_env.render()
@@ -244,6 +252,8 @@ def evaluate(
                     action = action.detach().cpu().numpy()
             obs, reward, terminated, truncated, _ = eval_env.step(action)
             done = terminated or truncated
+            if done:
+                break
             episode_reward += float(reward)
 
         returns.append(episode_reward)
@@ -796,7 +806,8 @@ def train_reinforce_cnn(
             logger.info(f"Final training video saved to {train_video_path}")
         wandb.finish()
 
-    env.close()
+    if env is not None:
+        env.close()
 
     if dashboard:
         dashboard.close()

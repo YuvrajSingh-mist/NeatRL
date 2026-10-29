@@ -48,13 +48,13 @@ RECIPES: dict[str, Recipe] = {
             {"grid_env": False, "capture_video": False},
         ),
         cnn=Call(
-            "neatrl.a2c_cnn.train_a2c_cnn", "CartPole-v1", {"capture_video": False}
+            "neatrl.a2c_cnn.train_a2c_cnn", "ALE/Pong-v5", {"capture_video": False}
         ),
     ),
     "ddpg": Recipe(
         mlp=Call("neatrl.ddpg_mlp.train_ddpg", "Pendulum-v1", {"capture_video": False}),
         cnn=Call(
-            "neatrl.ddpg_cnn.train_ddpg_cnn", "Pendulum-v1", {"capture_video": False}
+            "neatrl.ddpg_cnn.train_ddpg_cnn", "CarRacing-v3", {"capture_video": False}
         ),
     ),
     "dqn": Recipe(
@@ -83,14 +83,14 @@ RECIPES: dict[str, Recipe] = {
         mlp=Call(
             "neatrl.dueling_dqn_mlp.train_dueling_dqn",
             "CliffWalking-v0",
-            {"grid_env": True, "capture_video": False},
+            {"capture_video": False},
         ),
         cnn_switch="atari_wrapper",
     ),
     "ppo": Recipe(
         mlp=Call("neatrl.ppo_mlp.train_ppo", "CartPole-v1", {"capture_video": False}),
         cnn=Call(
-            "neatrl.ppo_cnn.train_ppo_cnn", "CartPole-v1", {"capture_video": False}
+            "neatrl.ppo_cnn.train_ppo_cnn", "ALE/Pong-v5", {"capture_video": False}
         ),
     ),
     "q_learning": Recipe(
@@ -108,7 +108,7 @@ RECIPES: dict[str, Recipe] = {
         ),
         cnn=Call(
             "neatrl.reinforce_cnn.train_reinforce_cnn",
-            "CartPole-v1",
+            "ALE/Pong-v5",
             {"capture_video": False},
         ),
         steps_kw="total_episodes",
@@ -117,24 +117,24 @@ RECIPES: dict[str, Recipe] = {
         mlp=Call(
             "neatrl.rnd_mlp.train_ppo_rnd",
             "CliffWalking-v0",
-            {"grid_env": True, "capture_video": False},
+            {"capture_video": False},
         ),
         cnn=Call(
             "neatrl.rnd_cnn.train_ppo_rnd_cnn",
-            "CliffWalking-v0",
+            "ALE/Pong-v5",
             {"capture_video": False},
         ),
     ),
     "sac": Recipe(
         mlp=Call("neatrl.sac_mlp.train_sac", "Pendulum-v1", {"capture_video": False}),
         cnn=Call(
-            "neatrl.sac_cnn.train_sac_cnn", "Pendulum-v1", {"capture_video": False}
+            "neatrl.sac_cnn.train_sac_cnn", "CarRacing-v3", {"capture_video": False}
         ),
     ),
     "td3": Recipe(
         mlp=Call("neatrl.td3_mlp.train_td3", "Pendulum-v1", {"capture_video": False}),
         cnn=Call(
-            "neatrl.td3_cnn.train_td3_cnn", "Pendulum-v1", {"capture_video": False}
+            "neatrl.td3_cnn.train_td3_cnn", "CarRacing-v3", {"capture_video": False}
         ),
     ),
 }
