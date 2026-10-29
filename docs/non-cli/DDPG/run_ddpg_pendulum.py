@@ -69,7 +69,7 @@ def train_ddpg_pendulum():
         env_id="Pendulum-v1",  # Pendulum environment
         total_timesteps=4000000,  # Pendulum needs many timesteps
         seed=42,
-        learning_rate=3e-4,
+        lr=3e-4,
         buffer_size=50000,
         batch_size=256,
         learning_starts=25000,

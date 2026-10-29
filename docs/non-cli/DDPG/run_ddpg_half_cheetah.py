@@ -17,7 +17,7 @@ def main():
         env_id="HalfCheetah-v5",
         total_timesteps=1000000,  # MuJoCo environments need more timesteps
         seed=42,
-        learning_rate=3e-4,
+        lr=3e-4,
         buffer_size=1000000,
         batch_size=256,
         learning_starts=10000,

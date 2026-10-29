@@ -89,7 +89,7 @@ def test_breakout():
         env_id="BreakoutNoFrameskip-v4",  # CarRacing environment
         total_timesteps=1000000,  # Total timesteps for training
         seed=42,
-        learning_rate=3e-4,  # Learning rate
+        lr=3e-4,  # Learning rate
         alpha=0.2,  # Entropy regularization coefficient
         autotune_alpha=True,  # Automatically tune alpha
         target_entropy_scale=-1.0,  # Target entropy = scale * action_dim

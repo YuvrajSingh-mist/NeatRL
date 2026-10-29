@@ -32,7 +32,7 @@ def test_dqn_acrobot():
         env_id="Acrobot-v1",
         total_timesteps=100000,
         seed=42,
-        learning_rate=2.5e-4,
+        lr=2.5e-4,
         buffer_size=10000,
         gamma=0.99,
         tau=1.0,

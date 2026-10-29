@@ -40,7 +40,7 @@ def test_dueling_dqn_cliffwalking():
         env_id="CliffWalking-v0",
         total_timesteps=100000,
         seed=42,
-        learning_rate=2e-4,
+        lr=2e-4,
         buffer_size=10000,  # Reduced from 30K to save memory
         gamma=0.99,
         tau=1.0,

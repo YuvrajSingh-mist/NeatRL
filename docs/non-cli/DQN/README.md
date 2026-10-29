@@ -81,7 +81,9 @@ model = train_double_dqn(env_id="CartPole-v1", total_timesteps=50000, use_wandb=
 ```python
 from neatrl.double_dqn_cnn import train_double_dqn_cnn
 
-model = train_double_dqn_cnn(env_id="ALE/Pong-v5", total_timesteps=50000, use_wandb=False)
+model = train_double_dqn_cnn(
+    env_id="ALE/Pong-v5", total_timesteps=50000, use_wandb=False
+)
 ```
 
 ```bash

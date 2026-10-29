@@ -32,7 +32,7 @@ def test_dqn_lunar():
         env_id="LunarLander-v3",
         total_timesteps=2000000,
         seed=42,
-        learning_rate=2.5e-4,
+        lr=2.5e-4,
         buffer_size=100000,
         gamma=0.99,
         tau=1.0,

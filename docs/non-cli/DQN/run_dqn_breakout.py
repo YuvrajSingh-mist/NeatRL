@@ -46,7 +46,7 @@ def test_dqn_atari():
         env_id="BreakoutNoFrameskip-v4",
         total_timesteps=1000000,
         seed=42,
-        learning_rate=2.5e-4,
+        lr=2.5e-4,
         buffer_size=50000,
         gamma=0.99,
         tau=1.0,

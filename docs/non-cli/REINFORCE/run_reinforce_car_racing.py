@@ -133,9 +133,9 @@ def test_reinforce_carracing():
     # Train RND-PPO on CarRacing
     model = train_reinforce_cnn(
         env=gym.make("CarRacing-v3", render_mode="rgb_array", continuous=False),
-        total_steps=2000,
+        total_episodes=2000,
         seed=42,
-        learning_rate=2e-3,
+        lr=2e-3,
         gamma=0.99,
         capture_video=True,
         use_wandb=True,

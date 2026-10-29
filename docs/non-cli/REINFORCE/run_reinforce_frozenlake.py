@@ -40,9 +40,9 @@ def test_reinforce_frozenlake():
     # Train REINFORCE on FrozenLake with one-hot encoding
     model = train_reinforce(
         env_id="FrozenLake-v1",
-        total_steps=1000000,
+        total_episodes=1000000,
         seed=42,
-        learning_rate=2e-3,
+        lr=2e-3,
         gamma=0.99,
         capture_video=True,
         use_wandb=True,

@@ -36,7 +36,7 @@ def test_dqn_frozenlake():
         env_id="FrozenLake-v1",
         total_timesteps=50000,
         seed=42,
-        learning_rate=1e-3,
+        lr=1e-3,
         buffer_size=10000,
         gamma=0.99,
         tau=1.0,

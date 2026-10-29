@@ -43,9 +43,9 @@ def test_reinforce_pendulum():
     # Train REINFORCE on Pendulum
     model = train_reinforce(
         env_id="Pendulum-v1",
-        total_steps=100000,
+        total_episodes=100000,
         seed=42,
-        learning_rate=3e-4,
+        lr=3e-4,
         gamma=0.99,
         capture_video=True,
         use_wandb=True,

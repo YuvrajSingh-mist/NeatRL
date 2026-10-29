@@ -151,7 +151,7 @@ if __name__ == "__main__":
         # env_id="CarRacing-v3",
         env=env,
         total_timesteps=1000000,
-        learning_rate=3e-4,
+        lr=3e-4,
         buffer_size=10000,
         gamma=0.99,
         tau=0.005,

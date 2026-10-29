@@ -15,7 +15,7 @@ def train_ddpg_bipedal_walker():
         env_id="BipedalWalker-v3",  # BipedalWalker environment
         total_timesteps=4000000,  # BipedalWalker needs many timesteps
         seed=42,
-        learning_rate=3e-4,
+        lr=3e-4,
         buffer_size=50000,
         batch_size=256,
         learning_starts=25000,

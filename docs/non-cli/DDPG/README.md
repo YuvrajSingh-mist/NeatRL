@@ -113,7 +113,7 @@ from neatrl.ddpg_mlp import train_ddpg
 model = train_ddpg(
     env_id="BipedalWalker-v3",
     total_timesteps=500000,
-    learning_rate=1e-3,
+    lr=1e-3,
     buffer_size=200000,
     gamma=0.99,
     tau=0.005,

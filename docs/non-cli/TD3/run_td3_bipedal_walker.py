@@ -65,7 +65,7 @@ if __name__ == "__main__":
     train_td3(
         env_id="BipedalWalker-v3",
         total_timesteps=1000000,
-        learning_rate=3e-4,
+        lr=3e-4,
         buffer_size=200000,
         gamma=0.99,
         tau=0.005,

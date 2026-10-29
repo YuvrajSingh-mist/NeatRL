@@ -28,7 +28,7 @@ def test_dqn_taxi():
         env_id="Taxi-v3",
         total_timesteps=3000000,
         seed=42,
-        learning_rate=2.5e-4,
+        lr=2.5e-4,
         buffer_size=20000,
         gamma=0.99,
         tau=1.0,

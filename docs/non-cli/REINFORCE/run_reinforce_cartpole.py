@@ -36,9 +36,9 @@ def test_reinforce_cartpole():
     # Train REINFORCE on CartPole
     model = train_reinforce(
         env_id="CartPole-v1",
-        total_steps=2000,
+        total_episodes=2000,
         seed=42,
-        learning_rate=2e-3,
+        lr=2e-3,
         gamma=0.99,
         capture_video=True,
         use_wandb=True,

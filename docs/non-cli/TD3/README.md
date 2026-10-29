@@ -131,7 +131,7 @@ train_td3(
 train_td3(
     env_id="HalfCheetah-v5",
     total_timesteps=1000000,
-    learning_rate=3e-4,
+    lr=3e-4,
     batch_size=256,
     buffer_size=1000000,
     policy_noise=0.2,
@@ -149,7 +149,7 @@ train_td3(
 train_td3_cnn(
     env_id="CarRacing-v2",
     total_timesteps=100000,
-    learning_rate=1e-4,
+    lr=1e-4,
     batch_size=32,
     learning_starts=5000,
     atari_wrapper=False,

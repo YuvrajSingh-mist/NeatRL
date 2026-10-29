@@ -18,7 +18,7 @@ neatrl train reinforce-cnn BreakoutNoFrameskip-v4 --no-wandb --atari
 ```python
 from neatrl.reinforce_mlp import train_reinforce
 
-model = train_reinforce(env_id="CartPole-v1", total_steps=2000, seed=42)
+model = train_reinforce(env_id="CartPole-v1", total_episodes=2000, seed=42)
 ```
 
 ### Training with Experiment Tracking
@@ -28,7 +28,7 @@ from neatrl.reinforce_mlp import train_reinforce
 
 model = train_reinforce(
     env_id="CartPole-v1",
-    total_steps=2000,
+    total_episodes=2000,
     seed=42,
     capture_video=True,
     use_wandb=True,
@@ -60,7 +60,7 @@ from neatrl.reinforce_mlp import train_reinforce
 
 model = train_reinforce(
     env_id="BreakoutNoFrameskip-v4",
-    total_steps=2000,
+    total_episodes=2000,
     seed=42,
     atari_wrapper=True,
     n_envs=4,
@@ -98,7 +98,7 @@ class CustomPolicyNet(nn.Module):
 
 model = train_reinforce(
     env_id="CartPole-v1",
-    total_steps=2000,
+    total_episodes=2000,
     seed=42,
     custom_agent=CustomPolicyNet(4, 2),
     use_wandb=True,
@@ -152,7 +152,7 @@ from neatrl.reinforce_mlp import train_reinforce
 
 model = train_reinforce(
     env_id="BreakoutNoFrameskip-v4",
-    total_steps=2000,
+    total_episodes=2000,
     atari_wrapper=True,
     n_envs=4,
     seed=42,
@@ -175,7 +175,7 @@ from neatrl.reinforce_mlp import train_reinforce
 
 model = train_reinforce(
     env_id="FrozenLake-v1",
-    total_steps=2000,
+    total_episodes=2000,
     seed=42,
     grid_env=True,
     use_wandb=True,
@@ -188,7 +188,7 @@ model = train_reinforce(
 ```python
 model = train_reinforce(
     env_id="CartPole-v1",
-    total_steps=2000,
+    total_episodes=2000,
     use_wandb=True,
     wandb_project="my-rl-project",
     wandb_entity="your-username",
