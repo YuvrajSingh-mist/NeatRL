@@ -17,7 +17,7 @@ import wandb
 from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
 
-from .cli.dashboard import Dashboard
+from .cli import Dashboard
 from .ddpg_mlp import ActorNet, QNet
 from .utils import configure_logging, get_logger, setup_device
 from .utils.nn_utils import (

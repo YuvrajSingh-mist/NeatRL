@@ -21,7 +21,7 @@ from gymnasium.wrappers import (
 )
 from tqdm import tqdm
 
-from .cli.dashboard import Dashboard
+from .cli import Dashboard
 from .utils import configure_logging, get_logger, get_space_dims, setup_device
 from .utils.nn_utils import (
     validate_policy_network_dimensions,

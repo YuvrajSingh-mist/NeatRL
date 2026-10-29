@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.0.2] - 2026-10-30
+
+### Fixed
+- **`import neatrl` raised `ModuleNotFoundError: No module named 'rich'`** on
+  a plain `pip install neatrl`. Every trainer imports the terminal dashboard,
+  which imports `rich`, and `rich` is only in the optional `cli` extra — so
+  the package was unusable without it. `neatrl.cli` now guards that import
+  and exposes `Dashboard = None` when the extra is absent; training runs with
+  plain logging instead of a crash. `pip install "neatrl[cli]"` still enables
+  the dashboard.
+
 ## [2.0.1] - 2026-10-30
 
 ### Fixed

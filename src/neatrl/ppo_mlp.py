@@ -16,7 +16,7 @@ import torch.optim as optim
 import wandb
 from tqdm import tqdm
 
-from .cli.dashboard import Dashboard
+from .cli import Dashboard
 from .utils import configure_logging, get_logger, get_space_dims, setup_device
 from .utils.nn_utils import (
     validate_critic_network_dimensions,

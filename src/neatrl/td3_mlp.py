@@ -16,7 +16,7 @@ import wandb
 from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
 
-from .cli.dashboard import Dashboard
+from .cli import Dashboard
 from .utils import configure_logging, get_logger, get_space_dims, setup_device
 from .utils.nn_utils import (
     validate_critic_network_dimensions,

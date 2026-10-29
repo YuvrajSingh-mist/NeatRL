@@ -152,6 +152,51 @@ class TestDispatch:
         assert out["atari_wrapper"] is True
 
 
+class TestOptionalRichDependency:
+    """`rich` is the optional `cli` extra, so a bare install must still import."""
+
+    def test_import_neatrl_succeeds_without_rich(self, tmp_path):
+        # A stub `rich` earlier on sys.path makes the import fail even on a
+        # machine that has the extra installed.
+        (tmp_path / "rich.py").write_text("raise ImportError('rich is not installed')")
+        pkg_root = str(pathlib.Path(__file__).resolve().parent.parent / "src")
+        env = dict(
+            os.environ, PYTHONPATH=os.pathsep.join([str(tmp_path), pkg_root])
+        )
+        code = (
+            "import neatrl, sys\n"
+            "from neatrl.cli import Dashboard\n"
+            "assert Dashboard is None, Dashboard\n"
+            "assert 'rich' not in sys.modules\n"
+            "print('ok', neatrl.__version__)\n"
+        )
+        out = subprocess.run(
+            [sys.executable, "-c", code],
+            capture_output=True,
+            text=True,
+            cwd=tmp_path,
+            env=env,
+        )
+        assert out.returncode == 0, out.stderr
+        assert out.stdout.startswith("ok")
+
+    def test_cli_help_works_without_rich(self, tmp_path):
+        (tmp_path / "rich.py").write_text("raise ImportError('rich is not installed')")
+        pkg_root = str(pathlib.Path(__file__).resolve().parent.parent / "src")
+        env = dict(
+            os.environ, PYTHONPATH=os.pathsep.join([str(tmp_path), pkg_root])
+        )
+        out = subprocess.run(
+            [sys.executable, "-m", "neatrl.cli", "--help"],
+            capture_output=True,
+            text=True,
+            cwd=tmp_path,
+            env=env,
+        )
+        assert out.returncode == 0, out.stderr
+        assert "train" in out.stdout
+
+
 class TestCommandLine:
     def test_train_with_only_an_algo_uses_the_default_env(
         self, monkeypatch, tmp_path, capsys

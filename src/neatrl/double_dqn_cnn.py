@@ -25,12 +25,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import wandb
 from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
 
-import wandb
-
-from .cli.dashboard import Dashboard
+from .cli import Dashboard
 from .dqn_cnn import (
     QNetCNN,
     _obs_tensor,
