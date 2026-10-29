@@ -6,6 +6,13 @@ warnings.filterwarnings(
     "ignore", message="The pynvml package is deprecated", category=FutureWarning
 )
 
+try:  # installed distributions carry the version in their metadata
+    from importlib.metadata import version as _dist_version
+
+    __version__ = _dist_version("neatrl")
+except Exception:  # source checkout without an installed dist
+    __version__ = "0.0.0+unknown"
+
 from .a2c_cnn import train_a2c_cnn
 from .a2c_mlp import train_a2c
 from .ddpg_cnn import train_ddpg_cnn
@@ -28,6 +35,7 @@ from .td3_cnn import train_td3_cnn
 from .td3_mlp import train_td3
 
 __all__ = [
+    "__version__",
     "train_dqn",
     "train_dqn_cnn",
     "train_double_dqn",

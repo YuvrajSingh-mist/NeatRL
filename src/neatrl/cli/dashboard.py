@@ -28,6 +28,13 @@ from .charts import (
 )
 from .history import HistoryTracker
 
+# Package metadata is the single source of the version string; the dashboard
+# used to hardcode it and drifted from pyproject.toml.
+try:
+    from .. import __version__ as _NEATRL_VERSION
+except Exception:  # pragma: no cover - partial install
+    _NEATRL_VERSION = "0.0.0+unknown"
+
 try:
     import psutil as psutilMod
 
@@ -238,7 +245,7 @@ class Dashboard:
             else ""
         )
         header.add_row(
-            f"NeatRL 1.0.0  [{self.algo}]  [yellow][LOGS][/yellow]  [dim][l: back][/dim]",
+            f"NeatRL {_NEATRL_VERSION}  [{self.algo}]  [yellow][LOGS][/yellow]  [dim][l: back][/dim]",
             f"Lines: {total}/{LOGBUFSIZE}{scrollInfo}",
         )
 
@@ -266,7 +273,7 @@ class Dashboard:
         header.add_column(style="bold cyan", min_width=22)
         header.add_column(style="white")
         header.add_row(
-            f"NeatRL 1.0.0  [{self.algo}]  [yellow][CONFIG][/yellow]  [dim][l: logs][c: back][/dim]",
+            f"NeatRL {_NEATRL_VERSION}  [{self.algo}]  [yellow][CONFIG][/yellow]  [dim][l: logs][c: back][/dim]",
             f"Device: {DT[2]}",
         )
         rows: list[tuple[str, str]] = []
@@ -398,7 +405,7 @@ class Dashboard:
         header.add_column(style="white", min_width=13)
         header.add_column(style="white", min_width=13)
         header.add_row(
-            f"NeatRL 1.0.0  [{self.algo}]",
+            f"NeatRL {_NEATRL_VERSION}  [{self.algo}]",
             f"CPU: [cyan]{cpu:.1f}%[/cyan]",
             f"{DT[0]}: [cyan]{gpu:.1f}%[/cyan]",
             f"DRAM: [cyan]{dram:.1f}%[/cyan]",
@@ -612,7 +619,7 @@ class Dashboard:
         header.add_column(style="bold cyan", min_width=22)
         header.add_column(style="white")
         header.add_row(
-            f"NeatRL 1.0.0  [{self.algo}]  [yellow][CHARTS][/yellow]  [dim][v: back][/dim]",
+            f"NeatRL {_NEATRL_VERSION}  [{self.algo}]  [yellow][CHARTS][/yellow]  [dim][v: back][/dim]",
             f"Steps: {abbrev(self.lastAgentSteps)}  |  History: {HISTORY_MAXLEN} pts",
         )
 

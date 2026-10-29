@@ -4,6 +4,36 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-30
+
+### Breaking
+- **`learning_rate=` is now `lr=`** on every trainer: `train_dqn`,
+  `train_dqn_cnn`, `train_double_dqn`, `train_double_dqn_cnn`,
+  `train_q_learning`, `train_reinforce`, `train_ppo`, `train_sac`,
+  `train_td3`, `train_a2c`, `train_ddpg`, `train_dueling_dqn`,
+  `train_ppo_rnd` and their `_cnn` variants.
+- **`train_reinforce` / `train_reinforce_cnn` take `total_episodes=`**
+  instead of `total_steps=`.
+- **Algorithm modules are split by network type**, so the old import paths
+  are gone: `neatrl.dqn` → `neatrl.dqn_mlp`, and the same for `ppo`, `sac`,
+  `td3`, `a2c`, `ddpg`, `reinforce`, `dueling_dqn` and `rnd`, each keeping a
+  `_cnn` sibling. `import neatrl` and the `neatrl.train_*` names are unchanged.
+
+### Added - CLI and dashboard
+- **`neatrl` console command**: `neatrl train <algo> <env>` with 20 aliases,
+  including `dqn-cnn`, `double-dqn`, `double-dqn-cnn`, `q-learning`,
+  `sac-cnn` and `td3-cnn`. It runs the matching script in `docs/cli/`, so it
+  expects a repository checkout.
+- **Live terminal dashboard** (`cli/dashboard.py`, built on `rich`): logs,
+  config and charts views with `l` / `c` / `v` keys. It only takes over the
+  terminal when stdout is a TTY, and skips raw mode entirely when stdin has
+  no file descriptor. New `cli` extra: `pip install "neatrl[cli]"` (`rich`,
+  `psutil`, `nvidia-ml-py`).
+- **`custom_agent=`** on `train_dqn`, `train_dueling_dqn`, `train_reinforce`
+  and `train_reinforce_cnn` to pass your own `torch.nn.Module`; it is
+  dimension-checked against the environment before training starts.
+- **`neatrl.__version__`**, read from the installed distribution metadata.
+
 ### Added - Atari DQN-CNN
 - **`dqn_cnn.py` / `train_dqn_cnn()`**: DQN with the convolutional network and
   Atari preprocessing from Mnih et al. (2015)
@@ -42,6 +72,26 @@ All notable changes to this project will be documented in this file.
 - **`scripts/check_tui_pty.py`**: runs each trainer inside a pseudo-terminal
   because the Dashboard only activates on a TTY, then asserts ANSI frames were
   drawn and the l/c/v views cycle
+
+### Added - Tabular Q-learning
+- **`q_learning.py` / `train_q_learning()`**: tabular off-policy TD control,
+  `Q(s, a) <- Q(s, a) + lr * [r + gamma * max_a' Q(s', a') - Q(s, a)]`, for
+  small discrete Gym environments (FrozenLake, CliffWalking, Taxi)
+  - Rejects `Box` observation or action spaces up front with an error that
+    names DQN as the function-approximation alternative
+  - Returns the trained `numpy` Q-table; checkpoints and evaluation reuse the
+    same `eval_every` / `save_every` / `num_eval_eps` contract as the
+    neural trainers
+  - New CLI alias: `neatrl train q-learning FrozenLake-v1`
+
+### Changed
+- `train_sac`, `train_sac_cnn`, `train_td3` and `train_td3_cnn` are now
+  exported from `neatrl` directly; they were only reachable through their
+  modules.
+- Every trainer calls `configure_logging()` and writes a log file to
+  `runs/<exp_name>/`.
+- `pygame-ce` is a runtime dependency, matching the classic-control error
+  hint that already told users to install it.
 
 ### Fixed
 - `evaluate()` in `dqn_mlp` and `dqn_cnn` looped forever on environments
