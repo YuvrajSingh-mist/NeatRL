@@ -145,7 +145,64 @@ All notable changes to this project will be documented in this file.
 - `validate_q_network_dimensions` now accepts image observation shapes and
   checks for a convolutional trunk, matching the other validators.
 
+## [1.0.0] - 2025-12-29
+
+### Added - SAC
+- **`neatrl/sac.py` / `train_sac()` and `train_sac_cnn()`**: maximum-entropy
+  actor-critic with twin critics, a stochastic Gaussian policy and
+  reparameterised sampling
+  - Temperature is tuned automatically against a target entropy
+    (`autotune_alpha`, `target_entropy_scale`, `alpha`)
+  - Delayed policy updates via `policy_frequency`, with `target_network_frequency`
+    for the critics
+- **`neatrl/td3.py` / `train_td3()` and `train_td3_cnn()`**: twin critics, a
+  delayed deterministic actor and target policy smoothing
+- Neither module was re-exported from `neatrl/__init__.py`; both were reachable
+  only by importing the module, until 2.0.0 added the top-level names.
+
+### Changed - breaking
+- **`get_action()` on the PPO, RND and A2C actor networks no longer takes the
+  unused `action` argument**: `get_action(x, action=None)` became
+  `get_action(x)`. Code that subclassed those networks and passed or overrode
+  the argument has to drop it.
+
+### Fixed
+- **TD3 training loop**: the TD target is detached so gradients cannot flow
+  into the target networks; observations, actions, rewards and dones are
+  cloned to avoid in-place operation errors; redundant `zero_grad` calls are
+  gone; and gradients are clipped on both the critics and the actor.
+
+## [0.6.0] - 2025-12-26
+
+### Added - A2C
+- **`neatrl/a2c.py` / `train_a2c()` and `train_a2c_cnn()`**: synchronous
+  advantage actor-critic, exported from `neatrl` alongside the other
+  trainers
+  - Vectorised rollouts via `n_envs`. The loss is weighted by `ENTROPY_COEFF`,
+    and the CNN variant additionally exposes `VALUE_COEFF`
+  - Optional learning-rate annealing (`anneal_lr`) and observation/reward
+    normalisation (`normalize_obs`, `normalize_reward`)
+- **`mujoco` extra**: `pip install "neatrl[mujoco]"` for MuJoCo continuous
+  control environments (`gymnasium[mujoco]`).
+
+### Changed
+- **A2C continuous actions are bounded**: the policy squashes its mean with
+  `2 * tanh`, so it emits actions inside the environment's range instead of
+  unbounded reals — required for `Pendulum-v1`, whose actions live in [-2, 2].
+  The Pendulum example now trains on four parallel environments (`n_envs=4`).
+- **DDPG-CNN CarRacing actor fixed**: the actor took the observation *shape*
+  as its own `obs_shape` argument, so `Conv2d(obs_shape, …)` received a tuple
+  and the fully-connected layer was sized for a wrong feature map
+  (`64*8*8`). It now takes `obs_shape` per-instance, builds
+  `Conv2d(obs_shape[0], …)`, and uses `64*7*7`.
+- The DDPG examples pass `env_id=` rather than a pre-built `env=`, and the
+  BipedalWalker example records video (`capture_video=True`).
+
 ## [0.5.0] - 2025-12-24
+
+> The TD3, SAC and A2C sections below were written ahead of this release. The
+> published 0.5.0 wheel contained DQN, Dueling DQN, PPO, REINFORCE, RND and
+> DDPG; A2C shipped in 0.6.0, and TD3 and SAC in 1.0.0.
 
 ### Added - PPO Algorithm Implementation
 - **PPO (Proximal Policy Optimization)**: Full implementation of PPO with Generalized Advantage Estimation (GAE)
@@ -188,7 +245,24 @@ All notable changes to this project will be documented in this file.
   - **Flexible Action Spaces**: Support for both discrete and continuous action spaces
 
 
+## [0.4.0] - 2025-12-21
+
+### Added - RND
+- **`neatrl/rnd.py` / `train_rnd()`**: Random Network Distillation exploration
+  on top of PPO — a fixed randomly initialised target network and a trainable
+  predictor, with the prediction error used as the intrinsic reward
+  - A `RunningMeanStd` normalises intrinsic rewards against the running
+    statistics of the return, so the curiosity bonus stays on a comparable
+    scale to the extrinsic reward
+  - `OneHotWrapper` one-hot encodes discrete observations, so grid
+    environments (FrozenLake, CliffWalking) work through the same code path
+  - `train_rnd` was renamed to `train_ppo_rnd` (with `train_ppo_rnd_cnn`
+    added) in 0.5.0
+
 ## [0.3.0] - 2025-12-22
+
+> Written ahead of the release: the 0.3.0 wheel contained DQN, Dueling DQN and
+> REINFORCE only. RND first shipped as `train_rnd` in 0.4.0.
 
 ### Added - PPO-RND Algorithm Implementation
 - **PPO-RND Algorithm**: Full implementation of Proximal Policy Optimization with Random Network Distillation
@@ -225,6 +299,26 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - **Parameter Renaming**: Renamed `record` parameter to `capture_video` for consistency in video recording functionality
+
+## [0.1.5] - 2025-12-13
+
+### Fixed
+- **Atari wrappers imported from the wrong package**: `dqn.py` did
+  `from gym.wrappers import AtariPreprocessing, FrameStackObservation` and
+  called `FrameStackObservation(env, num_stack=4)`. Gymnasium's wrapper is
+  imported from `gymnasium.wrappers` and takes `stack_size=`. Any run with
+  `atari_wrapper=True` failed on the import.
+- **`evaluate()` ignored `atari_wrapper`**: it built its environment without
+  the Atari preprocessing the training env used, so evaluation fed the network
+  raw frames of the wrong shape. It now takes `atari_wrapper` and applies the
+  same wrappers.
+
+### Changed
+- `make_env` returns a thunk (`make_env(...)()`) so each of the `n_envs=4`
+  parallel environments gets its own seed (`seed + idx`) instead of sharing
+  one.
+- Removed the ad-hoc `"Hooray! Episode reward exceeded 500, stopping early"`
+  early exit from training.
 
 ## [0.1.4] - 2025-12-13
 
