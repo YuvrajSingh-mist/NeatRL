@@ -7,9 +7,8 @@ All notable changes to this project will be documented in this file.
 ## [2.0.0] - 2026-10-30
 
 ### Breaking
-- **`learning_rate=` is now `lr=`** on every trainer: `train_dqn`,
-  `train_dqn_cnn`, `train_double_dqn`, `train_double_dqn_cnn`,
-  `train_q_learning`, `train_reinforce`, `train_ppo`, `train_sac`,
+- **`learning_rate=` is now `lr=`** on every trainer that already existed in
+  1.0.0: `train_dqn`, `train_reinforce`, `train_ppo`, `train_sac`,
   `train_td3`, `train_a2c`, `train_ddpg`, `train_dueling_dqn`,
   `train_ppo_rnd` and their `_cnn` variants.
 - **`train_reinforce` / `train_reinforce_cnn` take `total_episodes=`**
