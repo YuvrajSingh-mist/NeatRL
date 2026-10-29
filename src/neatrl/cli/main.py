@@ -1,53 +1,19 @@
-"""NeatRL CLI — neatrl train <algo> <env>"""
+"""NeatRL CLI -- ``neatrl train <algo> [env_id]``.
+
+Dispatch comes from ``neatrl.cli.recipes``, so the command works the same
+from an installed wheel as it does from a repository checkout.
+"""
 
 import argparse
-import importlib.util
-import pathlib
 import sys
 
-_DOCS_CLI = (
-    pathlib.Path(__file__).resolve().parent.parent.parent.parent / "docs" / "cli"
-)
-
-_SCRIPTS = {
-    "a2c": "a2c",
-    "a2c-cnn": "a2c",
-    "ddpg": "ddpg",
-    "ddpg-cnn": "ddpg",
-    "dqn": "dqn",
-    "dqn-cnn": "dqn",
-    "double-dqn": "double_dqn",
-    "double-dqn-cnn": "double_dqn",
-    "dueling-dqn": "dueling_dqn",
-    "ppo": "ppo",
-    "ppo-cnn": "ppo",
-    "q-learning": "q_learning",
-    "reinforce": "reinforce",
-    "reinforce-cnn": "reinforce",
-    "rnd": "rnd",
-    "rnd-cnn": "rnd",
-    "sac": "sac",
-    "sac-cnn": "sac",
-    "td3": "td3",
-    "td3-cnn": "td3",
-}
+from .recipes import ALIASES, RECIPES, default_env, run_train
 
 
-def _load_and_run(algo: str, env_id: str) -> None:
-    script = _DOCS_CLI / f"{_SCRIPTS[algo]}.py"
-    if not script.exists():
-        print(f"Script not found: {script}", file=sys.stderr)
-        sys.exit(1)
-    spec = importlib.util.spec_from_file_location("_neatrl_script", script)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    mod.run(env_id=env_id, use_cnn=algo.endswith("-cnn"))
-
-
-def main() -> None:
+def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="neatrl",
-        description="NeatRL — edit docs/cli/<algo>.py then run from here",
+        description="NeatRL -- train a reinforcement learning agent",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
@@ -59,32 +25,50 @@ def main() -> None:
             "  neatrl train sac Pendulum-v1\n"
             "  neatrl train td3-cnn CarRacing-v3\n"
             "  neatrl train rnd CliffWalking-v0\n"
+            "\n"
+            "Omit env_id to use the algorithm's default environment.\n"
         ),
     )
     subs = parser.add_subparsers(dest="command", metavar="command")
 
-    train_p = subs.add_parser("train", help="Run a docs/cli/<algo>.py script")
+    train_p = subs.add_parser("train", help="Train an agent")
     train_p.add_argument(
         "algo",
-        choices=sorted(_SCRIPTS),
+        choices=sorted(ALIASES),
         metavar="algo",
-        help=f"Algorithm ({', '.join(sorted(_SCRIPTS))})",
+        help=f"Algorithm ({', '.join(sorted(ALIASES))})",
     )
     train_p.add_argument(
         "env",
         metavar="env_id",
+        nargs="?",
         help="Gymnasium environment ID (e.g. CartPole-v1, Pendulum-v1)",
     )
+    train_p.add_argument(
+        "--steps",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "Training steps, or episodes for reinforce. "
+            "Defaults to the trainer's own setting."
+        ),
+    )
+    return parser
 
-    args = parser.parse_args()
+
+def main(argv=None) -> None:
+    parser = _build_parser()
+    args = parser.parse_args(argv)
 
     if not args.command:
         parser.print_help()
         sys.exit(0)
 
     if args.command == "train":
-        _load_and_run(args.algo, args.env)
+        key, use_cnn = ALIASES[args.algo]
+        env_id = args.env or default_env(key, use_cnn)
+        run_train(key, env_id, use_cnn=use_cnn, steps=args.steps)
 
 
-if __name__ == "__main__":
-    main()
+__all__ = ["main", "RECIPES"]

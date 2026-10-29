@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-10-30
+
+### Fixed
+- **`neatrl train` failed on every release installed from PyPI** with
+  `Script not found: .../docs/cli/<algo>.py`. The command loaded its example
+  scripts by path, and that directory only exists in a repository checkout.
+  Dispatch now comes from `neatrl.cli.recipes`, a table inside the package,
+  so the installed console script works from any directory.
+
+### Changed
+- `neatrl train` no longer requires an environment argument. Omitting it uses
+  the algorithm's default: `neatrl train dqn` trains on `CartPole-v1`,
+  `neatrl train sac` on `Pendulum-v1`, `neatrl train rnd` on
+  `CliffWalking-v0`.
+- `neatrl train --steps N` overrides the training length — `total_episodes`
+  for `reinforce`, `total_timesteps` for everything else.
+- The README documented fuzzy environment matching (`cartpole` resolving to
+  `CartPole-v1`) that the command never implemented. It now documents the
+  behaviour that exists.
+
 ## [2.0.0] - 2026-10-30
 
 ### Breaking

@@ -41,18 +41,26 @@ pip install "neatrl[mujoco]"   # MuJoCo continuous control
 
 ## CLI
 
-Run pre-configured example scripts for any algorithm directly from the terminal:
+Train any algorithm from the terminal:
 
 ```bash
-neatrl train dqn cartpole
-neatrl train ppo lunar
-neatrl train sac pendulum
-neatrl train td3 halfcheetah
-neatrl train rnd cliffwalking
-neatrl train ddpg-cnn carracing
+neatrl train dqn CartPole-v1
+neatrl train ppo LunarLander-v3
+neatrl train sac Pendulum-v1
+neatrl train td3 HalfCheetah-v4
+neatrl train rnd CliffWalking-v0
+neatrl train ddpg-cnn CarRacing-v3
 ```
 
-The env argument is matched fuzzy-style against the example scripts in `docs/` — `CartPole-v1`, `cartpole`, and `cartpole-v1` all resolve to the same script. Run `neatrl train <algo>` with an unknown env to see available scripts for that algorithm.
+The environment is optional — omit it to use the algorithm's default
+(`neatrl train dqn` trains on `CartPole-v1`, `neatrl train sac` on
+`Pendulum-v1`). `--steps` overrides the training length:
+
+```bash
+neatrl train dqn CartPole-v1 --steps 50000
+```
+
+Pass `--help` to any command for the full list of the 20 algorithm aliases.
 
 
 ## Quick Start
