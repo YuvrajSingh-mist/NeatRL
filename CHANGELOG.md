@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [2.0.2] - 2026-10-30
+## [2.0.2] - 2026-10-29
 
 ### Fixed
 - **`import neatrl` raised `ModuleNotFoundError: No module named 'rich'`** on
@@ -15,7 +15,7 @@ All notable changes to this project will be documented in this file.
   plain logging instead of a crash. `pip install "neatrl[cli]"` still enables
   the dashboard.
 
-## [2.0.1] - 2026-10-30
+## [2.0.1] - 2026-10-29
 
 ### Fixed
 - **`neatrl train` failed on every release installed from PyPI** with
@@ -35,7 +35,7 @@ All notable changes to this project will be documented in this file.
   `CartPole-v1`) that the command never implemented. It now documents the
   behaviour that exists.
 
-## [2.0.0] - 2026-10-30
+## [2.0.0] - 2026-10-29
 
 ### Breaking
 - **`learning_rate=` is now `lr=`** on every trainer that already existed in
