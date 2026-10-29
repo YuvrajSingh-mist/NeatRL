@@ -259,7 +259,7 @@ All notable changes to this project will be documented in this file.
   - `train_rnd` was renamed to `train_ppo_rnd` (with `train_ppo_rnd_cnn`
     added) in 0.5.0
 
-## [0.3.0] - 2025-12-22
+## [0.3.0] - 2025-12-17
 
 > Written ahead of the release: the 0.3.0 wheel contained DQN, Dueling DQN and
 > REINFORCE only. RND first shipped as `train_rnd` in 0.4.0.
@@ -273,6 +273,8 @@ All notable changes to this project will be documented in this file.
 
 
 ## [0.2.1] - 2025-12-17
+
+> This version has no distribution files left on PyPI; installing it will fail.
 
 ### Added - REINFORCE Algorithm Enhancements
 - **Atari Support**: REINFORCE now supports Atari games with automatic CNN architecture detection and preprocessing
@@ -334,12 +336,15 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - **Constructor Validation**: Added checks to ensure custom agent classes have compatible constructors
 
-## [0.1.3] - 2025-12-01
+## [0.1.3] - 2025-12-13
+
+### Changed
+- Dropped `cv2`, the TensorBoard `SummaryWriter` and the `RecordVideo`
+  wrapper from `dqn.py`; collected frames are stacked with `np.stack` and
+  written through `imageio`.
 
 ### Added
-- Initial release with DQN implementation
 - Weights & Biases integration for experiment tracking
-- Video recording capabilities
 - Comprehensive documentation
 
 ### Features
@@ -347,3 +352,9 @@ All notable changes to this project will be documented in this file.
 - Support for Atari and classic control environments
 - Modular configuration system
 - Evaluation and model saving utilities
+
+## [0.1.2] - 2025-12-13
+
+### Added
+- First published release: `train_dqn()` with an MLP Q-network, experience
+  replay, target-network updates, evaluation and checkpointing.
