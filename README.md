@@ -28,6 +28,13 @@ pip install neatrl
 pip install "neatrl[cli]"      # Live terminal dashboard (rich, psutil)
 ```
 
+With [uv](https://docs.astral.sh/uv/), install the `neatrl` command as an
+isolated tool — no virtualenv to manage:
+
+```bash
+uv tool install neatrl
+```
+
 With optional environment extras:
 
 ```bash
