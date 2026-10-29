@@ -25,9 +25,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import wandb
 from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
+
+import wandb
 
 from .cli import Dashboard
 from .dqn_cnn import (
@@ -298,7 +299,7 @@ def train_double_dqn_cnn(
 
     # Only show the interactive dashboard on a TTY; otherwise let logs through.
     dashboard = None
-    if sys.stdout.isatty():
+    if Dashboard is not None and sys.stdout.isatty():
         dashboard = Dashboard(
             "DoubleDQN-CNN",
             Config.env_id or "custom",

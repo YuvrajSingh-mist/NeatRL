@@ -163,3 +163,70 @@ class TestTrainersSkipDashboardWithoutTty:
         assert created == [], "trainer built a Dashboard with stdout piped"
         out = capsys.readouterr().out
         assert "\033[" not in out, "ANSI dashboard frames leaked into a piped stdout"
+
+
+class TestDashboardIsOptional:
+    """`rich` is an optional extra: without it, trainers must skip the dashboard.
+
+    `import neatrl` is guarded, but that guard is only useful if the trainers
+    also stop constructing a Dashboard when the symbol is None. They used to
+    call `Dashboard(...)` unconditionally and crashed with
+    `TypeError: 'NoneType' object is not callable` on every run without `rich`.
+    """
+
+    TRAINERS = [
+        "a2c_cnn",
+        "a2c_mlp",
+        "ddpg_cnn",
+        "ddpg_mlp",
+        "double_dqn_cnn",
+        "double_dqn_mlp",
+        "dqn_cnn",
+        "dqn_mlp",
+        "dueling_dqn_mlp",
+        "ppo_cnn",
+        "ppo_mlp",
+        "q_learning",
+        "reinforce_cnn",
+        "reinforce_mlp",
+        "rnd_cnn",
+        "rnd_mlp",
+        "sac_cnn",
+        "sac_mlp",
+        "td3_cnn",
+        "td3_mlp",
+    ]
+
+    @pytest.mark.parametrize("name", TRAINERS)
+    def test_trainer_tolerates_missing_dashboard(self, name):
+        import importlib
+        import inspect
+
+        source = inspect.getsource(importlib.import_module(f"neatrl.{name}"))
+        assert "Dashboard is not None" in source, (
+            f"neatrl/{name}.py constructs Dashboard unconditionally; a machine "
+            "without the [cli] extra would crash instead of training"
+        )
+
+    @pytest.mark.parametrize("name", TRAINERS)
+    def test_trainer_imports_sys_for_the_tty_check(self, name):
+        import importlib
+
+        mod = importlib.import_module(f"neatrl.{name}")
+        assert hasattr(mod, "Dashboard"), f"neatrl/{name}.py lost its Dashboard import"
+
+    def test_every_trainer_module_is_covered(self):
+        """Keep TRAINERS in sync when a trainer is added."""
+        import pathlib
+        import re
+
+        pkg = pathlib.Path(__file__).resolve().parents[1] / "src" / "neatrl"
+        found = set()
+        for path in pkg.glob("*.py"):
+            source = path.read_text()
+            if re.search(r"^\s*dashboard = Dashboard\(", source, re.M) or (
+                "dashboard = Dashboard(" in source
+            ):
+                found.add(path.stem)
+        missing = found - set(self.TRAINERS)
+        assert not missing, f"new trainers not covered by this test: {sorted(missing)}"

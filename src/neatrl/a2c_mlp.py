@@ -2,6 +2,7 @@
 
 import os
 import random
+import sys
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, Union
@@ -13,8 +14,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import wandb
 from tqdm import tqdm
+
+import wandb
 
 from .cli import Dashboard
 from .utils import configure_logging, get_logger, get_space_dims, setup_device
@@ -391,6 +393,16 @@ def train_a2c(
 
     logger.info(f"Observation Space: {obs_space_shape}, Action Space: {action_space_n}")
 
+    # The built-in actor is categorical, so a Box action space would otherwise
+    # fail deep inside gymnasium with a confusing IndexError.
+    if actor_class is ActorNet and isinstance(envs.single_action_space, gym.spaces.Box):
+        raise ValueError(
+            "train_a2c only supports discrete action spaces; "
+            f"{Config.env_id or 'the environment'} has a Box action space "
+            f"{envs.single_action_space}. Use train_ppo, train_sac, train_td3 or "
+            "train_ddpg for continuous control, or pass a custom `actor_class`."
+        )
+
     # Create actor network
     if isinstance(actor_class, nn.Module):
         # Use custom actor instance
@@ -430,9 +442,13 @@ def train_a2c(
 
     start_time = time.time()
 
-    dashboard = Dashboard(
-        "A2C", Config.env_id or "custom", Config.total_timesteps, config=Config
-    )
+    dashboard = None
+    # Live dashboard only on an interactive TTY and when
+    # `rich` is installed, so CI and piped output stay quiet.
+    if Dashboard is not None and sys.stdout.isatty():
+        dashboard = Dashboard(
+            "A2C", Config.env_id or "custom", Config.total_timesteps, config=Config
+        )
 
     for step in tqdm(range(1, num_updates + 1), desc="Training Updates", disable=True):
         # Annealing the rate if instructed to do so.

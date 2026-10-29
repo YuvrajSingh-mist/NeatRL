@@ -12,8 +12,9 @@ from dataclasses import dataclass
 
 import gymnasium as gym
 import numpy as np
-import wandb
 from tqdm import tqdm
+
+import wandb
 
 from .utils import configure_logging, get_logger
 

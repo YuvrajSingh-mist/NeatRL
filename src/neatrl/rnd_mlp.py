@@ -2,6 +2,7 @@
 
 import os
 import random
+import sys
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, Union
@@ -13,8 +14,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import wandb
 from tqdm import tqdm
+
+import wandb
 
 from .cli import Dashboard
 from .utils import configure_logging, get_logger, get_space_dims, setup_device
@@ -588,9 +590,13 @@ def train_ppo_rnd(
     start_time = time.time()
     latest_avg_return = 0.0
 
-    dashboard = Dashboard(
-        "RND", Config.env_id or "custom", Config.total_timesteps, config=Config
-    )
+    dashboard = None
+    # Live dashboard only on an interactive TTY and when
+    # `rich` is installed, so CI and piped output stay quiet.
+    if Dashboard is not None and sys.stdout.isatty():
+        dashboard = Dashboard(
+            "RND", Config.env_id or "custom", Config.total_timesteps, config=Config
+        )
 
     for update in tqdm(
         range(1, num_updates + 1), desc="Training Updates", disable=True

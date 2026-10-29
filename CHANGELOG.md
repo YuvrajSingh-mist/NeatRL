@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.0.3] - 2026-10-29
+
+### Fixed
+- **Training crashed without the `[cli]` extra.** 2.0.2 made `Dashboard`
+  optional so that `import neatrl` worked without `rich`, but the trainers
+  still called `Dashboard(...)` and died with
+  `TypeError: 'NoneType' object is not callable` on the first step. Fifteen
+  trainers failed on every run — `a2c_cnn`, `a2c_mlp`, `ddpg_cnn`, `ddpg_mlp`,
+  `dueling_dqn_mlp`, `ppo_cnn`, `ppo_mlp`, `reinforce_cnn`, `reinforce_mlp`,
+  `rnd_cnn`, `rnd_mlp`, `sac_cnn`, `sac_mlp`, `td3_cnn`, `td3_mlp` — and the
+  remaining four (`dqn_mlp`, `dqn_cnn`, `double_dqn_mlp`, `double_dqn_cnn`)
+  only skipped the dashboard when stdout was not a TTY, so they still crashed
+  in an interactive terminal. Every trainer now builds it only when
+  `Dashboard is not None and sys.stdout.isatty()`, so a bare
+  `pip install neatrl` can train without the extra.
+- `train_a2c` on a continuous-control environment (e.g. `Pendulum-v1`) used to
+  fail inside gymnasium with `IndexError: invalid index to scalar variable`,
+  because the built-in actor is categorical and returned a scalar action. It
+  now raises a `ValueError` naming the continuous-control trainers
+  (`train_ppo`, `train_sac`, `train_td3`, `train_ddpg`) and noting that a
+  custom `actor_class` can be supplied.
+
 ## [2.0.2] - 2026-10-29
 
 ### Fixed

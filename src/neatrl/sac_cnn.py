@@ -2,6 +2,7 @@
 
 import os
 import random
+import sys
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, Union
@@ -12,9 +13,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import wandb
 from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
+
+import wandb
 
 from .cli import Dashboard
 from .utils import configure_logging, get_logger, setup_device
@@ -542,9 +544,13 @@ def train_sac_cnn(
     start_time = time.time()
     latest_avg_return = 0.0
 
-    dashboard = Dashboard(
-        "SAC-CNN", Config.env_id or "custom", Config.total_timesteps, config=Config
-    )
+    dashboard = None
+    # Live dashboard only on an interactive TTY and when
+    # `rich` is installed, so CI and piped output stay quiet.
+    if Dashboard is not None and sys.stdout.isatty():
+        dashboard = Dashboard(
+            "SAC-CNN", Config.env_id or "custom", Config.total_timesteps, config=Config
+        )
 
     for step in tqdm(range(Config.total_timesteps)):
         # Sample action from stochastic policy

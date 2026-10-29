@@ -160,9 +160,7 @@ class TestOptionalRichDependency:
         # machine that has the extra installed.
         (tmp_path / "rich.py").write_text("raise ImportError('rich is not installed')")
         pkg_root = str(pathlib.Path(__file__).resolve().parent.parent / "src")
-        env = dict(
-            os.environ, PYTHONPATH=os.pathsep.join([str(tmp_path), pkg_root])
-        )
+        env = dict(os.environ, PYTHONPATH=os.pathsep.join([str(tmp_path), pkg_root]))
         code = (
             "import neatrl, sys\n"
             "from neatrl.cli import Dashboard\n"
@@ -183,9 +181,7 @@ class TestOptionalRichDependency:
     def test_cli_help_works_without_rich(self, tmp_path):
         (tmp_path / "rich.py").write_text("raise ImportError('rich is not installed')")
         pkg_root = str(pathlib.Path(__file__).resolve().parent.parent / "src")
-        env = dict(
-            os.environ, PYTHONPATH=os.pathsep.join([str(tmp_path), pkg_root])
-        )
+        env = dict(os.environ, PYTHONPATH=os.pathsep.join([str(tmp_path), pkg_root]))
         out = subprocess.run(
             [sys.executable, "-m", "neatrl.cli", "--help"],
             capture_output=True,

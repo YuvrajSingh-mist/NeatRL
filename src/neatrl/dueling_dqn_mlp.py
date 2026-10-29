@@ -2,6 +2,7 @@
 
 import os
 import random
+import sys
 import time
 from dataclasses import dataclass
 from typing import Any, Optional, Union
@@ -12,10 +13,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import wandb
 from gymnasium.wrappers import AtariPreprocessing, FrameStackObservation
 from stable_baselines3.common.buffers import ReplayBuffer
 from tqdm import tqdm
+
+import wandb
 
 from .cli import Dashboard
 from .utils import configure_logging, get_logger, get_space_dims, setup_device
@@ -347,9 +349,13 @@ def train_dueling_dqn(
     update_count = 0
     latest_loss = 0.0
 
-    dashboard = Dashboard(
-        "Dueling-DQN", Config.env_id or "custom", total_timesteps, config=Config
-    )
+    dashboard = None
+    # Live dashboard only on an interactive TTY and when
+    # `rich` is installed, so CI and piped output stay quiet.
+    if Dashboard is not None and sys.stdout.isatty():
+        dashboard = Dashboard(
+            "Dueling-DQN", Config.env_id or "custom", total_timesteps, config=Config
+        )
 
     for step in tqdm(range(total_timesteps), disable=True):
         step = step * n_envs
