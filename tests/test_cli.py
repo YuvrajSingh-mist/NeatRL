@@ -153,6 +153,44 @@ class TestDispatch:
         assert out["atari_wrapper"] is True
 
 
+class TestEnvRouting:
+    """Image envs and MLP aliases are a mismatch that used to fail in torch."""
+
+    def test_image_env_routes_to_the_cnn_trainer(self):
+        call, used_cnn = recipes.resolve_call("dqn", "ALE/Pong-v5", False)
+        assert used_cnn is True
+        assert call.func == "neatrl.dqn_cnn.train_dqn_cnn"
+
+    def test_carracing_routes_to_a_carracing_cnn_trainer(self):
+        call, used_cnn = recipes.resolve_call("td3", "CarRacing-v3", False)
+        assert used_cnn is True
+        assert call.func == "neatrl.td3_cnn.train_td3_cnn"
+
+    def test_atari_env_is_not_sent_to_a_carracing_trainer(self):
+        with pytest.raises(ValueError, match="preprocessing"):
+            recipes.resolve_call("td3", "ALE/Pong-v5", False)
+
+    def test_familyless_algorithm_rejects_image_env(self):
+        with pytest.raises(ValueError, match="no CNN trainer"):
+            recipes.resolve_call("q_learning", "ALE/Pong-v5", False)
+
+    def test_cnn_alias_rejects_a_vector_env(self):
+        with pytest.raises(ValueError, match="expects atari image"):
+            recipes.resolve_call("dqn", "CartPole-v1", True)
+
+    def test_every_call_declares_a_family(self):
+        for key, recipe in RECIPES.items():
+            assert recipe.mlp.family == "vector", key
+            if recipe.cnn is not None:
+                assert recipe.cnn.family in ("atari", "carracing"), key
+
+    def test_cli_reports_a_mismatch_without_a_traceback(self, capsys):
+        with pytest.raises(SystemExit) as excinfo:
+            main(["train", "q-learning", "ALE/Pong-v5"])
+        assert excinfo.value.code == 2
+        assert "no CNN trainer" in capsys.readouterr().err
+
+
 class TestOptionalRichDependency:
     """`rich` is the optional `cli` extra, so a bare install must still import."""
 

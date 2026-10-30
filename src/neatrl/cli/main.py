@@ -94,7 +94,20 @@ def main(argv=None) -> None:
         key, use_cnn = ALIASES[args.algo]
         env_id = args.env or default_env(key, use_cnn)
         _warn_if_dashboard_disabled()
-        run_train(key, env_id, use_cnn=use_cnn, steps=args.steps, use_wandb=args.wandb)
+        try:
+            run_train(
+                key,
+                env_id,
+                use_cnn=use_cnn,
+                steps=args.steps,
+                use_wandb=args.wandb,
+            )
+        except ValueError as exc:
+            # Fixture mismatches (an image env handed to an MLP alias, and the
+            # like) are user errors, not crashes: report them without a
+            # traceback.
+            print(f"neatrl: error: {exc}", file=sys.stderr)
+            sys.exit(2)
 
 
 __all__ = ["main", "RECIPES"]

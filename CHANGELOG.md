@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-10-30
+
+### Added
+- **An image environment picks the CNN trainer for you.**
+  `neatrl train dqn ALE/Pong-v5` now runs the DQN CNN trainer and says so,
+  instead of dying inside torch with `mat1 and mat2 shapes cannot be
+  multiplied (33600x3 and 210x256)`. Each recipe records the observation
+  family its trainer preprocesses for (`vector`, `atari`, `carracing`), so the
+  swap only happens where the training code genuinely matches.
+- **Mismatches are one-line errors, not tracebacks.** A CarRacing env given to
+  `ppo-cnn` or an Atari env given to `td3-cnn` now explains which alias does
+  support it; a vector env given to a `-cnn` alias points back at the MLP one;
+  and an image env given to a tabular algorithm (`q-learning`) says it has no
+  CNN trainer at all.
+
 ## [2.3.0] - 2026-10-30
 
 ### Added
