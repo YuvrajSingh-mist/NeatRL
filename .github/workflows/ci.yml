@@ -6,33 +6,106 @@ on:
   pull_request:
     branches: [ master ]
 
+# A new push supersedes the previous run: no queue of stale failures, and one
+# email per branch tip instead of one per intermediate commit.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
+  lint:
+    name: Lint and format
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.9", "3.10", "3.11"]
-
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v7
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: "3.12"
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v3
+      uses: astral-sh/setup-uv@v7
       with:
         enable-cache: true
         cache-dependency-glob: "pyproject.toml"
 
     - name: Install dependencies
-      run: |
-        uv pip install --system -e .[dev]
+      run: uv pip install --system -e ".[dev]"
 
+    # --output-format=github turns findings into PR annotations instead of log
+    # lines nobody reads.
     - name: Lint with ruff
-      run: |
-        ruff check .
-        ruff format --check .
+      run: ruff check . --output-format=github
 
+    - name: Check formatting
+      run: ruff format --check .
+
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      # Three versions, three chances to see a real failure: do not cancel the
+      # others when one trips.
+      fail-fast: false
+      matrix:
+        python-version: [ "3.10", "3.11", "3.12" ]
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v7
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v7
+      with:
+        enable-cache: true
+        cache-dependency-glob: "pyproject.toml"
+
+    - name: Install dependencies
+      run: uv pip install --system -e ".[dev]"
+
+    # The suite is tiered; the training-matrix tiers are opt-in because they
+    # actually train. These files run in seconds and cover the CLI contract,
+    # the public API, the dashboard and the code-quality guards.
+    - name: Fast test suite
+      run: |
+        pytest -q \
+          tests/test_cli.py \
+          tests/test_cli_extras.py \
+          tests/test_code_quality.py \
+          tests/test_docs.py \
+          tests/test_public_api.py \
+          tests/test_utils.py \
+          tests/test_dashboard.py \
+          tests/test_dashboard_hw.py \
+          tests/test_dashboard_redraw.py \
+          tests/test_dashboard_terminal.py
+
+  docs:
+    name: Docs links and structure
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v7
+      with:
+        python-version: "3.12"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v7
+      with:
+        enable-cache: true
+        cache-dependency-glob: "pyproject.toml"
+
+    # Only gymnasium is needed: the checker validates every relative link, that
+    # each docs/cli page points at its own docs/non-cli subfolder, and that the
+    # environment ids named in the docs are real gymnasium registrations.
+    - name: Install gymnasium
+      run: uv pip install --system "gymnasium[classic-control]>=1.3.0"
+
+    - name: Check documentation
+      run: python scripts/check_docs.py --env-ids
