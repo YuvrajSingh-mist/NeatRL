@@ -32,12 +32,12 @@ class DuelingQNet(nn.Module):
 
 
 def test_dueling_dqn_lunarlander():
-    """Test Dueling DQN training on LunarLander-v2."""
-    print("Testing Dueling DQN training on LunarLander-v2 with neatrl...")
+    """Test Dueling DQN training on LunarLander-v3."""
+    print("Testing Dueling DQN training on LunarLander-v3 with neatrl...")
 
     # Train Dueling DQN on LunarLander
     model = train_dueling_dqn(
-        env_id="LunarLander-v2",
+        env_id="LunarLander-v3",
         total_timesteps=100000,
         seed=42,
         lr=2e-4,

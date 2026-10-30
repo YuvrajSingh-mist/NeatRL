@@ -2,7 +2,7 @@
 TD3 Example for CarRacing with CNN
 
 This example demonstrates TD3 with CNNs on pixel-based environments.
-Uses the CarRacing-v2 environment with frame stacking.
+Uses the CarRacing-v3 environment with frame stacking.
 """
 
 from typing import Union

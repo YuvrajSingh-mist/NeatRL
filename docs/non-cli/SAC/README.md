@@ -94,7 +94,7 @@ model = train_sac_cnn(
 
 ### Box2D
 - `BipedalWalker-v3`
-- `LunarLanderContinuous-v2`
+- `LunarLanderContinuous-v3`
 
 ### MuJoCo
 - `HalfCheetah-v5`

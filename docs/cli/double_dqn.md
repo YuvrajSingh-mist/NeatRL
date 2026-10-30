@@ -11,7 +11,7 @@ overestimation that plain DQN inherits from its own target.
 | Observation | flat vector · stacked Atari frames |
 | Trainer | `neatrl.double_dqn_mlp.train_double_dqn` · `neatrl.double_dqn_cnn.train_double_dqn_cnn` |
 | Extra needed | none · `neatrl[atari]` |
-| Docs | [`docs/non-cli/`](../non-cli/) |
+| Docs | [`docs/non-cli/Double-DQN/`](../non-cli/Double-DQN/) |
 
 ## Run it
 
@@ -48,4 +48,4 @@ model = train_double_dqn(
 )
 ```
 
-Full reference: [CLI](README.md) · [DQN](dqn.md)
+Full reference: [CLI](README.md) · [algorithm](../non-cli/Double-DQN/README.md)

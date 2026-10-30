@@ -64,7 +64,7 @@ class CustomDuelingQNet(nn.Module):
 
 
 model = train_dueling_dqn(
-    env_id="LunarLander-v2",
+    env_id="LunarLander-v3",
     total_timesteps=100000,
     seed=42,
     custom_agent=CustomDuelingQNet(8, 4),
@@ -129,7 +129,7 @@ model = train_dueling_dqn(
 ```
 
 ### Box2D
-- `LunarLander-v2`
+- `LunarLander-v3`
 - `LunarLander-v3`
 
 ### Toy Text

@@ -1,4 +1,4 @@
-.PHONY: venv install install-dev lint format test build upload publish release upgrade clean
+.PHONY: venv install install-dev lint format test docs build upload publish release upgrade clean
 
 PYTHON ?= python3
 
@@ -21,6 +21,10 @@ format:
 
 test: venv
 	uv run pytest -q
+
+# Links, the CLI → non-cli folder mapping, and gymnasium env ids in the docs.
+docs: venv
+	uv run python scripts/check_docs.py --env-ids
 
 build: install-dev lint format
 	uv run python -m build

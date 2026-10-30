@@ -18,7 +18,7 @@ neatrl train ppo-cnn ALE/Breakout-v5
 ```python
 from neatrl.ppo_mlp import train_ppo
 
-model = train_ppo(env_id="LunarLander-v2", total_timesteps=10000, seed=42)
+model = train_ppo(env_id="LunarLander-v3", total_timesteps=10000, seed=42)
 ```
 
 ### Training with Experiment Tracking
@@ -27,7 +27,7 @@ model = train_ppo(env_id="LunarLander-v2", total_timesteps=10000, seed=42)
 from neatrl.ppo_mlp import train_ppo
 
 model = train_ppo(
-    env_id="LunarLander-v2",
+    env_id="LunarLander-v3",
     total_timesteps=50000,
     seed=42,
     capture_video=True,
@@ -136,7 +136,7 @@ model = train_ppo(
 from neatrl.ppo_mlp import train_ppo
 
 model = train_ppo(
-    env_id="LunarLander-v2",
+    env_id="LunarLander-v3",
     total_timesteps=200000,
     seed=42,
     n_envs=4,
@@ -250,7 +250,7 @@ model = train_ppo(
 from neatrl.ppo_mlp import train_ppo
 
 model = train_ppo(
-    env_id="LunarLander-v2",
+    env_id="LunarLander-v3",
     total_timesteps=200000,
     value_clip=True,
     clip_value=0.2,

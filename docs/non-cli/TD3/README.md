@@ -46,7 +46,7 @@ train_td3(env_id="HalfCheetah-v5", total_timesteps=1000000, use_wandb=True)
 ```python
 from neatrl.td3_cnn import train_td3_cnn
 
-train_td3_cnn(env_id="CarRacing-v2", total_timesteps=100000, use_wandb=True)
+train_td3_cnn(env_id="CarRacing-v3", total_timesteps=100000, use_wandb=True)
 ```
 
 ## Network Architectures
@@ -147,7 +147,7 @@ train_td3(
 
 ```python
 train_td3_cnn(
-    env_id="CarRacing-v2",
+    env_id="CarRacing-v3",
     total_timesteps=100000,
     lr=1e-4,
     batch_size=32,

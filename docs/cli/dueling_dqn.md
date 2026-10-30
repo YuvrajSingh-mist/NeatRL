@@ -50,4 +50,4 @@ model = train_dueling_dqn(
 )
 ```
 
-Full reference: [CLI](README.md) · [DQN](dqn.md)
+Full reference: [CLI](README.md) · [algorithm](../non-cli/Dueling-DQN/README.md)

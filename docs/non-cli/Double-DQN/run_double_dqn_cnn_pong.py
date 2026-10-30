@@ -1,7 +1,12 @@
 """Train the Atari Double DQN-CNN on Pong.
 
-Same preprocessing and hyperparameters as ``run_dqn_cnn_pong.py``; the only
-difference is the target ``R + gamma * Q_target(s', argmax_a Q_online(s', a))``.
+Same preprocessing and hyperparameters as
+``docs/non-cli/DQN/run_dqn_cnn_pong.py``; the only difference is the target
+``R + gamma * Q_target(s', argmax_a Q_online(s', a))``.
+
+Install the Atari extra first::
+
+    pip install "neatrl[atari]"
 
 Watch ``values/mean_max_q`` against ``values/true_discounted_return``: with the
 decoupled target the estimate stays much closer to what the greedy policy

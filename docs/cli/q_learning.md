@@ -17,7 +17,7 @@ values updated by the off-policy TD rule, with epsilon-greedy exploration.
 ```bash
 neatrl train q-learning                      # FrozenLake-v1
 neatrl train q-learning FrozenLake-v1 --steps 20000
-neatrl train q-learning Taxi-v3
+neatrl train q-learning Taxi-v4
 ```
 
 The run saves the final table as `runs/<env>/.../q_table_final.npy` instead of

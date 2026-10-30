@@ -6,8 +6,8 @@ from neatrl.ppo_mlp import train_ppo
 
 
 def test_ppo_lunar_lander():
-    """Test PPO training on LunarLander-v2."""
-    print("Testing PPO training on LunarLander-v2 with neatrl...")
+    """Test PPO training on LunarLander-v3."""
+    print("Testing PPO training on LunarLander-v3 with neatrl...")
 
     # Train PPO on Lunar Lander
     model = train_ppo(

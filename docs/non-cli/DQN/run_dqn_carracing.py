@@ -30,8 +30,8 @@ class CarRacingQNet(nn.Module):
 
 
 def test_dqn_carracing():
-    """Test DQN training on CarRacing-v2 with discrete actions."""
-    print("Testing DQN training on CarRacing-v2 with neatrl...")
+    """Test DQN training on CarRacing-v3 with discrete actions."""
+    print("Testing DQN training on CarRacing-v3 with neatrl...")
 
     # Note: CarRacing has continuous actions by default.
     # For discrete, you may need to wrap the environment.
@@ -39,7 +39,7 @@ def test_dqn_carracing():
 
     # Train DQN on CarRacing
     model = train_dqn(
-        env_id="CarRacing-v2",
+        env_id="CarRacing-v3",
         total_timesteps=500000,
         seed=42,
         lr=2.5e-4,

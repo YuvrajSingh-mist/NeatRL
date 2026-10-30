@@ -162,11 +162,11 @@ model = train_reinforce(
 Supported Atari games include:
 - `ALE/Breakout-v5`
 - `ALE/Pong-v5`
-- `SpaceInvadersNoFrameskip-v4`
+- `ALE/SpaceInvaders-v5`
 
 ### Box2D
 - `LunarLander-v3`
-- `CarRacing-v2`
+- `CarRacing-v3`
 
 ### Grid Environments
 

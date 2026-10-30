@@ -24,8 +24,8 @@ class CustomQNet(nn.Module):
 
 
 def test_dqn_lunarlander():
-    """Test DQN training on LunarLander-v2."""
-    print("Testing DQN training on LunarLander-v2 with neatrl...")
+    """Test DQN training on LunarLander-v3."""
+    print("Testing DQN training on LunarLander-v3 with neatrl...")
 
     # Train DQN on LunarLander
     model = train_dqn(

@@ -63,6 +63,9 @@ model = train_dqn(
 
 ## Double DQN
 
+Double DQN has its own folder — [`docs/non-cli/Double-DQN/`](../Double-DQN/) —
+with the full argument table, example scripts and the CLI reference.
+
 `neatrl.double_dqn_mlp` (vector observations) and `neatrl.double_dqn_cnn` (Atari
 frames) are drop-in replacements for `dqn_mlp` / `dqn_cnn` that differ only in
 the TD target:
