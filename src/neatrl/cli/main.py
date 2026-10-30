@@ -8,6 +8,7 @@ import argparse
 import sys
 import traceback
 
+from .. import __version__
 from .extras import format_hint, missing_extra
 from .recipes import ALIASES, RECIPES, RecipeError, default_env, run_train
 
@@ -31,6 +32,9 @@ def _build_parser() -> argparse.ArgumentParser:
             "Omit env_id to use the algorithm's default environment.\n"
         ),
     )
+    # Reporting the installed version is how anyone checks that an upgrade
+    # took effect, so it must not require training anything first.
+    parser.add_argument("--version", action="version", version=f"neatrl {__version__}")
     subs = parser.add_subparsers(dest="command", metavar="command")
 
     train_p = subs.add_parser("train", help="Train an agent")

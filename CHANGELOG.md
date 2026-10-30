@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.5.4] - 2026-10-31
+
+### Added
+- **`neatrl --version`** prints the installed version. Checking that an upgrade
+  took effect used to mean launching a training run.
+
 ## [2.5.3] - 2026-10-31
 
 ### Added

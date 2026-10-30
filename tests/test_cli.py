@@ -295,3 +295,16 @@ class TestCommandLine:
         )
         assert out.returncode == 0, out.stderr
         assert "train" in out.stdout
+
+
+def test_version_flag_reports_the_installed_version(capsys):
+    """`neatrl --version` is how an upgrade is checked; it must not train."""
+    import pytest
+
+    from neatrl import __version__
+    from neatrl.cli.main import main
+
+    with pytest.raises(SystemExit) as exit_info:
+        main(["--version"])
+    assert exit_info.value.code == 0
+    assert __version__ in capsys.readouterr().out
