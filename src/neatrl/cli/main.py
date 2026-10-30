@@ -6,8 +6,10 @@ from an installed wheel as it does from a repository checkout.
 
 import argparse
 import sys
+import traceback
 
-from .recipes import ALIASES, RECIPES, default_env, run_train
+from .extras import format_hint, missing_extra
+from .recipes import ALIASES, RECIPES, RecipeError, default_env, run_train
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -65,9 +67,10 @@ def _build_parser() -> argparse.ArgumentParser:
 def _warn_if_dashboard_disabled() -> None:
     """Say why the TUI is missing, instead of silently training without it.
 
-    ``rich`` is the optional ``cli`` extra, so a bare ``pip install neatrl``
-    trains with plain logging. That used to be indistinguishable from a bug:
-    the dashboard simply never appeared.
+    ``rich`` ships in the base install now, so this only fires for an old
+    release or an environment where the import genuinely failed -- which used
+    to be indistinguishable from a bug, since the dashboard just never
+    appeared.
     """
     from . import Dashboard
 
@@ -75,9 +78,10 @@ def _warn_if_dashboard_disabled() -> None:
         return
 
     print(
-        "note: the terminal dashboard is disabled because 'rich' is not "
-        'installed. Install it with: pip install "neatrl[cli]"  '
-        '(uv: uv tool install --force "neatrl[cli]")',
+        "note: the terminal dashboard is disabled because 'rich' could not be "
+        "imported (it is part of the base install). Reinstall with: "
+        "pip install --force-reinstall neatrl  "
+        "(uv tool: uv tool install --force neatrl)",
         file=sys.stderr,
     )
 
@@ -102,12 +106,22 @@ def main(argv=None) -> None:
                 steps=args.steps,
                 use_wandb=args.wandb,
             )
-        except ValueError as exc:
+        except RecipeError as exc:
             # Fixture mismatches (an image env handed to an MLP alias, and the
             # like) are user errors, not crashes: report them without a
             # traceback.
             print(f"neatrl: error: {exc}", file=sys.stderr)
             sys.exit(2)
+        except Exception as exc:  # noqa: BLE001 - re-raised unless diagnosed
+            hint = missing_extra(exc)
+            if hint is None:
+                raise
+            # Keep gymnasium's own error: it names the missing package, and
+            # rewriting it would make real failures harder to diagnose.
+            traceback.print_exc()
+            print("", file=sys.stderr)
+            print(format_hint(hint), file=sys.stderr)
+            sys.exit(1)
 
 
 __all__ = ["main", "RECIPES"]

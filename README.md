@@ -25,31 +25,37 @@ NeatRL provides readable implementations of popular RL algorithms with a focus o
 
 ```bash
 pip install neatrl
-pip install "neatrl[all]"      # dashboard + Atari, Box2D, classic, MuJoCo
 ```
+
+That is the whole default setup. It brings the terminal dashboard (`rich`,
+`psutil`), classic-control environments (CartPole, Pendulum, Acrobot,
+MountainCar) and everything the MLP aliases need — no extras to remember.
 
 With [uv](https://docs.astral.sh/uv/), install the `neatrl` command as an
 isolated tool — no virtualenv to manage:
 
 ```bash
-uv tool install "neatrl[all]"
+uv tool install neatrl
 ```
 
-`[all]` is the one-liner: the terminal dashboard plus every environment family
-the `train` aliases use (Atari, Box2D, classic control, MuJoCo) and the Atari
-`ale-py` bindings. Without it, `neatrl train dqn-cnn` fails with
-`NamespaceNotFound: Namespace ALE not found`, and the dashboard is skipped
-because `rich` is absent.
+### Image-based (`-cnn`) aliases
 
-Pick individual extras instead if you want a smaller install:
+The `-cnn` aliases train on image observations, which only Atari and Box2D
+provide — gymnasium's classic control and MuJoCo envs are all vector
+observations, so there is no CNN equivalent for them. Add the family you want:
 
 ```bash
-pip install "neatrl[cli]"      # Live terminal dashboard (rich, psutil)
-pip install "neatrl[atari]"    # Atari games (ALE)
-pip install "neatrl[box2d]"    # Box2D environments (LunarLander, BipedalWalker, …)
-pip install "neatrl[classic]"  # Classic control (CartPole, Pendulum, …)
-pip install "neatrl[mujoco]"   # MuJoCo continuous control
+pip install "neatrl[atari]"    # ALE/Pong-v5, ALE/Breakout-v5 (default for -cnn)
+pip install "neatrl[box2d]"    # CarRacing-v3, LunarLander-v3, BipedalWalker-v3
+pip install "neatrl[mujoco]"   # HalfCheetah-v4, Ant-v5, …
+pip install "neatrl[all]"      # all of the above in one go
 ```
+
+If you run a `-cnn` alias without the matching extra, the CLI prints
+gymnasium's error unchanged and then tells you the exact command to run.
+
+`neatrl[cli]` and `neatrl[classic]` still resolve, so older instructions keep
+working, but they are no longer needed.
 
 > Browse supported environments: [MuJoCo](https://gymnasium.farama.org/environments/mujoco/) · [Box2D](https://gymnasium.farama.org/environments/box2d/) · [Classic Control](https://gymnasium.farama.org/environments/classic_control/) · [Atari](https://gymnasium.farama.org/environments/atari/)
 

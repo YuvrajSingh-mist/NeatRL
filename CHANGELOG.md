@@ -4,6 +4,36 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-10-30
+
+### Changed
+- **`pip install neatrl` is now enough to train.** The terminal dashboard
+  (`rich`, `psutil`, `nvidia-ml-py`) and classic-control environments
+  (CartPole, Pendulum, Acrobot, MountainCar) moved from extras into the base
+  dependencies. `neatrl[cli]` and `neatrl[classic]` still resolve, so existing
+  instructions keep working, but nothing extra is needed for the default
+  `neatrl train <algo>` aliases.
+- **The `box2d` extra no longer pins `swig`.** gymnasium already requests it
+  only where it is needed (Python 3.14); on 3.10–3.13 the `box2d` wheels make
+  it unnecessary, so the install no longer risks a source build.
+
+### Added
+- **`neatrl[ale]`** as an alias for `neatrl[atari]`, spelled after the
+  namespace `ale-py` registers.
+- **A missing environment dependency now tells you how to fix it.** Running a
+  `-cnn` alias without `ale-py` prints gymnasium's own error unchanged --
+  `NamespaceNotFound: Namespace ALE not found. Have you installed the proper
+  package for ALE?` -- followed by the command that installs it:
+
+  ```
+  neatrl: this environment needs the 'ale-py' package, which is not installed.
+  neatrl: install the 'atari' extra to enable Atari games such as ALE/Pong-v5:
+      pip install "neatrl[atari]"
+  ```
+
+  The same treatment covers Box2D and MuJoCo. Unrelated failures still raise
+  normally, so nothing is swallowed.
+
 ## [2.4.0] - 2026-10-30
 
 ### Added

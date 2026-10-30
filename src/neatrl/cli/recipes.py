@@ -19,6 +19,14 @@ from importlib import import_module
 from typing import Any
 
 
+class RecipeError(ValueError):
+    """A user mistake in the requested alias/environment pairing.
+
+    Distinct from ``ValueError`` so the CLI can report it as a one-line error
+    instead of a traceback, without swallowing genuine bugs.
+    """
+
+
 @dataclass(frozen=True)
 class Call:
     """One trainer invocation: ``func(env_id=env, **kwargs)``."""
@@ -246,7 +254,7 @@ def resolve_call(algo: str, env_id: str | None, use_cnn: bool) -> tuple[Call, bo
         call = recipe.cnn or recipe.mlp
         wanted = call.family
         if family != wanted:
-            raise ValueError(
+            raise RecipeError(
                 f"{alias}-cnn expects {wanted} image observations, but "
                 f"{requested} is a {family} environment. Use "
                 f"`neatrl train {alias} {requested}` instead."
@@ -269,7 +277,7 @@ def resolve_call(algo: str, env_id: str | None, use_cnn: bool) -> tuple[Call, bo
         return cnn, True
 
     if cnn is None:
-        raise ValueError(
+        raise RecipeError(
             f"{alias} has no CNN trainer, and {requested} returns image "
             f"observations. Use a vector-observation environment instead."
         )
@@ -279,7 +287,7 @@ def resolve_call(algo: str, env_id: str | None, use_cnn: bool) -> tuple[Call, bo
         if other.cnn is not None and other.cnn.family == family
     )
     hint = ", ".join(f"`neatrl train {a} {requested}`" for a in alternatives)
-    raise ValueError(
+    raise RecipeError(
         f"{requested} needs {family} image preprocessing, which {alias}-cnn "
         f"does not apply ({cnn.env} is its default). Try {hint}."
     )

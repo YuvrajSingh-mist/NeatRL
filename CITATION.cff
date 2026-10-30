@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: If you use NeatRL (library, algorithms, or experiments), please cite it as below.
 title: "NeatRL: Readable Single-File Reinforcement Learning Implementations in PyTorch"
-version: "2.0.2"
+version: "2.5.0"
 type: software
 authors:
   - family-names: Singh

@@ -171,11 +171,32 @@ def test_dueling_q_net_accepts_image_observations():
     assert adv.shape == (2, 3)
 
 
-def test_extra_bundles_every_env_family():
-    """`neatrl[all]` is what makes the aliases runnable from one install."""
+def _pyproject_block(name: str) -> str:
+    """Return the contents of a top-level ``name = [...]`` array in pyproject."""
+    import re
     from pathlib import Path
 
     text = (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text()
-    all_extra = text.split("all = [", 1)[1].split("]", 1)[0]
+    match = re.search(rf"^{name} = \[(.*?)^\]", text, re.S | re.M)
+    assert match, f"{name} not found in pyproject.toml"
+    return match.group(1)
+
+
+def test_extra_bundles_every_env_family():
+    """`neatrl[all]` is what makes the aliases runnable from one install."""
+    all_extra = _pyproject_block("all")
     for token in ("ale-py", "box2d", "classic-control", "atari", "mujoco", "rich"):
         assert token in all_extra, f"{token} missing from the `all` extra"
+
+
+def test_base_install_ships_the_dashboard_and_classic_control():
+    """`pip install neatrl` alone must give the TUI and classic-control envs.
+
+    Only the native environment families (Atari, Box2D, MuJoCo) stay opt-in:
+    they need compiled packages, and every alias that uses them fails with an
+    install hint when they are absent.
+    """
+    base = _pyproject_block("dependencies")
+    for token in ("rich", "psutil", "nvidia-ml-py", "classic-control", "pygame-ce"):
+        assert token in base, f"{token} missing from the base dependencies"
+    assert "ale-py" not in base, "Atari should stay an opt-in extra"
