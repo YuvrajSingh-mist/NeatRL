@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-10-30
+
+### Added
+- **`neatrl[all]` extra.** One install covers everything the `train` aliases
+  reach: the terminal dashboard (`rich`, `psutil`, `nvidia-ml-py`), Atari
+  (`ale-py` + ROMs), Box2D, classic control and MuJoCo. The image-based
+  `-cnn` aliases default to `ALE/Pong-v5` and `CarRacing-v3`, so on a plain
+  `pip install neatrl` they could not run at all. `uv tool install
+  "neatrl[all]"` is now the documented setup; the individual extras remain.
+
 ## [2.1.4] - 2026-10-30
 
 ### Fixed

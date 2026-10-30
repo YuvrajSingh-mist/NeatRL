@@ -25,19 +25,26 @@ NeatRL provides readable implementations of popular RL algorithms with a focus o
 
 ```bash
 pip install neatrl
-pip install "neatrl[cli]"      # Live terminal dashboard (rich, psutil)
+pip install "neatrl[all]"      # dashboard + Atari, Box2D, classic, MuJoCo
 ```
 
 With [uv](https://docs.astral.sh/uv/), install the `neatrl` command as an
 isolated tool — no virtualenv to manage:
 
 ```bash
-uv tool install neatrl
+uv tool install "neatrl[all]"
 ```
 
-With optional environment extras:
+`[all]` is the one-liner: the terminal dashboard plus every environment family
+the `train` aliases use (Atari, Box2D, classic control, MuJoCo) and the Atari
+`ale-py` bindings. Without it, `neatrl train dqn-cnn` fails with
+`NamespaceNotFound: Namespace ALE not found`, and the dashboard is skipped
+because `rich` is absent.
+
+Pick individual extras instead if you want a smaller install:
 
 ```bash
+pip install "neatrl[cli]"      # Live terminal dashboard (rich, psutil)
 pip install "neatrl[atari]"    # Atari games (ALE)
 pip install "neatrl[box2d]"    # Box2D environments (LunarLander, BipedalWalker, …)
 pip install "neatrl[classic]"  # Classic control (CartPole, Pendulum, …)

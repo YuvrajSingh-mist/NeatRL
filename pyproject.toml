@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "neatrl"
-version = "2.1.4"
+version = "2.2.0"
 description = "A Python library for reinforcement learning algorithms"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -32,6 +32,17 @@ mujoco = ["gymnasium[mujoco]"]
 atari = ["gymnasium[atari]", "ale-py"]
 classic = ["gymnasium[classic-control]"]
 box2d = ["swig", "gymnasium[box2d]"]
+# Everything the `neatrl train` aliases can reach, including the image-based
+# `-cnn` ones (ALE for Pong/Breakout, Box2D for CarRacing). A plain
+# `pip install neatrl` cannot run those, which is why this exists.
+all = [
+    "rich",
+    "psutil",
+    "nvidia-ml-py",
+    "ale-py",
+    "swig",
+    "gymnasium[atari,classic-control,box2d,mujoco]",
+]
 dev = [
     "ruff",
     "mypy",
