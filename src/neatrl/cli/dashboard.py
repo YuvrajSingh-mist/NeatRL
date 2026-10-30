@@ -177,7 +177,7 @@ def gpuMemCell(vram: float) -> str:
         # RL networks are small next to the box, so GB alone showed "0.0G"
         # for a whole training run. Milliseconds in MB until it matters.
         if held < 1024**3:
-            return f"{DT[1]}: [cyan]{held / 1024**2:.0f}M[/cyan]"
+            return f"{DT[1]}: [cyan]{held / 1024**2:.1f}M[/cyan]"
         return f"{DT[1]}: [cyan]{held / 1024**3:.1f}G[/cyan]"
     return f"{DT[1]}: [cyan]{vram:.1f}%[/cyan]"
 
