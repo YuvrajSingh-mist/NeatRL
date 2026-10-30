@@ -14,9 +14,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from tqdm import tqdm
-
 import wandb
+from tqdm import tqdm
 
 from .cli import Dashboard
 from .utils import configure_logging, get_logger, setup_device

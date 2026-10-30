@@ -62,6 +62,8 @@ dev = [
     "rich",
     "psutil",
     "nvidia-ml-py",
+    # The fast test suite runs in CI from this extra, so it has to be here.
+    "pytest>=8.4.2",
 ]
 
 [project.scripts]
@@ -95,6 +97,13 @@ ignore = [
 # ``__init__.py`` filters a deprecation warning before importing the submodules,
 # so the imports deliberately follow that call; E402 does not apply.
 "__init__.py" = ["F401", "E402"]
+
+[tool.ruff.lint.isort]
+# Training runs drop a ``wandb/`` directory in the repo root, which ruff would
+# otherwise classify as a first-party package. Pin it so the import order is the
+# same in a fresh checkout (where CI runs) as on a machine that has been
+# training. Without this, a local ``ruff check`` passes while CI fails I001.
+known-third-party = ["wandb"]
 
 [dependency-groups]
 dev = [
