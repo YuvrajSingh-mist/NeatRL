@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.1.2] - 2026-10-30
+
+### Added
+- `neatrl train` now prints a one-line note when it has to skip the dashboard
+  because `rich` is not installed, naming the fix
+  (`pip install "neatrl[cli]"`). Previously the TUI just did not appear, with
+  nothing to explain why.
+
+### Note
+- Install with the `cli` extra to keep the dashboard:
+  `uv tool install --force "neatrl[cli]"`. `uv` records the extra, so later
+  `uv tool upgrade neatrl` runs keep it.
+
 ## [2.1.1] - 2026-10-30
 
 ### Fixed

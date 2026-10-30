@@ -57,6 +57,26 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _warn_if_dashboard_disabled() -> None:
+    """Say why the TUI is missing, instead of silently training without it.
+
+    ``rich`` is the optional ``cli`` extra, so a bare ``pip install neatrl``
+    trains with plain logging. That used to be indistinguishable from a bug:
+    the dashboard simply never appeared.
+    """
+    from . import Dashboard
+
+    if Dashboard is not None or not sys.stdout.isatty():
+        return
+
+    print(
+        "note: the terminal dashboard is disabled because 'rich' is not "
+        'installed. Install it with: pip install "neatrl[cli]"  '
+        '(uv: uv tool install --force "neatrl[cli]")',
+        file=sys.stderr,
+    )
+
+
 def main(argv=None) -> None:
     parser = _build_parser()
     args = parser.parse_args(argv)
@@ -68,6 +88,7 @@ def main(argv=None) -> None:
     if args.command == "train":
         key, use_cnn = ALIASES[args.algo]
         env_id = args.env or default_env(key, use_cnn)
+        _warn_if_dashboard_disabled()
         run_train(key, env_id, use_cnn=use_cnn, steps=args.steps)
 
 
