@@ -30,9 +30,11 @@ adds Atari preprocessing. `--steps` sets `total_timesteps`.
 
 ## Environments
 
-Discrete-action environments. PPO is the usual first choice for a new
-discrete-action problem: it tolerates defaults better than A2C and needs no
-replay buffer.
+Discrete and continuous action spaces. The built-in actor reads the space: a
+`Discrete` one gets a categorical head, a `Box` one a Gaussian head, so
+`neatrl train ppo Pendulum-v1` and `neatrl train ppo CartPole-v1` both work
+with no extra flags. Discrete is the usual first choice for a new problem: PPO
+tolerates defaults better than A2C and needs no replay buffer.
 
 ## Programmatic equivalent
 
