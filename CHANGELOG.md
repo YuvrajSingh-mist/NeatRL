@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ## [2.5.3] - 2026-10-31
 
+### Added
+- **`./scripts/publish.sh` (or `make publish`) releases to PyPI in one step**:
+  it runs the tests, builds, and uploads using a token from `.env` (gitignored)
+  -- never from the command line, where it would land in shell history.
+  `make release V=2.6.0` also bumps `pyproject.toml` and opens a CHANGELOG
+  entry, and `make upgrade` refreshes the local tool install.
+
 ### Fixed
 - **The terminal cursor blinked over the dashboard.** Every frame homes to the
   origin and rewrites ~20 rows, so the terminal's own cursor was visible
