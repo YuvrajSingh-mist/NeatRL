@@ -31,6 +31,7 @@ def _fake_ioreg(output: str):
 
 def test_apple_gpu_util_parses_the_metal_counter(monkeypatch):
     """ioreg publishes the driver's own utilization percentage."""
+    monkeypatch.setattr(dashboard.sys, "platform", "darwin")
     monkeypatch.setattr(
         dashboard.subprocess,
         "run",
@@ -48,12 +49,14 @@ def test_apple_gpu_util_returns_zero_when_ioreg_is_missing(monkeypatch):
     def boom(*a, **k):
         raise FileNotFoundError("ioreg")
 
+    monkeypatch.setattr(dashboard.sys, "platform", "darwin")
     monkeypatch.setattr(dashboard.subprocess, "run", boom)
     assert dashboard._apple_gpu_util() == 0.0
 
 
 def test_apple_gpu_util_handles_unexpected_output(monkeypatch):
     """No AGX node (an Intel Mac) simply yields no GPU figure."""
+    monkeypatch.setattr(dashboard.sys, "platform", "darwin")
     monkeypatch.setattr(dashboard.subprocess, "run", _fake_ioreg(""))
     assert dashboard._apple_gpu_util() == 0.0
 
@@ -68,6 +71,7 @@ def test_apple_gpu_util_is_throttled(monkeypatch):
             a, 0, stdout='"Device Utilization %"=5', stderr=""
         )
 
+    monkeypatch.setattr(dashboard.sys, "platform", "darwin")
     monkeypatch.setattr(dashboard.subprocess, "run", counting_run)
     for _ in range(10):
         dashboard._apple_gpu_util()
@@ -151,13 +155,19 @@ def test_long_algorithm_names_are_not_cut_from_the_dashboard():
 
 
 def test_header_fits_an_80_column_terminal(monkeypatch):
-    """The memory value is the last cell, so overflow silently ate it."""
+    """The memory value is the last cell, so overflow silently ate it.
+
+    The backend and the counter are pinned so the layout is identical on every
+    platform: CI runs Linux while the MPS cell only appears on Apple hardware.
+    """
     import re
 
     import torch
 
     from neatrl.cli.dashboard import Dashboard
 
+    monkeypatch.setattr(dashboard, "DT", ("GPU", "MPS", "mps"))
+    monkeypatch.setattr(dashboard, "getHw", lambda: (33.3, 18.4, 9.9, 240 * 1024**2))
     monkeypatch.setattr(torch.mps, "driver_allocated_memory", lambda: 240 * 1024**2)
     frame = Dashboard("Dueling-DQN", "ALE/Pong-v5", 1000).renderDash(0, 0, {}, None, "")
     header = next(line for line in frame.splitlines() if "CPU" in line)

@@ -10,6 +10,18 @@ import io
 import pytest
 
 
+def _has_atari() -> bool:
+    """True when `neatrl[atari]` is installed and registers ALE environments."""
+    try:
+        import ale_py
+        import gymnasium as gym
+
+        gym.register_envs(ale_py)
+    except Exception:  # noqa: BLE001 - the extra is optional
+        return False
+    return "ALE/Pong-v5" in gym.registry
+
+
 class TestDashboardConstruction:
     def test_constructs_without_tty(self):
         from neatrl.cli.dashboard import Dashboard
@@ -118,6 +130,11 @@ class TestTrainersSkipDashboardWithoutTty:
     @pytest.mark.parametrize("module", ["neatrl.dqn_mlp", "neatrl.dqn_cnn"])
     def test_no_dashboard_when_not_a_tty(self, module, monkeypatch, capsys):
         import importlib
+
+        if module == "neatrl.dqn_cnn" and not _has_atari():
+            pytest.skip(
+                "neatrl.dqn_cnn needs the atari extra (pip install neatrl[atari])"
+            )
 
         mod = importlib.import_module(module)
         monkeypatch.setattr("sys.stdout.isatty", lambda: False)
