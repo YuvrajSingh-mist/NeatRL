@@ -60,3 +60,21 @@ def test_guards_check_the_default_network_not_the_environment():
 
     source = inspect.getsource(ppo_mlp.train_ppo)
     assert "actor_class is ActorNet" in source
+
+
+def test_cli_reports_discrete_only_as_a_user_error(capsys):
+    """`neatrl train ppo Pendulum-v1` is a mistake, not a crash: one line, exit 2.
+
+    The trainer raises a ValueError whose advice (`actor_class`) the CLI cannot
+    act on, so the recipe layer rewrites it into a command the user can run.
+    """
+    from neatrl.cli.main import main
+
+    with pytest.raises(SystemExit) as info:
+        main(["train", "ppo", "Pendulum-v1", "--steps", "100"])
+
+    assert info.value.code == 2
+    err = capsys.readouterr().err
+    assert "trains discrete action spaces only" in err
+    assert "neatrl train sac Pendulum-v1" in err
+    assert "Traceback" not in err
