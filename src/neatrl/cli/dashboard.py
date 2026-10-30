@@ -489,17 +489,21 @@ class Dashboard:
         # Universal charts section
         if universalLines:
             chartBody = Text()
-            chartBody.append("[bold cyan]── Universal Metrics ──[/bold cyan]\n")
+            chartBody.append_text(
+                Text.from_markup("[bold cyan]── Universal Metrics ──[/bold cyan]\n")
+            )
             for line in universalLines:
-                chartBody.append(line + "\n")
+                chartBody.append_text(Text.from_markup(line + "\n"))
             frame.add_row(chartBody)
 
         # Algo-specific charts section
         if algoLines:
             algoBody = Text()
-            algoBody.append(f"[bold cyan]── {self.algo} Metrics ──[/bold cyan]\n")
+            algoBody.append_text(
+                Text.from_markup(f"[bold cyan]── {self.algo} Metrics ──[/bold cyan]\n")
+            )
             for line in algoLines:
-                algoBody.append(line + "\n")
+                algoBody.append_text(Text.from_markup(line + "\n"))
             frame.add_row(algoBody)
 
         # Bottom row: eval stats (left) + model params (right)
@@ -627,41 +631,60 @@ class Dashboard:
         wide = SPARKLINE_WIDTH + 12  # wider sparklines for detail view
 
         # ── Universal ──
-        body.append("[bold cyan]══ Universal Metrics ══[/bold cyan]\n\n")
+        body.append_text(
+            Text.from_markup("[bold cyan]══ Universal Metrics ══[/bold cyan]\n\n")
+        )
         ep_ret = self.history.get("return")
         if ep_ret:
-            body.append(
-                labeled_sparkline("Episode Return", ep_ret, wide, "green") + "\n"
+            body.append_text(
+                Text.from_markup(
+                    labeled_sparkline("Episode Return", ep_ret, wide, "green") + "\n"
+                )
             )
         ep_len = self.history.get("ep_length")
         if ep_len:
-            body.append(
-                labeled_sparkline("Episode Length", ep_len, wide, "yellow") + "\n"
+            body.append_text(
+                Text.from_markup(
+                    labeled_sparkline("Episode Length", ep_len, wide, "yellow") + "\n"
+                )
             )
         loss = self.history.get("total_loss")
         if loss:
-            body.append(
-                labeled_sparkline("Training Loss", loss, wide, "red", fmt=".4f") + "\n"
+            body.append_text(
+                Text.from_markup(
+                    labeled_sparkline("Training Loss", loss, wide, "red", fmt=".4f")
+                    + "\n"
+                )
             )
 
         # ── Algo-specific ──
         algo = self.algo.lower()
-        body.append(f"\n[bold cyan]══ {self.algo} Metrics ══[/bold cyan]\n\n")
+        body.append_text(
+            Text.from_markup(f"\n[bold cyan]══ {self.algo} Metrics ══[/bold cyan]\n\n")
+        )
 
         if algo in ("dqn", "dueling-dqn"):
             eps = self.history.get("epsilon")
             if eps:
-                body.append(
-                    labeled_sparkline("Epsilon (ε)", eps, wide, "magenta") + "\n"
+                body.append_text(
+                    Text.from_markup(
+                        labeled_sparkline("Epsilon (ε)", eps, wide, "magenta") + "\n"
+                    )
                 )
             q_mean = self.history.get("q_mean")
             if q_mean:
-                body.append(
-                    labeled_sparkline("Mean Q-value", q_mean, wide, "blue") + "\n"
+                body.append_text(
+                    Text.from_markup(
+                        labeled_sparkline("Mean Q-value", q_mean, wide, "blue") + "\n"
+                    )
                 )
             buf = self.history.latest("buffer_fill")
             if buf is not None:
-                body.append(metric_bar("Buffer fill %", buf, 100, 20, "green") + "\n")
+                body.append_text(
+                    Text.from_markup(
+                        metric_bar("Buffer fill %", buf, 100, 20, "green") + "\n"
+                    )
+                )
 
         elif algo == "ppo":
             for name, color, fmt_str in [
@@ -672,31 +695,46 @@ class Dashboard:
             ]:
                 vals = self.history.get(name)
                 if vals:
-                    body.append(
-                        labeled_sparkline(
-                            name.replace("_", " ").title(), vals, wide, color, fmt_str
+                    body.append_text(
+                        Text.from_markup(
+                            labeled_sparkline(
+                                name.replace("_", " ").title(),
+                                vals,
+                                wide,
+                                color,
+                                fmt_str,
+                            )
+                            + "\n"
                         )
-                        + "\n"
                     )
 
         elif algo == "sac":
             alpha = self.history.get("alpha")
             if alpha:
-                body.append(
-                    labeled_sparkline("Alpha (entropy)", alpha, wide, "yellow", ".4f")
-                    + "\n"
+                body.append_text(
+                    Text.from_markup(
+                        labeled_sparkline(
+                            "Alpha (entropy)", alpha, wide, "yellow", ".4f"
+                        )
+                        + "\n"
+                    )
                 )
             q1 = self.history.get("q1_mean")
             q2 = self.history.get("q2_mean")
             if q1 and q2:
                 dual = dual_sparkline(q1, q2, wide, "cyan", "magenta")
-                body.append(
-                    f"  {'Q1 / Q2 Mean':<18} {dual}  {q1[-1]:>7.2f} : {q2[-1]:<7.2f}\n"
+                body.append_text(
+                    Text.from_markup(
+                        f"  {'Q1 / Q2 Mean':<18} {dual}  {q1[-1]:>7.2f} : {q2[-1]:<7.2f}\n"
+                    )
                 )
             actor_loss = self.history.get("actor_loss")
             if actor_loss:
-                body.append(
-                    labeled_sparkline("Actor Loss", actor_loss, wide, "green") + "\n"
+                body.append_text(
+                    Text.from_markup(
+                        labeled_sparkline("Actor Loss", actor_loss, wide, "green")
+                        + "\n"
+                    )
                 )
 
         frame = Table(box=box.ROUNDED, show_header=False, padding=(0, 1), expand=False)

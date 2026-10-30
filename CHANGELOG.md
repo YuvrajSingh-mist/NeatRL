@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-10-30
+
+### Fixed
+- **The dashboard printed its styling as literal text.** Section headers
+  showed up as `[bold cyan]── DQN Metrics ──[/bold cyan]`, sparklines as
+  `[magenta]▄[/magenta]`, and buffer bars as `[green][/green][dim]░░░░[/dim]`.
+  `charts.py` returns Rich markup, but the dashboard fed those strings through
+  `Text.append()`, which does not parse markup. It now uses `Text.from_markup`,
+  so headings and chart colours render as intended.
+
+### Note
+- The dashboard needs `rich`, which is the optional `cli` extra:
+  `uv tool install "neatrl[cli]"` or `pip install "neatrl[cli]"`. Without it,
+  training runs with plain logging instead of the TUI.
+
 ## [2.1.0] - 2026-10-30
 
 Every algorithm was run through `neatrl train` on two environments each (40
