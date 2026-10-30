@@ -56,14 +56,6 @@ model = train_ppo(
 
 ### PPO for Continuous Action Spaces
 
-The built-in `ActorNet` is categorical, so a plain `train_ppo(env_id="BipedalWalker-v3", …)`
-now stops with a clear `ValueError` instead of failing inside gymnasium. Continuous
-control needs an actor whose `get_action` returns a `Normal` distribution — pass it
-as `actor_class` (the full working script is
-[`run_ppo_bipedal_walker.py`](run_ppo_bipedal_walker.py)). For a first continuous
-run without custom code, `train_sac`, `train_td3` and `train_ddpg` are the built-in
-choices.
-
 ```python
 from neatrl.ppo_mlp import train_ppo
 
@@ -73,8 +65,8 @@ model = train_ppo(
     seed=42,
     n_envs=8,
     max_steps=128,
-    actor_class=GaussianActor,  # returns torch.distributions.Normal
     use_wandb=True,
+    wandb_project="cleanRL",
     exp_name="ppo-bipedal-walker",
 )
 ```
@@ -187,7 +179,7 @@ model = train_ppo(
 )
 ```
 
-### Bipedal Walker (Continuous Actions, custom actor)
+### Bipedal Walker (Continuous Actions)
 
 ```python
 from neatrl.ppo_mlp import train_ppo
@@ -198,7 +190,6 @@ model = train_ppo(
     seed=42,
     n_envs=8,
     max_steps=512,
-    actor_class=GaussianActor,  # see run_ppo_bipedal_walker.py for the class
     use_wandb=True,
     exp_name="ppo-bipedal-walker",
 )
@@ -272,7 +263,7 @@ model = train_ppo(
 - `run_ppo_lunar_lander.py` - Lunar Lander training
 - `run_ppo_taxi.py` - Taxi environment training
 - `run_ppo_breakout.py` - Breakout Atari training
-- `run_ppo_bipedal_walker.py` - Bipedal Walker training (custom Gaussian actor)
+- `run_ppo_bipedal_walker.py` - Bipedal Walker training
 
 ## Tips
 

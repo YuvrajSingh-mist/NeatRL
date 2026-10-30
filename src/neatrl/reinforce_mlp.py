@@ -413,22 +413,6 @@ def train_reinforce(
 
     obs_shape, action_shape = get_space_dims(env)
 
-    # The built-in policy is categorical, so a Box action space would otherwise
-    # fail inside gymnasium with a confusing IndexError.
-    single_action_space = (
-        env.single_action_space  # type: ignore[attr-defined]
-        if hasattr(env, "single_action_space")
-        else env.action_space
-    )
-    if Config.custom_agent is None and isinstance(single_action_space, gym.spaces.Box):
-        raise ValueError(
-            "train_reinforce only supports discrete action spaces by default; "
-            f"{Config.env_id or 'the environment'} has a Box action space "
-            f"{single_action_space}. Use train_sac, train_td3 or train_ddpg for "
-            "continuous control, or pass a `custom_agent` whose get_action "
-            "returns a Normal distribution."
-        )
-
     # Use custom agent if provided, otherwise use default PolicyNet
     if Config.custom_agent is not None:
         if isinstance(Config.custom_agent, nn.Module):

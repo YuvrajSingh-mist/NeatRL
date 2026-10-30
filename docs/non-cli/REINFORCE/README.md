@@ -205,7 +205,7 @@ What gets logged:
 
 - `run_reinforce_cartpole.py` - Basic REINFORCE training on CartPole with parallel environments
 - `run_reinforce_frozenlake.py` - REINFORCE training on FrozenLake (with one-hot encoding)
-- `run_reinforce_pendulum.py` - REINFORCE on Pendulum (continuous actions, requires the custom `custom_agent` in that script; the built-in policy is categorical)
+- `run_reinforce_pendulum.py` - REINFORCE training on Pendulum (continuous actions)
 - `run_reinforce_car_racing.py` - REINFORCE training on CarRacing (CNN architecture)
 
 ## Installation

@@ -32,9 +32,7 @@ adds Atari preprocessing. `--steps` sets `total_timesteps`.
 
 Discrete-action environments. PPO is the usual first choice for a new
 discrete-action problem: it tolerates defaults better than A2C and needs no
-replay buffer. The built-in actor is categorical, so naming a continuous
-environment raises a `ValueError`; for continuous control use `sac`, `td3` or
-`ddpg`, or a custom `actor_class` from Python.
+replay buffer.
 
 ## Programmatic equivalent
 

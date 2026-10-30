@@ -445,23 +445,6 @@ def train_reinforce_cnn(
             else env.action_space.shape
         )
 
-    # The built-in policy is categorical, so a Box action space would otherwise
-    # fail inside gymnasium with a confusing IndexError.
-    if Config.custom_agent is None:
-        single_action_space = (
-            env.single_action_space  # type: ignore[attr-defined]
-            if hasattr(env, "single_action_space")
-            else env.action_space
-        )
-        if isinstance(single_action_space, gym.spaces.Box):
-            raise ValueError(
-                "train_reinforce_cnn only supports discrete action spaces by "
-                f"default; {Config.env_id or 'the environment'} has a Box action "
-                f"space {single_action_space}. Use train_sac_cnn, train_td3_cnn or "
-                "train_ddpg_cnn for continuous control, or pass a `custom_agent` "
-                "whose get_action returns a Normal distribution."
-            )
-
     # Use custom agent if provided, otherwise use default PolicyNet
     if Config.custom_agent is not None:
         if isinstance(Config.custom_agent, nn.Module):

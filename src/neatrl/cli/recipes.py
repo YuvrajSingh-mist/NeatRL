@@ -316,24 +316,7 @@ def run_train(
     # not start an upload unless the user asks for one.
     kwargs["use_wandb"] = use_wandb
 
-    try:
-        return _resolve(call.func)(env_id=env_id or call.env, **kwargs)
-    except ValueError as exc:
-        # A discrete-only trainer refusing a Box action space is a user
-        # mistake, not a crash: report it as one line, like the image/vector
-        # mismatches above. The trainer's wording mentions `actor_class`,
-        # which the CLI has no flag for, so explain what the command can do.
-        if "only supports discrete action spaces" not in str(exc):
-            raise
-        requested = env_id or call.env
-        alias = algo.replace("_", "-")
-        raise RecipeError(
-            f"{alias} trains discrete action spaces only (its built-in actor "
-            f"is categorical), so {requested} is not supported. Use "
-            f"`neatrl train sac {requested}`, td3 or ddpg for continuous "
-            "actions, or call the trainer from Python with a custom "
-            "`actor_class`."
-        ) from exc
+    return _resolve(call.func)(env_id=env_id or call.env, **kwargs)
 
 
 def default_env(algo: str, use_cnn: bool = False) -> str:

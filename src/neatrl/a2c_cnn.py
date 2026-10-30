@@ -86,7 +86,7 @@ def layer_init(
 
 
 class ActorNet(nn.Module):
-    """Shared-trunk categorical actor for discrete action spaces."""
+    """Shared-trunk actor network for discrete or continuous action spaces."""
 
     def __init__(
         self,
