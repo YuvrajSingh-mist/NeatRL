@@ -7,11 +7,11 @@ This guide shows you how to use NeatRL's DQN implementation.
 ### CLI
 
 ```bash
-neatrl train dqn cartpole
-neatrl train dqn lunar
-neatrl train dqn mountaincar
-neatrl train dqn frozenlake
-neatrl train dqn breakout
+neatrl train dqn CartPole-v1
+neatrl train dqn LunarLander-v3
+neatrl train dqn MountainCar-v0
+neatrl train dqn FrozenLake-v1
+neatrl train dqn ALE/Breakout-v5
 ```
 
 ### Python API
@@ -31,7 +31,7 @@ model = train_dqn(
 
 | Argument | Type | Default | Description |
 |----------|------|---------|-------------|
-| `env_id` | str | `"BreakoutNoFrameskip-v4"` | Gymnasium environment ID |
+| `env_id` | str | `"ALE/Breakout-v5"` | Gymnasium environment ID |
 | `total_timesteps` | int | `20000` | Total number of environment steps |
 | `seed` | int | `42` | Random seed |
 | `learning_rate` | float | `2.5e-4` | Learning rate for the Adam optimizer |

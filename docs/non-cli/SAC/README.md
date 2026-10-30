@@ -7,8 +7,8 @@ This guide shows you how to use NeatRL's SAC implementation for continuous and d
 ### CLI
 
 ```bash
-neatrl train sac Pendulum-v1 --no-wandb
-neatrl train sac-cnn BreakoutNoFrameskip-v4 --no-wandb --atari
+neatrl train sac Pendulum-v1
+neatrl train sac-cnn ALE/Breakout-v5
 ```
 
 ### Python API
@@ -43,7 +43,7 @@ model = train_sac(
 from neatrl.sac_cnn import train_sac_cnn
 
 model = train_sac_cnn(
-    env_id="BreakoutNoFrameskip-v4",
+    env_id="ALE/Breakout-v5",
     total_timesteps=100000,
     seed=42,
     atari_wrapper=True,
@@ -107,7 +107,7 @@ model = train_sac_cnn(
 from neatrl.sac_cnn import train_sac_cnn
 
 model = train_sac_cnn(
-    env_id="BreakoutNoFrameskip-v4",
+    env_id="ALE/Breakout-v5",
     total_timesteps=1000000,
     seed=42,
     alpha=0.2,

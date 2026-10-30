@@ -7,8 +7,8 @@ This guide shows you how to use NeatRL's PPO implementation for reinforcement le
 ### CLI
 
 ```bash
-neatrl train ppo CartPole-v1 --no-wandb
-neatrl train ppo-cnn BreakoutNoFrameskip-v4 --no-wandb --atari
+neatrl train ppo CartPole-v1
+neatrl train ppo-cnn ALE/Breakout-v5
 ```
 
 ### Python API
@@ -77,7 +77,7 @@ model = train_ppo(
 from neatrl.ppo_mlp import train_ppo
 
 model = train_ppo(
-    env_id="BreakoutNoFrameskip-v4",
+    env_id="ALE/Breakout-v5",
     total_timesteps=10000000,
     seed=42,
     n_envs=8,
@@ -168,7 +168,7 @@ model = train_ppo(
 from neatrl.ppo_mlp import train_ppo
 
 model = train_ppo(
-    env_id="BreakoutNoFrameskip-v4",
+    env_id="ALE/Breakout-v5",
     total_timesteps=10000000,
     seed=42,
     n_envs=8,

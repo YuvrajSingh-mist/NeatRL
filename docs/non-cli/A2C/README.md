@@ -18,8 +18,8 @@ Note: A2C works with both discrete and continuous action spaces.
 ### CLI
 
 ```bash
-neatrl train a2c Acrobot-v1 --no-wandb
-neatrl train a2c-cnn CarRacing-v3 --no-wandb
+neatrl train a2c Acrobot-v1
+neatrl train a2c-cnn CarRacing-v3
 ```
 
 ### Python API

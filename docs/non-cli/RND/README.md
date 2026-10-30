@@ -7,8 +7,8 @@ This guide shows you how to use NeatRL's RND implementation, which combines PPO 
 ### CLI
 
 ```bash
-neatrl train rnd CliffWalking-v1 --no-wandb --grid-env
-neatrl train rnd-cnn BreakoutNoFrameskip-v4 --no-wandb --atari
+neatrl train rnd CliffWalking-v1
+neatrl train rnd-cnn ALE/Breakout-v5
 ```
 
 ### Python API
@@ -120,7 +120,7 @@ model = train_ppo_rnd(
 from neatrl.rnd_cnn import train_ppo_rnd_cnn
 
 model = train_ppo_rnd_cnn(
-    env_id="BreakoutNoFrameskip-v4",
+    env_id="ALE/Breakout-v5",
     total_timesteps=1000000,
     seed=42,
     n_envs=8,

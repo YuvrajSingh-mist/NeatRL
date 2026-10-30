@@ -18,8 +18,8 @@ Note: DDPG is designed for continuous action spaces. For discrete action environ
 ### CLI
 
 ```bash
-neatrl train ddpg Pendulum-v1 --no-wandb
-neatrl train ddpg-cnn BreakoutNoFrameskip-v4 --no-wandb --atari
+neatrl train ddpg Pendulum-v1
+neatrl train ddpg-cnn ALE/Breakout-v5
 ```
 
 ### Python API
@@ -39,7 +39,7 @@ train_ddpg(env_id="HalfCheetah-v5", total_timesteps=1000000, use_wandb=True)
 ```python
 from neatrl.ddpg_cnn import train_ddpg_cnn
 
-train_ddpg_cnn(env_id="PongNoFrameskip-v4", total_timesteps=100000, use_wandb=True)
+train_ddpg_cnn(env_id="ALE/Pong-v5", total_timesteps=100000, use_wandb=True)
 ```
 
 ## Network Architectures

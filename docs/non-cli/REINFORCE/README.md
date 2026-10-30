@@ -7,8 +7,8 @@ This guide shows you how to use NeatRL's REINFORCE algorithm implementation.
 ### CLI
 
 ```bash
-neatrl train reinforce CartPole-v1 --no-wandb
-neatrl train reinforce-cnn BreakoutNoFrameskip-v4 --no-wandb --atari
+neatrl train reinforce CartPole-v1
+neatrl train reinforce-cnn ALE/Breakout-v5
 ```
 
 ### Python API
@@ -59,7 +59,7 @@ model = train_reinforce(
 from neatrl.reinforce_mlp import train_reinforce
 
 model = train_reinforce(
-    env_id="BreakoutNoFrameskip-v4",
+    env_id="ALE/Breakout-v5",
     total_episodes=2000,
     seed=42,
     atari_wrapper=True,
@@ -151,7 +151,7 @@ model = train_reinforce(
 from neatrl.reinforce_mlp import train_reinforce
 
 model = train_reinforce(
-    env_id="BreakoutNoFrameskip-v4",
+    env_id="ALE/Breakout-v5",
     total_episodes=2000,
     atari_wrapper=True,
     n_envs=4,
@@ -160,8 +160,8 @@ model = train_reinforce(
 ```
 
 Supported Atari games include:
-- `BreakoutNoFrameskip-v4`
-- `PongNoFrameskip-v4`
+- `ALE/Breakout-v5`
+- `ALE/Pong-v5`
 - `SpaceInvadersNoFrameskip-v4`
 
 ### Box2D

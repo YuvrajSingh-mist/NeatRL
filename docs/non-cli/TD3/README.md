@@ -25,8 +25,8 @@ Note: TD3 is designed for continuous action spaces. For discrete action environm
 ### CLI
 
 ```bash
-neatrl train td3 Pendulum-v1 --no-wandb
-neatrl train td3-cnn BreakoutNoFrameskip-v4 --no-wandb --atari
+neatrl train td3 Pendulum-v1
+neatrl train td3-cnn ALE/Breakout-v5
 ```
 
 ### Python API

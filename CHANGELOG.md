@@ -29,6 +29,12 @@ All notable changes to this project will be documented in this file.
   server. Since the CLI no longer enables wandb, `neatrl train sac` and
   friends complete in CI and over SSH.
 
+### Docs
+- **`neatrl train` examples match the real command.** They used `--no-wandb`,
+  `--atari`, `--grid-env` and `--timesteps`, none of which exist, plus retired
+  env ids (`BreakoutNoFrameskip-v4`, `cartpole`, `lunar`) and the obsolete
+  `--no-wandb` workaround that this release makes unnecessary.
+
 ### Changed
 - **Requires Python 3.10+ and `gymnasium>=1.3.0`.** The current environment ids
   (`CliffWalking-v1`, `Taxi-v4`) only exist from gymnasium 1.3, and 1.3 dropped

@@ -142,7 +142,7 @@ model = train_sac(
 from neatrl.sac_cnn import train_sac_cnn
 
 model = train_sac_cnn(
-    env_id="BreakoutNoFrameskip-v4",
+    env_id="ALE/Breakout-v5",
     total_timesteps=100000,
     alpha=0.2,
     autotune_alpha=True,
