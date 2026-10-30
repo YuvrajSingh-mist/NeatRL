@@ -36,17 +36,4 @@ Discrete and continuous action spaces. The built-in actor reads the space: a
 with no extra flags. Discrete is the usual first choice for a new problem: PPO
 tolerates defaults better than A2C and needs no replay buffer.
 
-## Programmatic equivalent
-
-```python
-from neatrl.ppo_mlp import train_ppo
-
-model = train_ppo(
-    env_id="CartPole-v1",
-    total_timesteps=200_000,
-    capture_video=False,
-    use_wandb=False,
-)
-```
-
 Full reference: [CLI](README.md) · [algorithm](../non-cli/PPO/README.md)

@@ -44,17 +44,4 @@ Discrete actions, episodic tasks. There is no value function and no replay
 buffer, so variance is high and long runs are normal — that is the algorithm,
 not the implementation.
 
-## Programmatic equivalent
-
-```python
-from neatrl.reinforce_mlp import train_reinforce
-
-model = train_reinforce(
-    env_id="CartPole-v1",
-    total_episodes=1000,
-    capture_video=False,
-    use_wandb=False,
-)
-```
-
 Full reference: [CLI](README.md) · [algorithm](../non-cli/REINFORCE/README.md)

@@ -37,17 +37,4 @@ passes `capture_video=False` and `use_wandb=False` with Atari preprocessing.
 Discrete-action environments. Atari on `a2c-cnn`; naming `ALE/Pong-v5` on `a2c`
 switches to the CNN trainer with a note on stderr.
 
-## Programmatic equivalent
-
-```python
-from neatrl.a2c_mlp import train_a2c
-
-model = train_a2c(
-    env_id="CartPole-v1",
-    total_timesteps=200_000,
-    capture_video=False,
-    use_wandb=False,
-)
-```
-
 Full reference: [CLI](README.md) · [algorithm](../non-cli/A2C/README.md)

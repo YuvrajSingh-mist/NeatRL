@@ -37,17 +37,4 @@ the MuJoCo environments need `pip install "neatrl[mujoco]"`.
 CarRacing is the one image family for `ddpg-cnn` — do not expect ALE games to
 work on it. For pixels in an Atari game use a `-cnn` alias from the DQN family.
 
-## Programmatic equivalent
-
-```python
-from neatrl.ddpg_mlp import train_ddpg
-
-model = train_ddpg(
-    env_id="Pendulum-v1",
-    total_timesteps=50_000,
-    capture_video=False,
-    use_wandb=False,
-)
-```
-
 Full reference: [CLI](README.md) · [algorithm](../non-cli/DDPG/README.md)

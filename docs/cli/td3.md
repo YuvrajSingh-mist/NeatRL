@@ -34,17 +34,4 @@ sets `total_timesteps`.
 Continuous actions only. TD3 is usually the better default than DDPG on the
 same environment — same interface, fewer divergences.
 
-## Programmatic equivalent
-
-```python
-from neatrl.td3_mlp import train_td3
-
-model = train_td3(
-    env_id="Pendulum-v1",
-    total_timesteps=50_000,
-    capture_video=False,
-    use_wandb=False,
-)
-```
-
 Full reference: [CLI](README.md) · [algorithm](../non-cli/TD3/README.md)

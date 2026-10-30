@@ -40,18 +40,4 @@ image environment on `dqn` prints a note and runs `dqn-cnn` instead — see
 supported by `dqn-cnn`, whose preprocessing is Atari-only; use `ddpg-cnn`,
 `td3-cnn` or `sac-cnn` for that.
 
-## Programmatic equivalent
-
-```python
-from neatrl.dqn_mlp import train_dqn
-
-model = train_dqn(
-    env_id="CartPole-v1",
-    total_timesteps=200_000,
-    atari_wrapper=False,
-    capture_video=False,
-    use_wandb=False,
-)
-```
-
 Full reference: [CLI](README.md) · [algorithm](../non-cli/DQN/README.md)

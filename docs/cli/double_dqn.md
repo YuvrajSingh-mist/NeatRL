@@ -34,18 +34,4 @@ Same reach as DQN: any vector-observation environment on the plain alias, Atari
 on the `-cnn` alias. An image environment named on `double-dqn` switches to
 `double-dqn-cnn` automatically, with a note on stderr.
 
-## Programmatic equivalent
-
-```python
-from neatrl.double_dqn_mlp import train_double_dqn
-
-model = train_double_dqn(
-    env_id="CartPole-v1",
-    total_timesteps=200_000,
-    atari_wrapper=False,
-    capture_video=False,
-    use_wandb=False,
-)
-```
-
 Full reference: [CLI](README.md) · [algorithm](../non-cli/Double-DQN/README.md)

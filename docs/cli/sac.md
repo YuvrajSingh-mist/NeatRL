@@ -34,17 +34,4 @@ Continuous actions only. The entropy term makes SAC the most forgiving of the
 three continuous-control algorithms when the reward scale is unhelpful — a
 reasonable first attempt before hand-tuning anything.
 
-## Programmatic equivalent
-
-```python
-from neatrl.sac_mlp import train_sac
-
-model = train_sac(
-    env_id="Pendulum-v1",
-    total_timesteps=50_000,
-    capture_video=False,
-    use_wandb=False,
-)
-```
-
 Full reference: [CLI](README.md) · [algorithm](../non-cli/SAC/README.md)

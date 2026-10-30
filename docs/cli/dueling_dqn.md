@@ -37,17 +37,4 @@ If you name an image environment on the plain alias, the routing adds
 earn their keep. Any discrete-action vector environment works too. Atari needs
 `pip install "neatrl[atari]"`.
 
-## Programmatic equivalent
-
-```python
-from neatrl.dueling_dqn_mlp import train_dueling_dqn
-
-model = train_dueling_dqn(
-    env_id="CliffWalking-v1",
-    total_timesteps=100_000,
-    capture_video=False,
-    use_wandb=False,
-)
-```
-
 Full reference: [CLI](README.md) · [algorithm](../non-cli/Dueling-DQN/README.md)
