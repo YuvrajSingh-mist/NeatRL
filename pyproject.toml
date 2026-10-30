@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "neatrl"
-version = "2.4.0"
+version = "2.5.0"
 description = "A Python library for reinforcement learning algorithms"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -16,31 +16,41 @@ authors = [
 dependencies = [
     "torch",
     "numpy",
-    "gymnasium>=1.3.0",
+    # classic-control envs (CartPole, Pendulum, Acrobot, MountainCar) plus the
+    # pygame-ce module they render with. gymnasium's classic-control extra is
+    # pygame-ce, not pygame, so this does not collide with the pin below.
+    "gymnasium[classic-control]>=1.3.0",
+    "pygame-ce>=2.1.3",
     "stable-baselines3",
     "tqdm",
-    "wandb",
+    "wandb[media]",
     "imageio[ffmpeg]",
     "opencv-python",
-    "wandb[media]",
-    "pygame-ce>=2.1.3",
+    # The terminal dashboard. Bundled rather than optional so that a plain
+    # `pip install neatrl` shows the TUI instead of silently logging.
+    "rich",
+    "psutil",
+    "nvidia-ml-py",
 ]
 
 [project.optional-dependencies]
-cli = ["rich", "psutil", "nvidia-ml-py"]
-mujoco = ["gymnasium[mujoco]"]
+# Environment families that need a heavier native dependency stay opt-in.
 atari = ["gymnasium[atari]", "ale-py"]
+# `ale` is the same thing spelled after the namespace it registers.
+ale = ["gymnasium[atari]", "ale-py"]
+box2d = ["gymnasium[box2d]"]
+mujoco = ["gymnasium[mujoco]"]
+# Kept so existing instructions and scripts keep working; the dashboard and
+# classic control now ship in the base install.
+cli = ["rich", "psutil", "nvidia-ml-py"]
 classic = ["gymnasium[classic-control]"]
-box2d = ["swig", "gymnasium[box2d]"]
 # Everything the `neatrl train` aliases can reach, including the image-based
-# `-cnn` ones (ALE for Pong/Breakout, Box2D for CarRacing). A plain
-# `pip install neatrl` cannot run those, which is why this exists.
+# `-cnn` ones (ALE for Pong/Breakout, Box2D for CarRacing).
 all = [
     "rich",
     "psutil",
     "nvidia-ml-py",
     "ale-py",
-    "swig",
     "gymnasium[atari,classic-control,box2d,mujoco]",
 ]
 dev = [
