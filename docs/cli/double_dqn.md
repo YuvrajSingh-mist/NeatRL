@@ -22,16 +22,4 @@ neatrl train double-dqn-cnn                      # ALE/Pong-v5
 neatrl train double-dqn-cnn ALE/Breakout-v5 --steps 500000
 ```
 
-## What the alias passes
-
-`double-dqn`: `atari_wrapper=False`, `capture_video=False`, `use_wandb=False`.
-`double-dqn-cnn`: `capture_video=False`, `use_wandb=False`, plus its own Atari
-preprocessing. `--steps` sets `total_timesteps` for both.
-
-## Environments
-
-Same reach as DQN: any vector-observation environment on the plain alias, Atari
-on the `-cnn` alias. An image environment named on `double-dqn` switches to
-`double-dqn-cnn` automatically, with a note on stderr.
-
 Full reference: [CLI](README.md) · [algorithm](../non-cli/Double-DQN/README.md)

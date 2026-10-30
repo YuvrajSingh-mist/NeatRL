@@ -23,18 +23,4 @@ neatrl train ddpg-cnn                      # CarRacing-v3
 neatrl train ddpg-cnn CarRacing-v3 --steps 200000
 ```
 
-## What the alias passes
-
-Both aliases pass `capture_video=False` and `use_wandb=False`; `ddpg-cnn`
-applies the CarRacing-specific image preprocessing (cropped, stacked frames).
-`--steps` sets `total_timesteps`.
-
-## Environments
-
-Continuous actions only. `CarRacing-v3` needs `pip install "neatrl[box2d]"`;
-the MuJoCo environments need `pip install "neatrl[mujoco]"`.
-
-CarRacing is the one image family for `ddpg-cnn` — do not expect ALE games to
-work on it. For pixels in an Atari game use a `-cnn` alias from the DQN family.
-
 Full reference: [CLI](README.md) · [algorithm](../non-cli/DDPG/README.md)

@@ -16,24 +16,12 @@ policy.
 ## Run it
 
 ```bash
-neatrl train ppo                        # CartPole-v1
+neatrl train ppo                        # CartPole-v1 (discrete)
 neatrl train ppo CartPole-v1 --steps 200000
+neatrl train ppo Pendulum-v1            # continuous, Gaussian head
 neatrl train ppo LunarLander-v3
 neatrl train ppo-cnn                    # ALE/Pong-v5
 neatrl train ppo-cnn ALE/Breakout-v5 --steps 2000000
 ```
-
-## What the alias passes
-
-Both aliases pass `capture_video=False` and `use_wandb=False`; the CNN alias
-adds Atari preprocessing. `--steps` sets `total_timesteps`.
-
-## Environments
-
-Discrete and continuous action spaces. The built-in actor reads the space: a
-`Discrete` one gets a categorical head, a `Box` one a Gaussian head, so
-`neatrl train ppo Pendulum-v1` and `neatrl train ppo CartPole-v1` both work
-with no extra flags. Discrete is the usual first choice for a new problem: PPO
-tolerates defaults better than A2C and needs no replay buffer.
 
 Full reference: [CLI](README.md) · [algorithm](../non-cli/PPO/README.md)

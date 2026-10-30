@@ -23,21 +23,4 @@ neatrl train dqn FrozenLake-v1          # discrete observations are fine
 neatrl train dqn ALE/Pong-v5            # note: switches to dqn-cnn
 ```
 
-## What the alias passes
-
-The `dqn` recipe calls the trainer with `atari_wrapper=False`,
-`capture_video=False` and `use_wandb=False`; `--steps` sets
-`total_timesteps`, and `--wandb` flips `use_wandb`.
-
-`dqn-cnn` passes `capture_video=False` and `use_wandb=False`, and already
-applies the Atari preprocessing (frame stack, clipped rewards, 84×84 frames).
-
-## Environments
-
-Any vector-observation environment works, continuous or discrete. Naming an
-image environment on `dqn` prints a note and runs `dqn-cnn` instead — see
-[environment routing](README.md#environment-routing). CarRacing is not
-supported by `dqn-cnn`, whose preprocessing is Atari-only; use `ddpg-cnn`,
-`td3-cnn` or `sac-cnn` for that.
-
 Full reference: [CLI](README.md) · [algorithm](../non-cli/DQN/README.md)

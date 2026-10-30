@@ -33,15 +33,4 @@ episodes:
 
 So a "small" number that is a smoke test elsewhere still runs a long time here.
 
-## What the alias passes
-
-Both aliases pass `capture_video=False` and `use_wandb=False`; the CNN alias
-adds Atari preprocessing.
-
-## Environments
-
-Discrete actions, episodic tasks. There is no value function and no replay
-buffer, so variance is high and long runs are normal — that is the algorithm,
-not the implementation.
-
 Full reference: [CLI](README.md) · [algorithm](../non-cli/REINFORCE/README.md)

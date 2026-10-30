@@ -21,20 +21,4 @@ neatrl train dueling-dqn-cnn                    # ALE/Pong-v5
 neatrl train dueling-dqn-cnn ALE/Breakout-v5
 ```
 
-## What the alias passes
-
-Unlike the rest of the family, `dueling-dqn` has **one trainer** for both
-observation types: the `-cnn` alias is the same function with
-`atari_wrapper=True`. Everything else is `capture_video=False` and
-`use_wandb=False`; `--steps` sets `total_timesteps`.
-
-If you name an image environment on the plain alias, the routing adds
-`atari_wrapper=True` for you.
-
-## Environments
-
-`CliffWalking-v1` (the default) is a sparse-reward grid where dueling heads
-earn their keep. Any discrete-action vector environment works too. Atari needs
-`pip install "neatrl[atari]"`.
-
 Full reference: [CLI](README.md) · [algorithm](../non-cli/Dueling-DQN/README.md)

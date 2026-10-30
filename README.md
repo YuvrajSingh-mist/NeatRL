@@ -177,7 +177,7 @@ The docs include:
 
 ### Per-algorithm guides
 
-Every algorithm has a CLI page (aliases, default env, what the alias passes)
+Every algorithm has a CLI page (aliases, default env, runnable commands)
 and a Python guide (arguments, networks, example scripts):
 
 | Algorithm | CLI reference | Python guide |

@@ -23,15 +23,4 @@ neatrl train td3-cnn                      # CarRacing-v3
 neatrl train td3-cnn CarRacing-v3 --steps 200000
 ```
 
-## What the alias passes
-
-Both aliases pass `capture_video=False` and `use_wandb=False`; `td3-cnn`
-applies CarRacing image preprocessing (cropped, stacked frames). `--steps`
-sets `total_timesteps`.
-
-## Environments
-
-Continuous actions only. TD3 is usually the better default than DDPG on the
-same environment — same interface, fewer divergences.
-
 Full reference: [CLI](README.md) · [algorithm](../non-cli/TD3/README.md)

@@ -22,18 +22,4 @@ neatrl train rnd CartPole-v1
 neatrl train rnd-cnn                       # ALE/Pong-v5
 ```
 
-## What the alias passes
-
-Both aliases pass `capture_video=False` and `use_wandb=False`; `rnd-cnn` adds
-Atari preprocessing. `--steps` sets `total_timesteps`.
-
-The trainer is PPO with the RND bonus bolted on — hence `train_ppo_rnd` in the
-import path, not `train_rnd`.
-
-## Environments
-
-Best where the environment reward is sparse: `CliffWalking-v1` (the default) is
-almost all negative reward, so the bonus is what keeps the agent moving. On a
-dense-reward task the bonus mostly adds noise.
-
 Full reference: [CLI](README.md) · [algorithm](../non-cli/RND/README.md)

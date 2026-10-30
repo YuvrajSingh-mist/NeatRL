@@ -23,10 +23,4 @@ neatrl train q-learning Taxi-v4
 The run saves the final table as `runs/<env>/.../q_table_final.npy` instead of
 a `.pth` model.
 
-## What the alias passes
-
-`capture_video=False` and `use_wandb=False`. `--steps` sets
-`total_timesteps` — the number of environment steps, which is also the number
-of table updates.
-
 Full reference: [CLI](README.md) · [algorithm](../non-cli/Q-learning/README.md)

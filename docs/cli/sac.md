@@ -23,15 +23,4 @@ neatrl train sac-cnn                       # CarRacing-v3
 neatrl train sac-cnn CarRacing-v3 --steps 200000
 ```
 
-## What the alias passes
-
-Both aliases pass `capture_video=False` and `use_wandb=False`; `sac-cnn` applies
-CarRacing image preprocessing. `--steps` sets `total_timesteps`.
-
-## Environments
-
-Continuous actions only. The entropy term makes SAC the most forgiving of the
-three continuous-control algorithms when the reward scale is unhelpful — a
-reasonable first attempt before hand-tuning anything.
-
 Full reference: [CLI](README.md) · [algorithm](../non-cli/SAC/README.md)

@@ -73,24 +73,28 @@ usage: neatrl train [-h] [--steps N] [--wandb] algo [env_id]
 
 21 aliases over 11 algorithms. The `-cnn` alias is the same algorithm reading
 pixels instead of a flat observation vector. Each alias links to its own page,
-which lists verified environments and the exact arguments the alias passes.
+which lists its default environment and the commands that run it.
 
-| Algorithm | Aliases | Default environment | Observation | Trainer |
-|---|---|---|---|---|
-| [Q-learning](q_learning.md) | [`q-learning`](q_learning.md) | `FrozenLake-v1` | tabular | `neatrl.q_learning.train_q_learning` |
-| [DQN](dqn.md) | [`dqn`](dqn.md) · [`dqn-cnn`](dqn.md) | `CartPole-v1` · `ALE/Pong-v5` | vector · Atari | `neatrl.dqn_mlp.train_dqn` · `neatrl.dqn_cnn.train_dqn_cnn` |
-| [Double DQN](double_dqn.md) | [`double-dqn`](double_dqn.md) · [`double-dqn-cnn`](double_dqn.md) | `CartPole-v1` · `ALE/Pong-v5` | vector · Atari | `neatrl.double_dqn_mlp.train_double_dqn` · `neatrl.double_dqn_cnn.train_double_dqn_cnn` |
-| [Dueling DQN](dueling_dqn.md) | [`dueling-dqn`](dueling_dqn.md) · [`dueling-dqn-cnn`](dueling_dqn.md) | `CliffWalking-v1` · `ALE/Pong-v5` | vector · Atari | `neatrl.dueling_dqn_mlp.train_dueling_dqn` (both; `atari_wrapper=True` for CNN) |
-| [REINFORCE](reinforce.md) | [`reinforce`](reinforce.md) · [`reinforce-cnn`](reinforce.md) | `CartPole-v1` · `ALE/Pong-v5` | vector · Atari | `neatrl.reinforce_mlp.train_reinforce` · `neatrl.reinforce_cnn.train_reinforce_cnn` |
-| [A2C](a2c.md) | [`a2c`](a2c.md) · [`a2c-cnn`](a2c.md) | `CartPole-v1` · `ALE/Pong-v5` | vector · Atari | `neatrl.a2c_mlp.train_a2c` · `neatrl.a2c_cnn.train_a2c_cnn` |
-| [PPO](ppo.md) | [`ppo`](ppo.md) · [`ppo-cnn`](ppo.md) | `CartPole-v1` · `ALE/Pong-v5` | vector · Atari | `neatrl.ppo_mlp.train_ppo` · `neatrl.ppo_cnn.train_ppo_cnn` |
-| [RND](rnd.md) | [`rnd`](rnd.md) · [`rnd-cnn`](rnd.md) | `CliffWalking-v1` · `ALE/Pong-v5` | vector · Atari | `neatrl.rnd_mlp.train_ppo_rnd` · `neatrl.rnd_cnn.train_ppo_rnd_cnn` |
-| [DDPG](ddpg.md) | [`ddpg`](ddpg.md) · [`ddpg-cnn`](ddpg.md) | `Pendulum-v1` · `CarRacing-v3` | vector · Box2D | `neatrl.ddpg_mlp.train_ddpg` · `neatrl.ddpg_cnn.train_ddpg_cnn` |
-| [TD3](td3.md) | [`td3`](td3.md) · [`td3-cnn`](td3.md) | `Pendulum-v1` · `CarRacing-v3` | vector · Box2D | `neatrl.td3_mlp.train_td3` · `neatrl.td3_cnn.train_td3_cnn` |
-| [SAC](sac.md) | [`sac`](sac.md) · [`sac-cnn`](sac.md) | `Pendulum-v1` · `CarRacing-v3` | vector · Box2D | `neatrl.sac_mlp.train_sac` · `neatrl.sac_cnn.train_sac_cnn` |
+| Algorithm | Aliases | Default environment | Observation | Actions | Trainer |
+|---|---|---|---|---|---|
+| [Q-learning](q_learning.md) | [`q-learning`](q_learning.md) | `FrozenLake-v1` | tabular | discrete | `neatrl.q_learning.train_q_learning` |
+| [DQN](dqn.md) | [`dqn`](dqn.md) · [`dqn-cnn`](dqn.md) | `CartPole-v1` · `ALE/Pong-v5` | vector · Atari | discrete | `neatrl.dqn_mlp.train_dqn` · `neatrl.dqn_cnn.train_dqn_cnn` |
+| [Double DQN](double_dqn.md) | [`double-dqn`](double_dqn.md) · [`double-dqn-cnn`](double_dqn.md) | `CartPole-v1` · `ALE/Pong-v5` | vector · Atari | discrete | `neatrl.double_dqn_mlp.train_double_dqn` · `neatrl.double_dqn_cnn.train_double_dqn_cnn` |
+| [Dueling DQN](dueling_dqn.md) | [`dueling-dqn`](dueling_dqn.md) · [`dueling-dqn-cnn`](dueling_dqn.md) | `CliffWalking-v1` · `ALE/Pong-v5` | vector · Atari | discrete | `neatrl.dueling_dqn_mlp.train_dueling_dqn` (both; `atari_wrapper=True` for CNN) |
+| [REINFORCE](reinforce.md) | [`reinforce`](reinforce.md) · [`reinforce-cnn`](reinforce.md) | `CartPole-v1` · `ALE/Pong-v5` | vector · Atari | discrete | `neatrl.reinforce_mlp.train_reinforce` · `neatrl.reinforce_cnn.train_reinforce_cnn` |
+| [A2C](a2c.md) | [`a2c`](a2c.md) · [`a2c-cnn`](a2c.md) | `CartPole-v1` · `ALE/Pong-v5` | vector · Atari | discrete | `neatrl.a2c_mlp.train_a2c` · `neatrl.a2c_cnn.train_a2c_cnn` |
+| [PPO](ppo.md) | [`ppo`](ppo.md) · [`ppo-cnn`](ppo.md) | `CartPole-v1` · `ALE/Pong-v5` | vector · Atari | discrete + continuous | `neatrl.ppo_mlp.train_ppo` · `neatrl.ppo_cnn.train_ppo_cnn` |
+| [RND](rnd.md) | [`rnd`](rnd.md) · [`rnd-cnn`](rnd.md) | `CliffWalking-v1` · `ALE/Pong-v5` | vector · Atari | discrete + continuous | `neatrl.rnd_mlp.train_ppo_rnd` · `neatrl.rnd_cnn.train_ppo_rnd_cnn` |
+| [DDPG](ddpg.md) | [`ddpg`](ddpg.md) · [`ddpg-cnn`](ddpg.md) | `Pendulum-v1` · `CarRacing-v3` | vector · Box2D | continuous | `neatrl.ddpg_mlp.train_ddpg` · `neatrl.ddpg_cnn.train_ddpg_cnn` |
+| [TD3](td3.md) | [`td3`](td3.md) · [`td3-cnn`](td3.md) | `Pendulum-v1` · `CarRacing-v3` | vector · Box2D | continuous | `neatrl.td3_mlp.train_td3` · `neatrl.td3_cnn.train_td3_cnn` |
+| [SAC](sac.md) | [`sac`](sac.md) · [`sac-cnn`](sac.md) | `Pendulum-v1` · `CarRacing-v3` | vector · Box2D | continuous | `neatrl.sac_mlp.train_sac` · `neatrl.sac_cnn.train_sac_cnn` |
 
-`q-learning` is tabular and has no CNN sibling, so it only accepts discrete
-environments with small observation spaces.
+`ppo` and `rnd` read the action space from the environment: a `Discrete` space
+gets a categorical head, a `Box` space a Gaussian one, so `Pendulum-v1` and
+`CartPole-v1` both run with no extra flags. Everything else is fixed — the
+DQN family, REINFORCE and A2C are discrete-only, DDPG, TD3 and SAC are
+continuous-only. `q-learning` is tabular and has no CNN sibling, so it only
+accepts discrete environments with small observation spaces.
 
 ---
 
@@ -267,7 +271,7 @@ done
 | `src/neatrl/cli/dashboard.py` | The Rich terminal dashboard |
 | `src/neatrl/cli/extras.py` | Missing-package detection and install hints |
 | `src/neatrl/cli/charts.py` | Sparklines and metric bars |
-| `docs/cli/<algo>.md` | One page per algorithm: verified environments, the exact arguments the alias passes |
+| `docs/cli/<algo>.md` | One page per algorithm: defaults, runnable commands, algorithm guide link |
 
 The CLI is a thin layer: every alias dispatches to a public `train_*` function
 in `neatrl`, the same one the Python API exposes. For programmatic control —
