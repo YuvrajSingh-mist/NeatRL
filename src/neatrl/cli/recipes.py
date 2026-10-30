@@ -45,52 +45,75 @@ RECIPES: dict[str, Recipe] = {
         mlp=Call(
             "neatrl.a2c_mlp.train_a2c",
             "CartPole-v1",
-            {"grid_env": False, "capture_video": False},
+            {"grid_env": False, "capture_video": False, "use_wandb": False},
         ),
         cnn=Call(
-            "neatrl.a2c_cnn.train_a2c_cnn", "ALE/Pong-v5", {"capture_video": False}
+            "neatrl.a2c_cnn.train_a2c_cnn",
+            "ALE/Pong-v5",
+            {"capture_video": False, "use_wandb": False},
         ),
     ),
     "ddpg": Recipe(
-        mlp=Call("neatrl.ddpg_mlp.train_ddpg", "Pendulum-v1", {"capture_video": False}),
+        mlp=Call(
+            "neatrl.ddpg_mlp.train_ddpg",
+            "Pendulum-v1",
+            {"capture_video": False, "use_wandb": False},
+        ),
         cnn=Call(
-            "neatrl.ddpg_cnn.train_ddpg_cnn", "CarRacing-v3", {"capture_video": False}
+            "neatrl.ddpg_cnn.train_ddpg_cnn",
+            "CarRacing-v3",
+            {"capture_video": False, "use_wandb": False},
         ),
     ),
     "dqn": Recipe(
         mlp=Call(
             "neatrl.dqn_mlp.train_dqn",
             "CartPole-v1",
-            {"atari_wrapper": False, "capture_video": False},
+            {"atari_wrapper": False, "capture_video": False, "use_wandb": False},
         ),
         cnn=Call(
-            "neatrl.dqn_cnn.train_dqn_cnn", "ALE/Pong-v5", {"capture_video": False}
+            "neatrl.dqn_cnn.train_dqn_cnn",
+            "ALE/Pong-v5",
+            {"capture_video": False, "use_wandb": False},
         ),
     ),
     "double_dqn": Recipe(
         mlp=Call(
             "neatrl.double_dqn_mlp.train_double_dqn",
             "CartPole-v1",
-            {"atari_wrapper": False, "capture_video": False},
+            {"atari_wrapper": False, "capture_video": False, "use_wandb": False},
         ),
         cnn=Call(
             "neatrl.double_dqn_cnn.train_double_dqn_cnn",
             "ALE/Pong-v5",
-            {"capture_video": False},
+            {"capture_video": False, "use_wandb": False},
         ),
     ),
     "dueling_dqn": Recipe(
         mlp=Call(
             "neatrl.dueling_dqn_mlp.train_dueling_dqn",
-            "CliffWalking-v0",
-            {"capture_video": False},
+            "CliffWalking-v1",
+            {"capture_video": False, "use_wandb": False},
+        ),
+        # One trainer handles both: `atari_wrapper` switches it to the
+        # Atari preprocessing + conv trunk that the `-cnn` alias expects.
+        cnn=Call(
+            "neatrl.dueling_dqn_mlp.train_dueling_dqn",
+            "ALE/Pong-v5",
+            {"capture_video": False, "use_wandb": False, "atari_wrapper": True},
         ),
         cnn_switch="atari_wrapper",
     ),
     "ppo": Recipe(
-        mlp=Call("neatrl.ppo_mlp.train_ppo", "CartPole-v1", {"capture_video": False}),
+        mlp=Call(
+            "neatrl.ppo_mlp.train_ppo",
+            "CartPole-v1",
+            {"capture_video": False, "use_wandb": False},
+        ),
         cnn=Call(
-            "neatrl.ppo_cnn.train_ppo_cnn", "ALE/Pong-v5", {"capture_video": False}
+            "neatrl.ppo_cnn.train_ppo_cnn",
+            "ALE/Pong-v5",
+            {"capture_video": False, "use_wandb": False},
         ),
     ),
     "q_learning": Recipe(
@@ -104,37 +127,49 @@ RECIPES: dict[str, Recipe] = {
         mlp=Call(
             "neatrl.reinforce_mlp.train_reinforce",
             "CartPole-v1",
-            {"capture_video": False},
+            {"capture_video": False, "use_wandb": False},
         ),
         cnn=Call(
             "neatrl.reinforce_cnn.train_reinforce_cnn",
             "ALE/Pong-v5",
-            {"capture_video": False},
+            {"capture_video": False, "use_wandb": False},
         ),
         steps_kw="total_episodes",
     ),
     "rnd": Recipe(
         mlp=Call(
             "neatrl.rnd_mlp.train_ppo_rnd",
-            "CliffWalking-v0",
-            {"capture_video": False},
+            "CliffWalking-v1",
+            {"capture_video": False, "use_wandb": False},
         ),
         cnn=Call(
             "neatrl.rnd_cnn.train_ppo_rnd_cnn",
             "ALE/Pong-v5",
-            {"capture_video": False},
+            {"capture_video": False, "use_wandb": False},
         ),
     ),
     "sac": Recipe(
-        mlp=Call("neatrl.sac_mlp.train_sac", "Pendulum-v1", {"capture_video": False}),
+        mlp=Call(
+            "neatrl.sac_mlp.train_sac",
+            "Pendulum-v1",
+            {"capture_video": False, "use_wandb": False},
+        ),
         cnn=Call(
-            "neatrl.sac_cnn.train_sac_cnn", "CarRacing-v3", {"capture_video": False}
+            "neatrl.sac_cnn.train_sac_cnn",
+            "CarRacing-v3",
+            {"capture_video": False, "use_wandb": False},
         ),
     ),
     "td3": Recipe(
-        mlp=Call("neatrl.td3_mlp.train_td3", "Pendulum-v1", {"capture_video": False}),
+        mlp=Call(
+            "neatrl.td3_mlp.train_td3",
+            "Pendulum-v1",
+            {"capture_video": False, "use_wandb": False},
+        ),
         cnn=Call(
-            "neatrl.td3_cnn.train_td3_cnn", "CarRacing-v3", {"capture_video": False}
+            "neatrl.td3_cnn.train_td3_cnn",
+            "CarRacing-v3",
+            {"capture_video": False, "use_wandb": False},
         ),
     ),
 }
@@ -169,6 +204,7 @@ def run_train(
     *,
     use_cnn: bool = False,
     steps: int | None = None,
+    use_wandb: bool = False,
 ) -> Any:
     """Run the trainer named by ``algo`` and return whatever it returns."""
     recipe = RECIPES[algo]
@@ -179,6 +215,9 @@ def run_train(
         kwargs[recipe.cnn_switch] = True
     if steps is not None:
         kwargs[recipe.steps_kw] = steps
+    # The trainers default to logging to wandb; a terminal command should
+    # not start an upload unless the user asks for one.
+    kwargs["use_wandb"] = use_wandb
 
     return _resolve(call.func)(env_id=env_id or call.env, **kwargs)
 

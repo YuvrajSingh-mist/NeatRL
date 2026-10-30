@@ -31,10 +31,10 @@ CASES = [
     # discrete observations, discrete actions
     ("FrozenLake-v1", "discrete", True, "dqn", False),
     ("FrozenLake-v1", "discrete", True, "double_dqn", False),
-    ("CliffWalking-v0", "discrete", True, "dqn", False),
-    ("CliffWalking-v0", "discrete", True, "double_dqn", False),
-    ("Taxi-v3", "discrete", True, "dqn", False),
-    ("Taxi-v3", "discrete", True, "double_dqn", False),
+    ("CliffWalking-v1", "discrete", True, "dqn", False),
+    ("CliffWalking-v1", "discrete", True, "double_dqn", False),
+    ("Taxi-v4", "discrete", True, "dqn", False),
+    ("Taxi-v4", "discrete", True, "double_dqn", False),
     # continuous observations, discrete actions
     ("CartPole-v1", "continuous", False, "dqn", False),
     ("CartPole-v1", "continuous", False, "double_dqn", False),

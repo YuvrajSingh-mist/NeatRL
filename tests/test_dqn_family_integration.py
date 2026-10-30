@@ -147,7 +147,7 @@ def test_double_target_differs_from_plain_max():
 
 
 def test_evaluate_terminates_without_env_timelimit():
-    """CliffWalking-v0 has no TimeLimit; evaluate() must still return.
+    """CliffWalking-v1 has no TimeLimit; evaluate() must still return.
 
     Regression test: the greedy rollout used to loop forever because nothing
     ever set terminated/truncated.
@@ -156,7 +156,7 @@ def test_evaluate_terminates_without_env_timelimit():
 
     net = QNet(48, 4)
     returns, _frames = evaluate(
-        "CliffWalking-v0",
+        "CliffWalking-v1",
         net,
         "cpu",
         seed=0,

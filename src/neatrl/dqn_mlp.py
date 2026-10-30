@@ -166,7 +166,7 @@ def evaluate(
     returns = []
     frames = []
 
-    # Some envs (e.g. CliffWalking-v0) are registered without a TimeLimit, so a
+    # Some envs (e.g. CliffWalking-v1) are registered without a TimeLimit, so a
     # policy that circles forever would never set terminated/truncated. Cap the
     # episode so evaluation always terminates.
     spec = getattr(eval_env, "spec", None)

@@ -32,12 +32,12 @@ class DuelingQNet(nn.Module):
 
 
 def test_dueling_dqn_cliffwalking():
-    """Test Dueling DQN training on CliffWalking-v0."""
-    print("Testing Dueling DQN training on CliffWalking-v0 with neatrl...")
+    """Test Dueling DQN training on CliffWalking-v1."""
+    print("Testing Dueling DQN training on CliffWalking-v1 with neatrl...")
 
     # Train Dueling DQN on CliffWalking
     model = train_dueling_dqn(
-        env_id="CliffWalking-v0",
+        env_id="CliffWalking-v1",
         total_timesteps=100000,
         seed=42,
         lr=2e-4,

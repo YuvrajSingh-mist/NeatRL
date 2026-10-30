@@ -23,6 +23,7 @@ from .cli import Dashboard
 from .utils import configure_logging, get_logger, get_space_dims, setup_device
 from .utils.nn_utils import (
     calculate_param_norm,
+    observation_input_layer,
     validate_dueling_q_network_dimensions,
 )
 from .utils.wrappers import OneHotWrapper
@@ -46,7 +47,7 @@ class Config:
 
     exp_name: str = "Dueling-DQN"
     seed: int = 42
-    env_id: str = "CliffWalking-v0"
+    env_id: str = "CliffWalking-v1"
 
     # Training parameters
     total_timesteps: int = 300000
@@ -83,14 +84,27 @@ class Config:
 
 
 class DuelingQNet(nn.Module):
-    """Dueling Q-network with separate value and advantage streams."""
+    """Dueling Q-network with separate value and advantage streams.
+
+    ``state_space`` is either a flat size or a full observation shape.  The
+    image case matters because this trainer also serves the ``-cnn`` alias
+    (``atari_wrapper=True``): a bare ``nn.Linear`` there would take the
+    `(4, 84, 84)` frame as four inputs and never match the flattened batch.
+    """
 
     def __init__(self, state_space, action_space):
         super().__init__()
         logger.info(f"State space: {state_space}, Action space: {action_space}")
 
+        # Image observations get a conv trunk; flat ones keep the MLP.
+        shape = (state_space,) if isinstance(state_space, int) else tuple(state_space)
+        self.obs_shape = tuple(shape) if len(shape) > 1 else None
+
         self.features = nn.Sequential(
-            nn.Linear(state_space, 64), nn.ReLU(), nn.Linear(64, 64), nn.ReLU()
+            observation_input_layer(shape, 64),
+            nn.ReLU(),
+            nn.Linear(64, 64),
+            nn.ReLU(),
         )
 
         self.values = nn.Sequential(nn.Linear(64, 64), nn.ReLU(), nn.Linear(64, 1))
@@ -100,6 +114,8 @@ class DuelingQNet(nn.Module):
 
     def forward(self, x):
         """Forward pass — returns network output(s)."""
+        if self.obs_shape is not None and x.ndim == 2:
+            x = x.reshape(x.shape[0], *self.obs_shape)
         feat = self.features(x)
         values = self.values(feat)
         adv = self.adv(feat)
@@ -183,7 +199,7 @@ def evaluate(
         episode_reward = 0.0
 
         # A policy that circles forever never sets terminated/truncated on envs
-        # registered without a TimeLimit (CliffWalking-v0), so cap the episode.
+        # registered without a TimeLimit (CliffWalking-v1), so cap the episode.
         spec = getattr(eval_env, "spec", None)
         max_steps = getattr(spec, "max_episode_steps", None) or 10_000
 
@@ -313,13 +329,22 @@ def train_dueling_dqn(
             env_id, seed, idx=0, atari_wrapper=atari_wrapper, grid_env=grid_env
         )()
 
-    obs_shape, action_shape = get_space_dims(env)
+    obs_dim, action_shape = get_space_dims(env)
+    # Image observations need the full shape so the trunk can build convs;
+    # flat ones keep the integer size used by custom-agent validation.
+    _space = (
+        env.single_observation_space
+        if hasattr(env, "single_observation_space")
+        else env.observation_space
+    )
+    _shape = tuple(getattr(_space, "shape", ()) or ())
+    obs_shape: Any = _shape if len(_shape) > 1 else obs_dim
 
     # Use custom agent if provided, otherwise use default DuelingQNet
     if custom_agent is not None:
         if isinstance(custom_agent, nn.Module):
             # Validate custom agent's dimensions first
-            validate_dueling_q_network_dimensions(custom_agent, obs_shape, action_shape)
+            validate_dueling_q_network_dimensions(custom_agent, obs_dim, action_shape)
 
             q_network = custom_agent.to(device)
             target_net = custom_agent.to(device)

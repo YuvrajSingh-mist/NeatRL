@@ -1,7 +1,7 @@
 # Tabular Q-learning
 
 Off-policy TD control with a Q-table. For **simple discrete Gym envs only**
-(`FrozenLake-v1`, `CliffWalking-v0`, `Taxi-v3`, …). Continuous observations → use DQN.
+(`FrozenLake-v1`, `CliffWalking-v1`, `Taxi-v4`, …). Continuous observations → use DQN.
 
 ```bash
 pip install "neatrl[classic]"

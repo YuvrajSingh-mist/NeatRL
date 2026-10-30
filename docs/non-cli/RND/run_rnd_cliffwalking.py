@@ -6,7 +6,7 @@ from neatrl.rnd_mlp import train_ppo_rnd
 
 
 def test_rnd_ppo_cliffwalking():
-    """Test RND-PPO training on CliffWalking-v0."""
+    """Test RND-PPO training on CliffWalking-v1."""
     print("Testing RND-PPO training on CliffWalking-v1 with neatrl...")
 
     # Train RND-PPO on CliffWalking

@@ -132,7 +132,7 @@ class TestTrainQLearning:
         """CliffWalking gives a reward every step, so the Q-table must leave zeros."""
         monkeypatch.chdir(tmp_path)
         q = train_q_learning(
-            env_id="CliffWalking-v0",
+            env_id="CliffWalking-v1",
             total_timesteps=200,
             seed=0,
             lr=0.5,

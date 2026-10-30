@@ -20,12 +20,12 @@ class QNet(nn.Module):
 
 
 def test_dqn_taxi():
-    """Test DQN training on Taxi-v3."""
-    print("Testing DQN training on Taxi-v3 with neatrl...")
+    """Test DQN training on Taxi-v4."""
+    print("Testing DQN training on Taxi-v4 with neatrl...")
 
     # Train DQN on Taxi
     model = train_dqn(
-        env_id="Taxi-v3",
+        env_id="Taxi-v4",
         total_timesteps=3000000,
         seed=42,
         lr=2.5e-4,

@@ -217,7 +217,7 @@ def evaluate(
         episode_reward = 0.0
 
         # A policy that circles forever never sets terminated/truncated on envs
-        # registered without a TimeLimit (CliffWalking-v0), so cap the episode.
+        # registered without a TimeLimit (CliffWalking-v1), so cap the episode.
         spec = getattr(eval_env, "spec", None)
         max_steps = getattr(spec, "max_episode_steps", None) or 10_000
 

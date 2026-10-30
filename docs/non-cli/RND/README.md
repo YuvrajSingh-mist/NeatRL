@@ -7,7 +7,7 @@ This guide shows you how to use NeatRL's RND implementation, which combines PPO 
 ### CLI
 
 ```bash
-neatrl train rnd CliffWalking-v0 --no-wandb --grid-env
+neatrl train rnd CliffWalking-v1 --no-wandb --grid-env
 neatrl train rnd-cnn BreakoutNoFrameskip-v4 --no-wandb --atari
 ```
 
@@ -18,7 +18,7 @@ neatrl train rnd-cnn BreakoutNoFrameskip-v4 --no-wandb --atari
 ```python
 from neatrl.rnd_mlp import train_ppo_rnd
 
-model = train_ppo_rnd(env_id="CliffWalking-v0", total_timesteps=10000, seed=42)
+model = train_ppo_rnd(env_id="CliffWalking-v1", total_timesteps=10000, seed=42)
 ```
 
 ### Training with Experiment Tracking
@@ -27,7 +27,7 @@ model = train_ppo_rnd(env_id="CliffWalking-v0", total_timesteps=10000, seed=42)
 from neatrl.rnd_mlp import train_ppo_rnd
 
 model = train_ppo_rnd(
-    env_id="CliffWalking-v0",
+    env_id="CliffWalking-v1",
     total_timesteps=50000,
     seed=42,
     capture_video=True,
@@ -51,7 +51,7 @@ model = train_ppo_rnd_cnn(
 
 | Argument | Type | Default | Description |
 |----------|------|---------|-------------|
-| `env_id` | str | `"CliffWalking-v0"` | Gymnasium environment ID |
+| `env_id` | str | `"CliffWalking-v1"` | Gymnasium environment ID |
 | `total_timesteps` | int | `5000000` | Total number of environment steps |
 | `seed` | int | `42` | Random seed |
 | `lr` | float | `3e-4` | Learning rate |
@@ -100,7 +100,7 @@ model = train_ppo_rnd_cnn(
 from neatrl.rnd_mlp import train_ppo_rnd
 
 model = train_ppo_rnd(
-    env_id="CliffWalking-v0",
+    env_id="CliffWalking-v1",
     total_timesteps=50000,
     seed=42,
     grid_env=True,
@@ -111,8 +111,8 @@ model = train_ppo_rnd(
 
 ### Toy Text
 - `FrozenLake-v1`
-- `Taxi-v3`
-- `CliffWalking-v0`
+- `Taxi-v4`
+- `CliffWalking-v1`
 
 ### Atari
 
@@ -153,7 +153,7 @@ total_advantage = EXT_COEFF * ext_advantage + INT_COEFF * int_advantage
 
 ```python
 model = train_ppo_rnd(
-    env_id="CliffWalking-v0",
+    env_id="CliffWalking-v1",
     total_timesteps=50000,
     use_wandb=True,
     wandb_project="my-rl-project",

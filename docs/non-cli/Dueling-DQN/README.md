@@ -18,7 +18,7 @@ neatrl train dueling-dqn LunarLander-v3 --no-wandb --timesteps 300000
 ```python
 from neatrl.dueling_dqn_mlp import train_dueling_dqn
 
-model = train_dueling_dqn(env_id="CliffWalking-v0", total_timesteps=10000, seed=42)
+model = train_dueling_dqn(env_id="CliffWalking-v1", total_timesteps=10000, seed=42)
 ```
 
 ### Training with Experiment Tracking
@@ -27,7 +27,7 @@ model = train_dueling_dqn(env_id="CliffWalking-v0", total_timesteps=10000, seed=
 from neatrl.dueling_dqn_mlp import train_dueling_dqn
 
 model = train_dueling_dqn(
-    env_id="CliffWalking-v0",
+    env_id="CliffWalking-v1",
     total_timesteps=50000,
     seed=42,
     capture_video=True,
@@ -77,7 +77,7 @@ model = train_dueling_dqn(
 
 | Argument | Type | Default | Description |
 |----------|------|---------|-------------|
-| `env_id` | str | `"CliffWalking-v0"` | Gymnasium environment ID |
+| `env_id` | str | `"CliffWalking-v1"` | Gymnasium environment ID |
 | `total_timesteps` | int | `300000` | Total number of environment steps |
 | `seed` | int | `42` | Random seed |
 | `learning_rate` | float | `2e-4` | Learning rate for the Adam optimizer |
@@ -119,7 +119,7 @@ model = train_dueling_dqn(
 from neatrl.dueling_dqn_mlp import train_dueling_dqn
 
 model = train_dueling_dqn(
-    env_id="CliffWalking-v0",
+    env_id="CliffWalking-v1",
     total_timesteps=50000,
     seed=42,
     grid_env=True,
@@ -134,8 +134,8 @@ model = train_dueling_dqn(
 
 ### Toy Text
 - `FrozenLake-v1`
-- `Taxi-v3`
-- `CliffWalking-v0`
+- `Taxi-v4`
+- `CliffWalking-v1`
 
 ## Dueling Architecture
 
@@ -155,7 +155,7 @@ This helps the agent distinguish between states that are generally good or bad (
 
 ```python
 model = train_dueling_dqn(
-    env_id="CliffWalking-v0",
+    env_id="CliffWalking-v1",
     total_timesteps=50000,
     use_wandb=True,
     wandb_project="my-rl-project",

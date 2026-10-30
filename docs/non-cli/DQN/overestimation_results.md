@@ -177,8 +177,8 @@ run both estimates converge onto the realised return and the difference is small
 | `LunarLander-v3` | continuous (8) | `Discrete(4)` | ~100k steps | **yes — clearest signal** |
 | `ALE/Pong-v5` | image (4x84x84) | `Discrete(6)` | ~12.5M steps (paper) | only with a multi-hour budget |
 | `FrozenLake-v1` | discrete (16) | `Discrete(4)` | ~20k steps | yes, with `--grid-env` (one-hot encoding) |
-| `CliffWalking-v0` | discrete (48) | `Discrete(4)` | ~20k steps | yes, with `--grid-env` |
-| `Taxi-v3` | discrete (500) | `Discrete(6)` | slower | yes, with `--grid-env` |
+| `CliffWalking-v1` | discrete (48) | `Discrete(4)` | ~20k steps | yes, with `--grid-env` |
+| `Taxi-v4` | discrete (500) | `Discrete(6)` | slower | yes, with `--grid-env` |
 
 More actions means a larger `max` over noise, so the bias is easier to see;
 `LunarLander` (4 actions) hits the sweet spot where the agent still learns fast.

@@ -38,7 +38,7 @@ class Config:
     # Experiment settings
     exp_name: str = "PPO-Experiment"  # Experiment name for logging and saving
     seed: int = 42  # Random seed for reproducibility
-    env_id: Optional[str] = "CliffWalking-v0"  # Gymnasium environment ID
+    env_id: Optional[str] = "CliffWalking-v1"  # Gymnasium environment ID
     total_timesteps: int = 5_000_000  # Total number of timesteps to train
 
     # PPO & Agent settings
@@ -236,7 +236,7 @@ def evaluate(
         rewards = 0.0
 
         # A policy that circles forever never sets terminated/truncated on envs
-        # registered without a TimeLimit (CliffWalking-v0), so cap the episode.
+        # registered without a TimeLimit (CliffWalking-v1), so cap the episode.
         spec = getattr(eval_env, "spec", None)
         max_steps = getattr(spec, "max_episode_steps", None) or 10_000
 

@@ -62,7 +62,7 @@ neatrl train dqn CartPole-v1
 neatrl train ppo LunarLander-v3
 neatrl train sac Pendulum-v1
 neatrl train td3 HalfCheetah-v4
-neatrl train rnd CliffWalking-v0
+neatrl train rnd CliffWalking-v1
 neatrl train ddpg-cnn CarRacing-v3
 ```
 
@@ -74,7 +74,10 @@ The environment is optional — omit it to use the algorithm's default
 neatrl train dqn CartPole-v1 --steps 50000
 ```
 
-Pass `--help` to any command for the full list of the 20 algorithm aliases.
+Runs are local: nothing is uploaded to Weights & Biases unless you pass
+`--wandb`.
+
+Pass `--help` to any command for the full list of the 21 algorithm aliases.
 
 
 ## Quick Start

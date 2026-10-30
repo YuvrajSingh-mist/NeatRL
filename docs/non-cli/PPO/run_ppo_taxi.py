@@ -6,12 +6,12 @@ from neatrl.ppo_mlp import train_ppo
 
 
 def test_ppo_taxi():
-    """Test PPO training on Taxi-v3."""
-    print("Testing PPO training on Taxi-v3 with neatrl...")
+    """Test PPO training on Taxi-v4."""
+    print("Testing PPO training on Taxi-v4 with neatrl...")
 
     # Train PPO on Taxi
     model = train_ppo(
-        env_id="Taxi-v3",
+        env_id="Taxi-v4",
         total_timesteps=2000000,
         seed=42,
         lr=3e-4,

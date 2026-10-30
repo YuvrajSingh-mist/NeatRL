@@ -163,7 +163,7 @@ def measure_values(
         episode_predictions: list[float] = []
         episode_rewards: list[float] = []
 
-        # Envs without a TimeLimit (e.g. CliffWalking-v0) need a hard cap, or a
+        # Envs without a TimeLimit (e.g. CliffWalking-v1) need a hard cap, or a
         # circling greedy policy would never end the episode.
         spec = getattr(env, "spec", None)
         max_steps = getattr(spec, "max_episode_steps", None) or 10_000

@@ -4,6 +4,37 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-10-30
+
+### Added
+- **`neatrl train dueling-dqn-cnn`.** The dueling trainer already had an
+  `atari_wrapper` image path, but no alias exposed it, so the recipe table
+  silently skipped the CNN variant. `DuelingQNet` now builds a conv trunk from
+  the full observation shape instead of a single `nn.Linear` sized by
+  `shape[0]`, which would have fed a `(4, 84, 84)` frame to a 4-input layer.
+- **`neatrl train --wandb`.** Logging to Weights & Biases is now opt-in.
+
+### Fixed
+- **Every recipe default env is registered again.** `CliffWalking-v0` and
+  `Taxi-v3` are retired in current gymnasium, so `neatrl train dueling-dqn` and
+  `neatrl train rnd` died with `DeprecatedEnv` before the first step. All
+  references moved to `CliffWalking-v1` / `Taxi-v4`.
+- **`neatrl train <algo>` no longer uploads to wandb.** The trainers default
+  `use_wandb=True`, which the CLI inherited, so a local `neatrl train dqn`
+  quietly created a run in the user's account. Recipes now pass
+  `use_wandb=False` unless `--wandb` is given.
+- **The headless video-capture crash is gone from the CLI path.** Trainers
+  render `rgb_array` evaluation video when wandb is on, and that calls
+  `pygame.display.init()`, which raises on any machine without a display
+  server. Since the CLI no longer enables wandb, `neatrl train sac` and
+  friends complete in CI and over SSH.
+
+### Changed
+- **Requires Python 3.10+ and `gymnasium>=1.3.0`.** The current environment ids
+  (`CliffWalking-v1`, `Taxi-v4`) only exist from gymnasium 1.3, and 1.3 dropped
+  Python 3.9. Installing on 3.9 now fails at resolve time instead of at
+  `gym.make`.
+
 ## [2.2.0] - 2026-10-30
 
 ### Added

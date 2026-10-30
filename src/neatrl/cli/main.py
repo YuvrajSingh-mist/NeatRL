@@ -24,7 +24,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "  neatrl train ppo LunarLander-v3\n"
             "  neatrl train sac Pendulum-v1\n"
             "  neatrl train td3-cnn CarRacing-v3\n"
-            "  neatrl train rnd CliffWalking-v0\n"
+            "  neatrl train rnd CliffWalking-v1\n"
             "\n"
             "Omit env_id to use the algorithm's default environment.\n"
         ),
@@ -53,6 +53,11 @@ def _build_parser() -> argparse.ArgumentParser:
             "Training steps, or episodes for reinforce. "
             "Defaults to the trainer's own setting."
         ),
+    )
+    train_p.add_argument(
+        "--wandb",
+        action="store_true",
+        help="Log the run to Weights & Biases (off by default).",
     )
     return parser
 
@@ -89,7 +94,7 @@ def main(argv=None) -> None:
         key, use_cnn = ALIASES[args.algo]
         env_id = args.env or default_env(key, use_cnn)
         _warn_if_dashboard_disabled()
-        run_train(key, env_id, use_cnn=use_cnn, steps=args.steps)
+        run_train(key, env_id, use_cnn=use_cnn, steps=args.steps, use_wandb=args.wandb)
 
 
 __all__ = ["main", "RECIPES"]

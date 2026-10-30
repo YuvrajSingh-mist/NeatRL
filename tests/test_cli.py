@@ -29,6 +29,7 @@ DOCUMENTED_ALIASES = {
     "double-dqn",
     "double-dqn-cnn",
     "dueling-dqn",
+    "dueling-dqn-cnn",
     "ppo",
     "ppo-cnn",
     "q-learning",

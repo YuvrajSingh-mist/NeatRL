@@ -43,7 +43,7 @@ model = train_ppo(
 from neatrl.ppo_mlp import train_ppo
 
 model = train_ppo(
-    env_id="Taxi-v3",
+    env_id="Taxi-v4",
     total_timesteps=100000,
     seed=42,
     n_envs=4,
@@ -152,7 +152,7 @@ model = train_ppo(
 from neatrl.ppo_mlp import train_ppo
 
 model = train_ppo(
-    env_id="Taxi-v3",
+    env_id="Taxi-v4",
     total_timesteps=100000,
     seed=42,
     n_envs=4,
@@ -240,7 +240,7 @@ model = train_ppo(
 from neatrl.ppo_mlp import train_ppo
 
 model = train_ppo(
-    env_id="CliffWalking-v0", total_timesteps=50000, grid_env=True, use_wandb=True
+    env_id="CliffWalking-v1", total_timesteps=50000, grid_env=True, use_wandb=True
 )
 ```
 

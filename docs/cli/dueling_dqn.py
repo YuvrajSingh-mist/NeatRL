@@ -1,7 +1,7 @@
 import torch.nn as nn
 
 # ── config ────────────────────────────────────────────────────────────
-ENV_ID = "CliffWalking-v0"
+ENV_ID = "CliffWalking-v1"
 USE_CNN = False  # True → Atari preprocessing
 GRID_ENV = True  # True for discrete obs (CliffWalking, FrozenLake)
 # ──────────────────────────────────────────────────────────────────────

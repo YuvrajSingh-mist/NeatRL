@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 import torch
 
-from neatrl.cli.recipes import RECIPES
+from neatrl.cli.recipes import ALIASES, RECIPES
 from neatrl.utils.nn_utils import ImageFeatures, observation_input_layer
 
 SRC = Path(__file__).resolve().parents[1] / "src" / "neatrl"
@@ -73,7 +73,7 @@ def test_observation_input_layer_handles_vectors_and_images():
 
 
 def test_eval_loops_are_step_capped():
-    """CliffWalking-v0 has no TimeLimit, so an uncapped eval never returns."""
+    """CliffWalking-v1 has no TimeLimit, so an uncapped eval never returns."""
     offenders = []
     for name in TRAINERS:
         src = (SRC / name).read_text()
@@ -108,3 +108,74 @@ def test_all_trainers_import():
     """Every module must import cleanly, which the matrix run depends on."""
     for name in TRAINERS:
         __import__(f"neatrl.{name[:-3]}")
+
+
+def test_every_recipe_default_env_is_registered():
+    """A default env that gymnasium has retired fails on the first step.
+
+    ``CliffWalking-v0`` and ``Taxi-v3`` both moved to ``-v1``/``-v4``, so
+    two aliases used to die with ``DeprecatedEnv`` before training began.
+    """
+    import gymnasium as gym
+
+    for key, recipe in RECIPES.items():
+        for kind, call in (("", recipe.mlp), ("-cnn", recipe.cnn)):
+            if call is None:
+                continue
+            try:
+                gym.spec(call.env)
+            except Exception as exc:  # noqa: BLE001 - report the env id
+                raise AssertionError(
+                    f"recipe {key}{kind} defaults to {call.env}: {exc}"
+                ) from exc
+
+
+def test_every_cnn_capable_recipe_has_an_alias():
+    """Bugs hid behind aliases that silently did not exist."""
+    for key, recipe in RECIPES.items():
+        alias = key.replace("_", "-")
+        assert (key, False) == ALIASES[alias]
+        if recipe.cnn is not None or recipe.cnn_switch:
+            assert ALIASES[f"{alias}-cnn"] == (key, True), alias
+
+
+def test_cli_training_does_not_log_to_wandb_by_default(monkeypatch):
+    """A terminal command must not upload runs to Weights & Biases."""
+    import neatrl.cli.recipes as recipes
+
+    seen = {}
+
+    def fake(dotted):
+        def call(**kwargs):
+            seen.update(kwargs)
+            return None
+
+        return call
+
+    monkeypatch.setattr(recipes, "_resolve", fake)
+    recipes.run_train("dqn", "CartPole-v1", steps=10)
+    assert seen["use_wandb"] is False
+
+    recipes.run_train("dqn", "CartPole-v1", steps=10, use_wandb=True)
+    assert seen["use_wandb"] is True
+
+
+def test_dueling_q_net_accepts_image_observations():
+    """The dueling trainer serves the `-cnn` alias through `atari_wrapper`."""
+    from neatrl.dueling_dqn_mlp import DuelingQNet
+
+    net = DuelingQNet((4, 84, 84), 3)
+    q, values, adv, _feat = net(torch.zeros(2, 4 * 84 * 84))
+    assert q.shape == (2, 3)
+    assert values.shape == (2, 1)
+    assert adv.shape == (2, 3)
+
+
+def test_extra_bundles_every_env_family():
+    """`neatrl[all]` is what makes the aliases runnable from one install."""
+    from pathlib import Path
+
+    text = (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text()
+    all_extra = text.split("all = [", 1)[1].split("]", 1)[0]
+    for token in ("ale-py", "box2d", "classic-control", "atari", "mujoco", "rich"):
+        assert token in all_extra, f"{token} missing from the `all` extra"
