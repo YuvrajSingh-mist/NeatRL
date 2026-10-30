@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.5.5] - 2026-10-31
+
 ### Fixed
 - **PPO and PPO-RND train continuous action spaces with the built-in actor.**
   `ActorNet` in `ppo_mlp`, `ppo_cnn`, `rnd_mlp` and `rnd_cnn` takes the action
