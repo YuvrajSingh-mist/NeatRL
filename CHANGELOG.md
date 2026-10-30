@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.5.2] - 2026-10-30
+
+### Changed
+- **On Apple Silicon the GPU memory cell is an absolute size, not a
+  percentage.** `VRAM: 8.5%` was the share of `driver_allocated_memory()` over
+  `recommended_max_memory()` -- a soft budget worth ~74% of RAM, so the number
+  sat next to a RAM percentage with a different denominator and read as
+  surprisingly small (a 74M-parameter net at 100% GPU load only reaches 18%).
+  It now reads `MPS: 240M` / `MPS: 2.2G`. GPU utilization was already the
+  metric that tracks load and still is: 2-3% idle, 97-100% under a large net.
+- **The algorithm name moved from the dashboard header to the Summary panel.**
+  Names like `Dueling-DQN` and `DQN-CNN` did not fit the header row at 80
+  columns and were silently cut off.
+
+### Fixed
+- **`neatrl train td3-cnn` crashed on exit** with
+  `UnboundLocalError: latest_avg_return` when the run ended before the first
+  evaluation; the closing dashboard message reads that value unconditionally.
+- **`NeatRL-Website` is no longer tracked by this repository.** It was a
+  gitlink with no `.gitmodules` pointing at a separate repo; the directory
+  stays on disk and is gitignored.
+
 ## [2.5.1] - 2026-10-30
 
 ### Changed

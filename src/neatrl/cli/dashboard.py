@@ -54,7 +54,11 @@ def deviceTag() -> tuple[str, str, str]:
     if torch.cuda.is_available():
         return "GPU", "VRAM", "cuda"
     if torch.backends.mps.is_available():
-        return "GPU", "VRAM", "mps"
+        # Not "VRAM": the GPU shares system RAM here, and the figure is an
+        # absolute size rather than a percentage of a separate pool. "MPS"
+        # also fits the header at 80 columns, where a longer label cropped
+        # the value for the longest trainer names.
+        return "GPU", "MPS", "mps"
     return "GPU", "VRAM", "cpu"
 
 
@@ -153,6 +157,29 @@ def getHw() -> tuple[float, float, float, float]:
             vram = 0.0
         gpu = _apple_gpu_util()
     return cpu, gpu, ram, vram
+
+
+def gpuMemCell(vram: float) -> str:
+    """Header cell for GPU-side memory.
+
+    CUDA gets a percentage of the card's VRAM, which is the real ceiling. On
+    MPS a percentage compares against PyTorch's soft budget (~74% of RAM), so
+    two different denominators sat side by side and the figure read as
+    surprisingly small. An absolute size answers "how much is the GPU holding"
+    without inviting that comparison; GPU utilization is the number that moves
+    during training anyway.
+    """
+    if DT[2] == "mps":
+        try:
+            held = torch.mps.driver_allocated_memory()
+        except (RuntimeError, AttributeError):
+            return f"{DT[1]}: [cyan]n/a[/cyan]"
+        # RL networks are small next to the box, so GB alone showed "0.0G"
+        # for a whole training run. Milliseconds in MB until it matters.
+        if held < 1024**3:
+            return f"{DT[1]}: [cyan]{held / 1024**2:.0f}M[/cyan]"
+        return f"{DT[1]}: [cyan]{held / 1024**3:.1f}G[/cyan]"
+    return f"{DT[1]}: [cyan]{vram:.1f}%[/cyan]"
 
 
 LOG_LEVEL_STYLES = {
@@ -483,22 +510,26 @@ class Dashboard:
         cpu, gpu, ram, vram = getHw()
 
         header = Table(box=None, show_header=False, padding=(0, 1))
-        header.add_column(style="bold cyan", min_width=22)
+        header.add_column(style="bold cyan", min_width=13)
         header.add_column(style="white", min_width=13)
         header.add_column(style="white", min_width=13)
         header.add_column(style="white", min_width=13)
         header.add_column(style="white", min_width=13)
         header.add_row(
-            f"NeatRL {_NEATRL_VERSION}  [{self.algo}]",
+            f"NeatRL {_NEATRL_VERSION}",
             f"CPU: [cyan]{cpu:.1f}%[/cyan]",
             f"{DT[0]}: [cyan]{gpu:.1f}%[/cyan]",
             f"RAM: [cyan]{ram:.1f}%[/cyan]",
-            f"{DT[1]}: [cyan]{vram:.1f}%[/cyan]",
+            gpuMemCell(vram),
         )
 
         summary = Table(box=None, show_header=True, padding=(0, 1))
         summary.add_column("[cyan]Summary[/cyan]", style="bright_white", min_width=14)
         summary.add_column("[cyan]Value[/cyan]", style="white", min_width=12)
+        # The algorithm lives here rather than in the header: names like
+        # "Dueling-DQN" did not fit the header row at 80 columns and were
+        # silently cut off.
+        summary.add_row("Algorithm", self.algo)
         envLabel = self.envId if len(self.envId) <= 14 else self.envId[:12] + "..."
         summary.add_row("Environment", envLabel)
         summary.add_row("Agent Steps", abbrev(agent_steps))

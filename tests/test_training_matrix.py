@@ -200,3 +200,18 @@ def test_base_install_ships_the_dashboard_and_classic_control():
     for token in ("rich", "psutil", "nvidia-ml-py", "classic-control", "pygame-ce"):
         assert token in base, f"{token} missing from the base dependencies"
     assert "ale-py" not in base, "Atari should stay an opt-in extra"
+
+
+def test_every_trainer_initialises_the_final_return():
+    """`td3-cnn` crashed on exit with UnboundLocalError: latest_avg_return.
+
+    The closing dashboard message reads it even when no evaluation has run yet,
+    so every trainer that mentions it must seed it first.
+    """
+    for path in SRC.glob("*.py"):
+        source = path.read_text()
+        if "latest_avg_return" not in source:
+            continue
+        assert "latest_avg_return = 0.0" in source, (
+            f"{path.name} reads latest_avg_return without seeding it"
+        )

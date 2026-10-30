@@ -111,3 +111,58 @@ def test_ram_is_reported_as_ram_not_dram():
     frame = Dashboard("DQN", "CartPole-v1", 1000).renderDash(0, 0, {}, None, "")
     assert "RAM:" in frame
     assert "DRAM" not in frame
+
+
+def test_mps_memory_is_reported_in_gigabytes(monkeypatch):
+    """A percentage of PyTorch's soft budget read as an oddly small number."""
+    import torch
+
+    monkeypatch.setattr(dashboard, "DT", ("GPU", "MPS", "mps"))
+    monkeypatch.setattr(
+        torch.mps, "driver_allocated_memory", lambda: int(2.5 * 1024**3)
+    )
+    assert dashboard.gpuMemCell(18.4) == "MPS: [cyan]2.5G[/cyan]"
+
+
+def test_cuda_memory_stays_a_percentage(monkeypatch):
+    """On CUDA the percentage is of the card's real VRAM, so keep it."""
+    monkeypatch.setattr(dashboard, "DT", ("GPU", "VRAM", "cuda"))
+    assert dashboard.gpuMemCell(18.4) == "VRAM: [cyan]18.4%[/cyan]"
+
+
+def test_mps_memory_survives_an_unavailable_counter(monkeypatch):
+    import torch
+
+    def boom():
+        raise RuntimeError("MPS not initialised")
+
+    monkeypatch.setattr(dashboard, "DT", ("GPU", "MPS", "mps"))
+    monkeypatch.setattr(torch.mps, "driver_allocated_memory", boom)
+    assert "n/a" in dashboard.gpuMemCell(0.0)
+
+
+def test_long_algorithm_names_are_not_cut_from_the_dashboard():
+    """`Dueling-DQN` used to vanish: the header row had no room for it."""
+    from neatrl.cli.dashboard import Dashboard
+
+    for algo in ("DQN", "DQN-CNN", "Dueling-DQN", "Q-learning"):
+        frame = Dashboard(algo, "ALE/Pong-v5", 1000).renderDash(0, 0, {}, None, "")
+        assert algo in frame, f"{algo} missing from the dashboard"
+
+
+def test_header_fits_an_80_column_terminal(monkeypatch):
+    """The memory value is the last cell, so overflow silently ate it."""
+    import re
+
+    import torch
+
+    from neatrl.cli.dashboard import Dashboard
+
+    monkeypatch.setattr(torch.mps, "driver_allocated_memory", lambda: 240 * 1024**2)
+    frame = Dashboard("Dueling-DQN", "ALE/Pong-v5", 1000).renderDash(0, 0, {}, None, "")
+    header = next(line for line in frame.splitlines() if "CPU" in line)
+
+    assert len(header) <= 80, header
+    assert header.endswith("\u2502"), header
+    # The full value must survive, unit included.
+    assert re.search(r"MPS: \d+(?:\.\d+)?[MG]\s*\u2502$", header), header

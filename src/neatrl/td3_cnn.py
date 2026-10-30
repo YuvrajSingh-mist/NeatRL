@@ -536,6 +536,10 @@ def train_td3_cnn(
     obs, _ = env.reset()  # type: ignore[union-attr]
     start_time = time.time()
 
+    # The run can finish (or be cut short) before the first evaluation, and
+    # the summary at the end reads this variable either way.
+    latest_avg_return = 0.0
+
     dashboard = None
     # Live dashboard only on an interactive TTY and when
     # `rich` is installed, so CI and piped output stay quiet.
