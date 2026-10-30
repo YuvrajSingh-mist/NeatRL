@@ -308,3 +308,51 @@ def test_version_flag_reports_the_installed_version(capsys):
         main(["--version"])
     assert exit_info.value.code == 0
     assert __version__ in capsys.readouterr().out
+
+
+# ─── the CLI is documented in markdown, not in example scripts ───────────────
+
+
+def test_the_cli_docs_exist():
+    """`docs/cli/` used to hold 11 example .py files that no longer run.
+
+    The command loads its recipe table from the package, so the folder is
+    documentation and should say so -- with the usage that used to be implicit
+    in those scripts.
+    """
+    from pathlib import Path
+
+    docs = Path(__file__).resolve().parents[1] / "docs" / "cli"
+    assert docs.is_dir(), "docs/cli/ is missing"
+    readme = docs / "README.md"
+    assert readme.is_file(), "docs/cli/ has no README.md"
+
+    text = readme.read_text(encoding="utf-8")
+    assert "neatrl train" in text
+    assert "--steps" in text and "--wandb" in text
+
+
+def test_the_cli_docs_list_every_alias():
+    """A new alias must be documented, or the table silently goes stale."""
+    from pathlib import Path
+
+    from neatrl.cli.recipes import ALIASES
+
+    readme = (
+        Path(__file__).resolve().parents[1] / "docs" / "cli" / "README.md"
+    ).read_text(encoding="utf-8")
+
+    missing = [alias for alias in ALIASES if f"`{alias}`" not in readme]
+    assert not missing, f"undocumented aliases: {missing}"
+
+
+def test_no_stale_example_scripts_in_the_cli_docs():
+    """The folder documents the CLI; runnable examples belong in docs/non-cli/."""
+    from pathlib import Path
+
+    docs = Path(__file__).resolve().parents[1] / "docs" / "cli"
+    scripts = sorted(p.name for p in docs.glob("*.py"))
+    assert not scripts, (
+        f"{scripts} in docs/cli/: the CLI does not load these, and programmatic "
+        "examples live in docs/non-cli/"
+    )

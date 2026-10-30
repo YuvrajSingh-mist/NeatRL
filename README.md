@@ -85,6 +85,10 @@ Runs are local: nothing is uploaded to Weights & Biases unless you pass
 
 Pass `--help` to any command for the full list of the 21 algorithm aliases.
 
+**[Full CLI reference](docs/cli/README.md)** — every alias with its default
+environment, the environment-routing rules, dashboard keys, exit codes, and the
+install hint for each optional dependency.
+
 
 ## Quick Start
 
@@ -164,6 +168,8 @@ model = train_sac_cnn(
 **[Complete Documentation](https://github.com/YuvrajSingh-mist/NeatRL/tree/master/docs)**
 
 The docs include:
+- A complete [CLI reference](docs/cli/README.md) — all 21 aliases, routing
+  rules, dashboard keys, exit codes
 - Detailed usage examples for every algorithm
 - Hyperparameter tuning guides
 - Environment compatibility notes

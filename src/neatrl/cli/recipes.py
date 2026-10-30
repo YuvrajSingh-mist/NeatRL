@@ -1,9 +1,11 @@
 """Training recipes behind ``neatrl train``.
 
-The console command has to work from an installed wheel, where the
-repository's ``docs/cli/`` examples are not on disk, so the trainer for
-each algorithm -- and the small set of keyword arguments those examples
-pass -- is declared here instead of being loaded from a file path.
+This table is the single source of truth for what the console command does.
+It used to load ``docs/cli/<algo>.py`` by path, which only exists in a
+repository checkout -- so from an installed wheel every alias failed with
+``Script not found``. The trainer for each algorithm, its default
+environment, and the keyword arguments it is called with are declared here
+instead.
 
 Every entry names a public ``neatrl`` trainer by its import path; the
 import happens only when the recipe runs, so listing the recipes (for
