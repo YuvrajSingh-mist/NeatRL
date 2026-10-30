@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.1.4] - 2026-10-30
+
+### Fixed
+- **The dashboard reported 0% GPU on Apple Silicon.** The MPS branch set
+  `gpu = 0.0` unconditionally, so the figure was never real. macOS has no NVML
+  equivalent and `powermetrics` needs root, but `ioreg` publishes the Metal
+  driver's own `Device Utilization %` unprivileged; that is now read (and
+  cached for a second, since it spawns a process). It sits near 0% for small
+  MLP workloads because the GPU really is idle, and reaches 99% under load.
+- **"VRAM" showed the Python process RSS, not GPU memory.** It was
+  `Process().memory_info().rss / virtual_memory().total`, which is ordinary
+  system memory. It now reports the share of the MPS memory budget the driver
+  has allocated (`driver_allocated_memory()` vs `recommended_max_memory()`).
+
+### Note
+- On Apple Silicon the GPU shares system RAM, so DRAM and VRAM describe the
+  same physical pool from different sides: DRAM is overall unified-memory
+  pressure, VRAM is how much of PyTorch's MPS budget is in use.
+
 ## [2.1.3] - 2026-10-30
 
 ### Fixed

@@ -8,6 +8,7 @@ import os
 import re
 import select
 import shutil
+import subprocess
 import sys
 import termios
 import time
@@ -59,6 +60,9 @@ def deviceTag() -> tuple[str, str, str]:
 
 DT = deviceTag()
 
+# (monotonic expiry, utilization %) for the throttled ioreg probe.
+_appleGpuCache: tuple[float, float] = (0.0, 0.0)
+
 
 def abbrev(n: float) -> str:
     if n >= 1e9:
@@ -84,6 +88,38 @@ def duration(secs: float) -> str:
     return f"{s}s"
 
 
+def _apple_gpu_util() -> float:
+    """GPU utilization % on Apple Silicon.
+
+    macOS has no NVML equivalent and ``powermetrics`` needs root, but ``ioreg``
+    publishes the Metal driver's own counters unprivileged. The call costs about
+    10 ms, so the result is reused for a second: the dashboard only samples at
+    5 Hz and the number does not change faster than that.
+    """
+    global _appleGpuCache
+    now = time.monotonic()
+    if _appleGpuCache[0] > now:
+        return _appleGpuCache[1]
+
+    util = 0.0
+    try:
+        out = subprocess.run(
+            ["ioreg", "-r", "-d", "1", "-c", "AGXAccelerator"],
+            capture_output=True,
+            text=True,
+            timeout=1.0,
+            check=False,
+        ).stdout
+        m = re.search(r'"Device Utilization %"\s*=\s*(\d+)', out)
+        if m:
+            util = float(m.group(1))
+    except (OSError, subprocess.SubprocessError):
+        util = 0.0
+
+    _appleGpuCache = (now + 1.0, util)
+    return util
+
+
 def getHw() -> tuple[float, float, float, float]:
     cpu = psutilMod.cpu_percent() if HAS_PSUTIL else 0.0
     dram = psutilMod.virtual_memory().percent if HAS_PSUTIL else 0.0
@@ -104,12 +140,16 @@ def getHw() -> tuple[float, float, float, float]:
         except Exception:
             gpu = 0.0
     elif DT[2] == "mps":
-        if HAS_PSUTIL:
-            proc = psutilMod.Process()
-            mem = proc.memory_info()
-            total = psutilMod.virtual_memory().total
-            vram = 100.0 * mem.rss / total if total > 0 else 0.0
-        gpu = 0.0
+        # Apple GPUs share system RAM, so "VRAM" is the share of the MPS memory
+        # budget the driver has handed out. The old code reported the whole
+        # Python process RSS against total RAM, which is not GPU usage at all.
+        try:
+            budget = torch.mps.recommended_max_memory()
+            if budget > 0:
+                vram = 100.0 * torch.mps.driver_allocated_memory() / budget
+        except (RuntimeError, AttributeError):
+            vram = 0.0
+        gpu = _apple_gpu_util()
     return cpu, gpu, dram, vram
 
 
