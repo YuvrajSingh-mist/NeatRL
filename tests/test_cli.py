@@ -333,17 +333,42 @@ def test_the_cli_docs_exist():
 
 
 def test_the_cli_docs_list_every_alias():
-    """A new alias must be documented, or the table silently goes stale."""
+    """A new alias must be documented, or the pages silently go stale."""
     from pathlib import Path
 
     from neatrl.cli.recipes import ALIASES
 
-    readme = (
-        Path(__file__).resolve().parents[1] / "docs" / "cli" / "README.md"
-    ).read_text(encoding="utf-8")
+    docs = Path(__file__).resolve().parents[1] / "docs" / "cli"
+    text = "\n".join(p.read_text(encoding="utf-8") for p in docs.glob("*.md"))
 
-    missing = [alias for alias in ALIASES if f"`{alias}`" not in readme]
+    missing = [alias for alias in ALIASES if f"`{alias}`" not in text]
     assert not missing, f"undocumented aliases: {missing}"
+
+
+def test_every_algorithm_has_its_own_cli_page():
+    """One markdown page per recipe, named after the recipe key."""
+    from pathlib import Path
+
+    from neatrl.cli.recipes import RECIPES
+
+    docs = Path(__file__).resolve().parents[1] / "docs" / "cli"
+    missing = [key for key in RECIPES if not (docs / f"{key}.md").is_file()]
+    assert not missing, f"no CLI page for: {missing}"
+
+
+def test_each_algorithm_page_states_its_trainer_and_default_env():
+    """These are the two things a reader comes to the page for."""
+    from pathlib import Path
+
+    from neatrl.cli.recipes import RECIPES
+
+    docs = Path(__file__).resolve().parents[1] / "docs" / "cli"
+    for key, recipe in RECIPES.items():
+        page = (docs / f"{key}.md").read_text(encoding="utf-8")
+        assert recipe.mlp.env in page, f"{key}.md never names {recipe.mlp.env}"
+        assert recipe.mlp.func in page, f"{key}.md never names {recipe.mlp.func}"
+        if recipe.cnn is not None and recipe.cnn.func != recipe.mlp.func:
+            assert recipe.cnn.func in page, f"{key}.md never names {recipe.cnn.func}"
 
 
 def test_no_stale_example_scripts_in_the_cli_docs():
@@ -356,3 +381,22 @@ def test_no_stale_example_scripts_in_the_cli_docs():
         f"{scripts} in docs/cli/: the CLI does not load these, and programmatic "
         "examples live in docs/non-cli/"
     )
+
+
+def test_the_cli_doc_links_resolve():
+    """A dead relative link is invisible until someone clicks it on GitHub."""
+    import re
+    from pathlib import Path
+
+    docs = Path(__file__).resolve().parents[1] / "docs" / "cli"
+    broken: list[str] = []
+
+    for page in docs.glob("*.md"):
+        for target in re.findall(r"\]\(([^)]+)\)", page.read_text(encoding="utf-8")):
+            link = target.split("#", 1)[0]
+            if not link or "://" in link or link.startswith("mailto:"):
+                continue
+            if not (page.parent / link).exists():
+                broken.append(f"{page.name} -> {target}")
+
+    assert not broken, f"broken links: {broken}"
