@@ -122,7 +122,9 @@ def _apple_gpu_util() -> float:
 
 def getHw() -> tuple[float, float, float, float]:
     cpu = psutilMod.cpu_percent() if HAS_PSUTIL else 0.0
-    dram = psutilMod.virtual_memory().percent if HAS_PSUTIL else 0.0
+    # System RAM in use. "DRAM" is technically right (it is the memory chips,
+    # not the SSD) but reads as jargon next to the disk, so the panel says RAM.
+    ram = psutilMod.virtual_memory().percent if HAS_PSUTIL else 0.0
     gpu, vram = 0.0, 0.0
 
     if DT[2] == "cuda":
@@ -150,7 +152,7 @@ def getHw() -> tuple[float, float, float, float]:
         except (RuntimeError, AttributeError):
             vram = 0.0
         gpu = _apple_gpu_util()
-    return cpu, gpu, dram, vram
+    return cpu, gpu, ram, vram
 
 
 LOG_LEVEL_STYLES = {
@@ -478,7 +480,7 @@ class Dashboard:
         elapsed = time.time() - self.t0
         sps = max(int(agent_steps / elapsed), 1) if elapsed > 0 else 1
         remaining = max(self.totalTimesteps - agent_steps, 0) / sps
-        cpu, gpu, dram, vram = getHw()
+        cpu, gpu, ram, vram = getHw()
 
         header = Table(box=None, show_header=False, padding=(0, 1))
         header.add_column(style="bold cyan", min_width=22)
@@ -490,7 +492,7 @@ class Dashboard:
             f"NeatRL {_NEATRL_VERSION}  [{self.algo}]",
             f"CPU: [cyan]{cpu:.1f}%[/cyan]",
             f"{DT[0]}: [cyan]{gpu:.1f}%[/cyan]",
-            f"DRAM: [cyan]{dram:.1f}%[/cyan]",
+            f"RAM: [cyan]{ram:.1f}%[/cyan]",
             f"{DT[1]}: [cyan]{vram:.1f}%[/cyan]",
         )
 

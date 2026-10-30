@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.5.1] - 2026-10-30
+
+### Changed
+- **The dashboard header says `RAM` instead of `DRAM`.** The figure was always
+  correct -- `psutil.virtual_memory()` percent, i.e. system memory in use, not
+  storage -- but "DRAM" beside a percentage reads like disk to anyone who is
+  not thinking of the memory chips. Nothing else changed; VRAM still reports
+  GPU-side allocation.
+
 ## [2.5.0] - 2026-10-30
 
 ### Changed

@@ -84,7 +84,7 @@ def test_mps_reports_gpu_and_driver_memory(monkeypatch):
     monkeypatch.setattr(torch.mps, "driver_allocated_memory", lambda: 2_500)
     monkeypatch.setattr(dashboard, "HAS_PSUTIL", False)
 
-    _cpu, gpu, _dram, vram = dashboard.getHw()
+    _cpu, gpu, _ram, vram = dashboard.getHw()
     assert gpu == 42.0
     assert vram == pytest.approx(25.0)
 
@@ -99,6 +99,15 @@ def test_mps_survives_a_zero_budget(monkeypatch):
     monkeypatch.setattr(torch.mps, "driver_allocated_memory", lambda: 5)
     monkeypatch.setattr(dashboard, "HAS_PSUTIL", False)
 
-    _cpu, gpu, _dram, vram = dashboard.getHw()
+    _cpu, gpu, _ram, vram = dashboard.getHw()
     assert vram == 0.0
     assert gpu == 10.0
+
+
+def test_ram_is_reported_as_ram_not_dram():
+    """The header says RAM; DRAM is accurate but reads as jargon for the disk."""
+    from neatrl.cli.dashboard import Dashboard
+
+    frame = Dashboard("DQN", "CartPole-v1", 1000).renderDash(0, 0, {}, None, "")
+    assert "RAM:" in frame
+    assert "DRAM" not in frame
