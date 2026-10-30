@@ -7,6 +7,7 @@ import logging
 import os
 import re
 import select
+import shutil
 import sys
 import termios
 import time
@@ -164,8 +165,8 @@ class Dashboard:
         self.configObj = config
         self.t0 = time.time()
         self.console = Console(highlight=False)
-        self.prevLines = 0
         self.isFirst = True
+        self.viewportRows = 0
         self.showLogs = False
         self.showConfig = False
         self.showCharts = False  # 'v' toggles full chart view
@@ -360,6 +361,13 @@ class Dashboard:
             sys.stdout.write("\033[2J\033[H")
             sys.stdout.flush()
 
+        # Size the console to the terminal *before* rendering, so every frame is
+        # drawn at the same width. Rendering first and resizing afterwards left
+        # a stray column of the previous, wider frame on screen.
+        cols, rows = self._viewport()
+        self.viewportRows = rows
+        self.console.width = max(cols - 1, 40)
+
         if self.showLogs:
             rendered = self.renderLogs()
         elif self.showConfig:
@@ -369,17 +377,51 @@ class Dashboard:
         else:
             rendered = self.renderDash(agent_steps, epoch, losses, eval_stats, message)
 
-        lines = rendered.count("\n")
-        if lines < self.prevLines:
-            rendered += "\n" * (self.prevLines - lines)
-            lines = self.prevLines
+        self._redraw(rendered)
+
+    def _viewport(self) -> tuple[int, int]:
+        """Terminal size, with a usable fallback when the tty reports nothing.
+
+        Some pseudo-terminals report 0 rows; treating that literally would clamp
+        the panel down to its minimum height.
+        """
+        cols, rows = shutil.get_terminal_size(fallback=(100, 30))
+        return (cols if cols >= 40 else 100), (rows if rows >= 12 else 30)
+
+    def _redraw(self, rendered: str) -> None:
+        """Draw the frame in place: one panel, redrawn on the same screen.
+
+        Positioning is absolute (cursor home) rather than a relative cursor-up.
+        With a relative move, anything that scrolls the terminal -- a frame
+        taller than the viewport, or a line printed by another library -- shifts
+        the origin for good, so every later frame lands lower than the previous
+        one and whole panels accumulate in the scrollback.
+        """
+        cols, rows = self._viewport()
+        # Leave a column spare: a line exactly as wide as the terminal wraps and
+        # costs an extra row, which reintroduces the same drift.
+        self.console.width = max(cols - 1, 40)
+
+        lines = rendered.rstrip("\n").split("\n")
+        # Never print past the bottom of the screen, or the terminal scrolls.
+        budget = max(rows - 1, 8)
+        if len(lines) > budget:
+            # Keep the top of the frame and its closing border; sacrifice the
+            # middle content rather than slicing the panel in half.
+            lines = lines[: budget - 1] + [lines[-1]]
+
         if self.isFirst:
-            sys.stdout.write(rendered)
+            sys.stdout.write("\033[2J\033[H")  # clear once, then overwrite
             self.isFirst = False
         else:
-            sys.stdout.write(f"\033[{self.prevLines}A\033[J" + rendered)
+            sys.stdout.write("\033[H")
+        # `\033[K` clears the rest of each row, so nothing from a previously
+        # wider frame survives to the right of this one. No trailing newline:
+        # the cursor must stay on the last row, or writing past it scrolls the
+        # screen and the top of the frame is lost.
+        sys.stdout.write("\n".join(line + "\033[K" for line in lines))
+        sys.stdout.write("\033[J")
         sys.stdout.flush()
-        self.prevLines = lines
 
     def push_metrics(self, **kwargs: float) -> None:
         """Record time-series metrics into the history tracker for chart rendering."""

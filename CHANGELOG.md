@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.1.3] - 2026-10-30
+
+### Fixed
+- **The dashboard printed a new panel for every frame instead of redrawing
+  one.** Frames ended up stacked down the scrollback. It repositioned with a
+  relative cursor-up (`ESC[nA`) measured from the previous frame, which breaks
+  the moment the terminal scrolls — a frame taller than the window, or a line
+  printed by another library such as `wandb`, shifts the origin permanently and
+  every later frame lands lower. The dashboard now homes the cursor and
+  overwrites the screen, so it behaves like a single live panel again.
+- The frame is trimmed to the terminal height (keeping its closing border) and
+  each row is cleared to end-of-line, so a frame can no longer scroll the
+  screen or leave fragments of a wider frame behind.
+- The panel is sized to the real terminal width instead of being capped at 80
+  columns, and a pseudo-terminal reporting 0 rows no longer collapses it.
+
 ## [2.1.2] - 2026-10-30
 
 ### Added
