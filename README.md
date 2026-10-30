@@ -175,25 +175,6 @@ The docs include:
 - Environment compatibility notes
 - Experiment tracking setup (WandB)
 
-### Per-algorithm guides
-
-Every algorithm has a CLI page (aliases, default env, what the alias passes)
-and a Python guide (arguments, networks, example scripts):
-
-| Algorithm | CLI reference | Python guide |
-|---|---|---|
-| Q-learning | [`q-learning`](docs/cli/q_learning.md) | [`docs/non-cli/Q-learning/`](docs/non-cli/Q-learning/) |
-| DQN | [`dqn` · `dqn-cnn`](docs/cli/dqn.md) | [`docs/non-cli/DQN/`](docs/non-cli/DQN/) |
-| Double DQN | [`double-dqn` · `double-dqn-cnn`](docs/cli/double_dqn.md) | [`docs/non-cli/Double-DQN/`](docs/non-cli/Double-DQN/) |
-| Dueling DQN | [`dueling-dqn` · `dueling-dqn-cnn`](docs/cli/dueling_dqn.md) | [`docs/non-cli/Dueling-DQN/`](docs/non-cli/Dueling-DQN/) |
-| REINFORCE | [`reinforce` · `reinforce-cnn`](docs/cli/reinforce.md) | [`docs/non-cli/REINFORCE/`](docs/non-cli/REINFORCE/) |
-| A2C | [`a2c` · `a2c-cnn`](docs/cli/a2c.md) | [`docs/non-cli/A2C/`](docs/non-cli/A2C/) |
-| PPO | [`ppo` · `ppo-cnn`](docs/cli/ppo.md) | [`docs/non-cli/PPO/`](docs/non-cli/PPO/) |
-| RND | [`rnd` · `rnd-cnn`](docs/cli/rnd.md) | [`docs/non-cli/RND/`](docs/non-cli/RND/) |
-| DDPG | [`ddpg` · `ddpg-cnn`](docs/cli/ddpg.md) | [`docs/non-cli/DDPG/`](docs/non-cli/DDPG/) |
-| TD3 | [`td3` · `td3-cnn`](docs/cli/td3.md) | [`docs/non-cli/TD3/`](docs/non-cli/TD3/) |
-| SAC | [`sac` · `sac-cnn`](docs/cli/sac.md) | [`docs/non-cli/SAC/`](docs/non-cli/SAC/) |
-
 
 ## Supported Algorithms
 
@@ -212,10 +193,10 @@ and a Python guide (arguments, networks, example scripts):
   - Removes the upward bias of the `max` in the DQN target
   - Same API and hyperparameters as DQN (`double_dqn_mlp`, `double_dqn_cnn`)
 
-- **REINFORCE** - Policy gradient method for discrete and continuous action spaces
+- **REINFORCE** - Policy gradient method for discrete action spaces
   - Atari game support with automatic CNN architecture
   - Parallel environment training (`n_envs` support)
-  - Continuous action space support
+  - Continuous control by passing a custom policy network (`custom_agent`)
   - Episode-based Monte Carlo returns
   - Variance reduction through baseline subtraction
 
@@ -227,7 +208,7 @@ and a Python guide (arguments, networks, example scripts):
 
 - **A2C** (Advantage Actor-Critic) - Synchronous actor-critic algorithm
   - Advantage function for reduced variance
-  - Support for both discrete and continuous action spaces
+  - Discrete action spaces by default; pass a custom `actor_class` for continuous control
   - Parallel environment training with vectorized environments
   - Monte Carlo returns for value estimation
 
@@ -247,7 +228,7 @@ and a Python guide (arguments, networks, example scripts):
 
 - **PPO** (Proximal Policy Optimization) - Policy gradient method with GAE
   - Full PPO implementation with Generalized Advantage Estimation (GAE)
-  - Support for both discrete and continuous action spaces
+  - Discrete action spaces by default; pass a custom `actor_class` for continuous control
   - Atari game support with automatic CNN architecture
   - Clipped surrogate objective for stable policy updates
   - Value function clipping and entropy regularization
@@ -256,7 +237,7 @@ and a Python guide (arguments, networks, example scripts):
 - **PPO-RND** (Proximal Policy Optimization with Random Network Distillation) - Curiosity-driven exploration
   - Intrinsic motivation through novelty detection
   - Combined extrinsic and intrinsic rewards for better exploration
-  - Support for both discrete and continuous action spaces
+  - Discrete action spaces by default; pass a custom `actor_class` for continuous control
   - PPO with clipped surrogate objective
   - Vectorized environments for parallel training
   - Intrinsic reward normalization and advantage calculation

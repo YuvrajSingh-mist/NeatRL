@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **PPO and PPO-RND now refuse a continuous environment instead of crashing.**
+  Both ship a categorical actor, but the docs labelled them "Discrete +
+  Continuous" and the PPO guide's `BipedalWalker-v3` example passed no custom
+  network -- so the run died inside gymnasium with `IndexError: invalid index
+  to scalar variable`. `train_ppo`, `train_ppo_cnn`, `train_ppo_rnd`,
+  `train_ppo_rnd_cnn` and the REINFORCE pair now raise a `ValueError` that
+  names the environment and points at `sac` / `td3` / `ddpg` or a custom
+  `actor_class` (`custom_agent` for REINFORCE). Continuous control through a
+  custom network is unaffected.
+
+### Changed
+- **Action-space claims match what the trainers do by default.** PPO, PPO-RND,
+  A2C and REINFORCE are discrete unless a custom network is supplied; the
+  README, the per-algorithm guides and the site chips now say that instead of
+  "Discrete + Continuous".
+
 ## [2.5.4] - 2026-10-31
 
 ### Added

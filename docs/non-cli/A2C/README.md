@@ -2,7 +2,10 @@
 
 A2C is an on-policy actor-critic algorithm that uses advantage estimates to reduce variance in policy gradient updates. This implementation includes both standard A2C for vector observations and CNN-based A2C for image observations.
 
-Note: A2C works with both discrete and continuous action spaces.
+Note: A2C's built-in actor is categorical, so it trains discrete action spaces
+unless you pass an `actor_class` that returns a `Normal` distribution; a `Box`
+action space with the default actor raises a clear `ValueError`. For continuous
+control out of the box use `train_sac`, `train_td3` or `train_ddpg`.
 
 ## Features
 
@@ -55,7 +58,7 @@ train_a2c_cnn(
 ### Actor Network (Standard)
 - Input: State vector
 - Hidden: 128 -> 128 -> 128 units with Tanh activation
-- Output: Action probabilities (softmax for discrete) or action values (for continuous)
+- Output: Action probabilities (softmax); continuous actions need a custom `actor_class`
 
 ### Critic Network (Standard)
 - Input: State vector

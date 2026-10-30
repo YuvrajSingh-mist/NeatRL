@@ -73,6 +73,7 @@ jobs:
     - name: Fast test suite
       run: |
         pytest -q \
+          tests/test_action_space_guards.py \
           tests/test_cli.py \
           tests/test_cli_extras.py \
           tests/test_code_quality.py \

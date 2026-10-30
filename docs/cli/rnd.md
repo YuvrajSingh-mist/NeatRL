@@ -34,7 +34,9 @@ import path, not `train_rnd`.
 
 Best where the environment reward is sparse: `CliffWalking-v1` (the default) is
 almost all negative reward, so the bonus is what keeps the agent moving. On a
-dense-reward task the bonus mostly adds noise.
+dense-reward task the bonus mostly adds noise. Discrete action spaces only: the
+built-in actor is categorical, so a continuous environment raises a `ValueError`
+unless a custom `actor_class` is passed from Python.
 
 ## Programmatic equivalent
 
