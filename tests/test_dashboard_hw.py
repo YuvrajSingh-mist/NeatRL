@@ -166,3 +166,84 @@ def test_header_fits_an_80_column_terminal(monkeypatch):
     assert header.endswith("\u2502"), header
     # The full value must survive, unit included.
     assert re.search(r"MPS: \d+(?:\.\d+)?[MG]\s*\u2502$", header), header
+
+
+# --- non-Apple backends -----------------------------------------------------
+
+
+@pytest.fixture()
+def fresh_nvml(monkeypatch):
+    """NVML state is cached per process; reset it so tests do not leak."""
+    monkeypatch.setattr(dashboard, "_nvmlHandle", None)
+    monkeypatch.setattr(dashboard, "_nvmlTried", False)
+    yield
+
+
+def test_nvml_is_initialised_once_per_process(monkeypatch, fresh_nvml):
+    """Per-frame nvmlInit() was a driver call 5x a second; cache the handle."""
+    calls = {"init": 0}
+
+    class FakeNVML:
+        @staticmethod
+        def nvmlInit():
+            calls["init"] += 1
+
+        @staticmethod
+        def nvmlDeviceGetHandleByIndex(i):
+            return f"dev{i}"
+
+        @staticmethod
+        def nvmlDeviceGetUtilizationRates(handle):
+            return type("Rates", (), {"gpu": 64})()
+
+    monkeypatch.setitem(__import__("sys").modules, "pynvml", FakeNVML)
+
+    assert dashboard._nvidia_gpu_util() == 64.0
+    assert dashboard._nvidia_gpu_util() == 64.0
+    assert calls["init"] == 1, "NVML should be initialised once, not per frame"
+
+
+def test_a_missing_nvml_does_not_retry_every_frame(monkeypatch, fresh_nvml):
+    """A box without the NVIDIA driver must not pay for that probe 5x/sec."""
+    attempts = []
+
+    class Boom:
+        @staticmethod
+        def nvmlInit():
+            attempts.append(1)
+            raise RuntimeError("libnvidia-ml.so not found")
+
+    monkeypatch.setitem(__import__("sys").modules, "pynvml", Boom)
+
+    for _ in range(5):
+        assert dashboard._nvidia_gpu_util() == dashboard.GPU_UNKNOWN
+    assert len(attempts) == 1
+
+
+def test_rocm_falls_back_to_amdsmi(monkeypatch, fresh_nvml):
+    """AMD cards on Linux expose no NVML; amdsmi is the ROCm equivalent."""
+    import sys as _sys
+
+    monkeypatch.setattr(dashboard, "DT", ("GPU", "VRAM", "cuda"))
+    monkeypatch.setattr(dashboard, "_nvidia_gpu_util", lambda: dashboard.GPU_UNKNOWN)
+    monkeypatch.setattr(dashboard, "_amd_gpu_util", lambda: 77.0)
+
+    assert dashboard.gpuUtil() == 77.0
+    assert "amdsmi" not in _sys.modules  # the stub is used, not the real package
+
+
+def test_gpu_util_reports_unknown_when_no_backend_answers(monkeypatch, fresh_nvml):
+    monkeypatch.setattr(dashboard, "DT", ("GPU", "VRAM", "cuda"))
+    monkeypatch.setattr(dashboard, "_nvidia_gpu_util", lambda: dashboard.GPU_UNKNOWN)
+    monkeypatch.setattr(dashboard, "_amd_gpu_util", lambda: dashboard.GPU_UNKNOWN)
+    assert dashboard.gpuUtil() == dashboard.GPU_UNKNOWN
+
+
+def test_apple_probe_is_skipped_off_darwin(monkeypatch):
+    """ioreg does not exist on Linux or Windows; do not spawn it there."""
+    ran = []
+    monkeypatch.setattr(dashboard.sys, "platform", "linux")
+    monkeypatch.setattr(dashboard.subprocess, "run", lambda *a, **k: ran.append(1))
+
+    assert dashboard._apple_gpu_util() == 0.0
+    assert not ran, "ioreg was shelled out on a non-Apple host"

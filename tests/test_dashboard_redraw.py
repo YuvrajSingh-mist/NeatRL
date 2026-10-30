@@ -43,7 +43,12 @@ def make_dash(monkeypatch):
     def _make():
         fake = _FakeStdout()
         monkeypatch.setattr("sys.stdout", fake)
-        return Dashboard("DQN", "CartPole-v1", 1000), fake
+        dash = Dashboard("DQN", "CartPole-v1", 1000)
+        # Drop the one-time setup output (cursor hide) so each test inspects
+        # only what its own redraw wrote.
+        fake.seek(0)
+        fake.truncate(0)
+        return dash, fake
 
     return _make
 

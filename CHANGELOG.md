@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.5.3] - 2026-10-31
+
+### Fixed
+- **The terminal cursor blinked over the dashboard.** Every frame homes to the
+  origin and rewrites ~20 rows, so the terminal's own cursor was visible
+  wherever the write had reached -- and over SSH, where a frame arrives in
+  chunks, it appeared to wander around the panel. It is now hidden for the
+  duration of the run and restored by `close()` and by an `atexit` handler, so
+  a crash or Ctrl-C cannot leave the shell without a cursor.
+
+### Changed
+- **The dashboard imports and runs on Windows and Linux.** `termios` and `tty`
+  were imported unconditionally, which made the whole package unimportable on
+  Windows; they are now an optional POSIX capability, with `msvcrt` handling
+  key input (arrow keys normalised to the same escape sequences). On a Windows
+  console ANSI output is enabled via
+  `ENABLE_VIRTUAL_TERMINAL_PROCESSING`; if that fails, or stdout is not a tty,
+  the frame is printed once as plain text instead of leaking escape sequences.
+- **GPU metrics no longer assume one platform.** `ioreg` is only probed on
+  macOS, NVML is initialised once per process instead of once per frame, and
+  ROCm hosts (where `torch.cuda` is true but NVML does not exist) fall back to
+  `amdsmi`. A host with no utilization counter now reads `GPU: n/a` and
+  `VRAM: n/a` instead of a misleading `0.0%`.
+
 ## [2.5.2] - 2026-10-30
 
 ### Changed

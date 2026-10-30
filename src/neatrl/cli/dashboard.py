@@ -6,13 +6,10 @@ import io
 import logging
 import os
 import re
-import select
 import shutil
 import subprocess
 import sys
-import termios
 import time
-import tty
 from collections import deque
 from typing import Any, Optional
 
@@ -29,6 +26,25 @@ from .charts import (
     metric_bar,
 )
 from .history import HistoryTracker
+
+# POSIX-only terminal plumbing. `select` itself exists on Windows but refuses
+# non-socket file descriptors, so the whole trio is treated as one capability
+# and `msvcrt` covers the Windows side. Importing `termios` unconditionally at
+# module level made the entire package unimportable on Windows.
+try:
+    import select
+    import termios
+    import tty
+
+    HAS_POSIX_TTY = True
+except ImportError:  # pragma: no cover - exercised only on Windows
+    HAS_POSIX_TTY = False
+
+IS_WINDOWS = sys.platform.startswith("win")
+
+# Escape sequences the dashboard writes itself, outside Rich.
+CURSOR_HIDE = "\033[?25l"
+CURSOR_SHOW = "\033[?25h"
 
 # Package metadata is the single source of the version string; the dashboard
 # used to hardcode it and drifted from pyproject.toml.
@@ -48,6 +64,35 @@ LOGBUFSIZE = 500
 LOG_VISIBLE = 30
 HISTORY_MAXLEN = 120
 SPARKLINE_WIDTH = 24
+
+
+def enableAnsi() -> bool:
+    """Turn on ANSI escape handling for this process.
+
+    POSIX terminals speak ANSI natively. A Windows console only does once
+    ``ENABLE_VIRTUAL_TERMINAL_PROCESSING`` is set, and only Windows 10 1511+
+    supports it at all -- Windows Terminal and ConPTY always do. When it cannot
+    be enabled the dashboard degrades to plain, scrolling output instead of
+    printing escape sequences as literal text.
+    """
+    if not IS_WINDOWS:
+        return True
+    try:
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        handle = kernel32.GetStdHandle(-11)  # STD_OUTPUT_HANDLE
+        mode = ctypes.c_uint32()
+        if not kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+            return False
+        ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
+        return bool(
+            kernel32.SetConsoleMode(
+                handle, mode.value | ENABLE_VIRTUAL_TERMINAL_PROCESSING
+            )
+        )
+    except Exception:  # pragma: no cover - depends on the host console
+        return False
 
 
 def deviceTag() -> tuple[str, str, str]:
@@ -101,6 +146,9 @@ def _apple_gpu_util() -> float:
     5 Hz and the number does not change faster than that.
     """
     global _appleGpuCache
+    if sys.platform != "darwin":
+        # No AGX accelerator to ask; avoid spawning ioreg on every host.
+        return 0.0
     now = time.monotonic()
     if _appleGpuCache[0] > now:
         return _appleGpuCache[1]
@@ -124,27 +172,81 @@ def _apple_gpu_util() -> float:
     return util
 
 
+# Sentinel for "this host has no utilization counter", rendered as n/a. Zero
+# would be a real reading: an idle GPU.
+GPU_UNKNOWN = -1.0
+
+# NVML is initialised once per process; doing it per frame cost a driver call
+# 5x a second and spammed the log when the driver refused.
+_nvmlHandle: Any = None
+_nvmlTried = False
+
+
+def _nvidia_gpu_util() -> float:
+    """Utilization % from NVML. Works on Linux and Windows (not macOS)."""
+    global _nvmlHandle, _nvmlTried
+    if not _nvmlTried:
+        _nvmlTried = True
+        try:
+            import pynvml
+
+            pynvml.nvmlInit()
+            _nvmlHandle = pynvml.nvmlDeviceGetHandleByIndex(0)
+        except Exception:
+            _nvmlHandle = None
+    if _nvmlHandle is None:
+        return GPU_UNKNOWN
+    try:
+        import pynvml
+
+        return float(pynvml.nvmlDeviceGetUtilizationRates(_nvmlHandle).gpu)
+    except Exception:
+        return GPU_UNKNOWN
+
+
+def _amd_gpu_util() -> float:
+    """Utilization % on ROCm, where NVML does not exist.
+
+    ``amdsmi`` is the supported interface and ships with ROCm 5.7+. Linux only;
+    there is no AMD GPU path on macOS.
+    """
+    try:
+        import amdsmi
+
+        amdsmi.amdsmi_init()
+        handles = amdsmi.amdsmi_get_processor_handles()
+        activity = amdsmi.amdsmi_get_gpu_activity(handles[0])
+        return float(activity["gfx_activity"])
+    except Exception:
+        return GPU_UNKNOWN
+
+
+def gpuUtil() -> float:
+    """Utilization % for the active backend, or GPU_UNKNOWN."""
+    if DT[2] == "cuda":
+        util = _nvidia_gpu_util()
+        if util == GPU_UNKNOWN:
+            util = _amd_gpu_util()
+        return util
+    if DT[2] == "mps":
+        return _apple_gpu_util() if sys.platform == "darwin" else GPU_UNKNOWN
+    return GPU_UNKNOWN
+
+
 def getHw() -> tuple[float, float, float, float]:
     cpu = psutilMod.cpu_percent() if HAS_PSUTIL else 0.0
     # System RAM in use. "DRAM" is technically right (it is the memory chips,
     # not the SSD) but reads as jargon next to the disk, so the panel says RAM.
     ram = psutilMod.virtual_memory().percent if HAS_PSUTIL else 0.0
-    gpu, vram = 0.0, 0.0
+    gpu, vram = GPU_UNKNOWN, 0.0
 
     if DT[2] == "cuda":
-        props = torch.cuda.get_device_properties(0)
-        vram = 100.0 * torch.cuda.memory_allocated(0) / props.total_memory
         try:
-            import pynvml
-
-            pynvml.nvmlInit()
-            gpu = float(
-                pynvml.nvmlDeviceGetUtilizationRates(
-                    pynvml.nvmlDeviceGetHandleByIndex(0)
-                ).gpu
-            )
-        except Exception:
-            gpu = 0.0
+            props = torch.cuda.get_device_properties(0)
+            vram = 100.0 * torch.cuda.memory_allocated(0) / props.total_memory
+        except (RuntimeError, AttributeError):
+            vram = 0.0
+        gpu = gpuUtil()
     elif DT[2] == "mps":
         # Apple GPUs share system RAM, so "VRAM" is the share of the MPS memory
         # budget the driver has handed out. The old code reported the whole
@@ -179,7 +281,17 @@ def gpuMemCell(vram: float) -> str:
         if held < 1024**3:
             return f"{DT[1]}: [cyan]{held / 1024**2:.1f}M[/cyan]"
         return f"{DT[1]}: [cyan]{held / 1024**3:.1f}G[/cyan]"
+    if DT[2] == "cpu":
+        # Nothing was measured, and "VRAM: 0.0%" would read as a real reading.
+        return f"{DT[1]}: [cyan]n/a[/cyan]"
     return f"{DT[1]}: [cyan]{vram:.1f}%[/cyan]"
+
+
+def gpuCell(gpu: float) -> str:
+    """Header cell for GPU utilization, or n/a where no counter exists."""
+    if gpu < 0:
+        return f"{DT[0]}: [cyan]n/a[/cyan]"
+    return f"{DT[0]}: [cyan]{gpu:.1f}%[/cyan]"
 
 
 LOG_LEVEL_STYLES = {
@@ -258,7 +370,10 @@ class Dashboard:
         except (OSError, ValueError, AttributeError, io.UnsupportedOperation):
             pass
         self.oldTerm = None
-        if self.fd is not None and os.isatty(self.fd):
+        # ANSI must be enabled before the first frame: on a Windows console
+        # without VT processing the escape sequences are printed as text.
+        self.ansi = enableAnsi()
+        if self.fd is not None and os.isatty(self.fd) and HAS_POSIX_TTY:
             self.oldTerm = termios.tcgetattr(self.fd)
             tty.setcbreak(self.fd)
             oldTermCopy = self.oldTerm
@@ -271,6 +386,16 @@ class Dashboard:
                     pass
 
             atexit.register(_restore)
+
+        # Hide the terminal's own cursor for as long as the dashboard owns the
+        # screen. Without this the blinking cursor is visible mid-panel: every
+        # frame homes to the origin and rewrites ~20 rows, so the cursor is
+        # caught wherever the write happens to have reached -- and over SSH,
+        # where the output arrives in chunks, it wanders around the panel.
+        self.cursorHidden = False
+        if self.ansi and sys.stdout.isatty():
+            self.hideCursor()
+            atexit.register(self.showCursor)
 
         # Log capture
         self.logBuf: deque[str] = deque(maxlen=LOGBUFSIZE)
@@ -287,10 +412,58 @@ class Dashboard:
                 self.savedHandlers.append(h)
         root.addHandler(self.logHandler)
 
+    def hideCursor(self) -> None:
+        """Stop the terminal drawing its cursor over the panel."""
+        if self.cursorHidden or not self.ansi:
+            return
+        try:
+            # Remember the stream: an atexit handler must write the restore
+            # sequence back to the same place, not to whatever stdout has
+            # become by then.
+            self._cursorStream = sys.stdout
+            sys.stdout.write(CURSOR_HIDE)
+            sys.stdout.flush()
+            self.cursorHidden = True
+        except (OSError, ValueError):
+            pass
+
+    def showCursor(self) -> None:
+        """Restore the cursor, including when the run dies on an exception."""
+        if not self.cursorHidden:
+            return
+        stream = getattr(self, "_cursorStream", None) or sys.stdout
+        try:
+            stream.write(CURSOR_SHOW)
+            stream.flush()
+        except (OSError, ValueError):
+            pass
+        self.cursorHidden = False
+
+    @staticmethod
+    def _pollKeyWindows() -> Optional[str]:
+        """Windows equivalent of the select() probe: msvcrt has its own queue."""
+        try:
+            import msvcrt
+
+            if not msvcrt.kbhit():
+                return None
+            c = msvcrt.getwch()
+            # Arrows and function keys arrive as a two-character sequence with
+            # a \x00 or \xe0 prefix; normalise to the ANSI spelling the rest of
+            # the dashboard already understands.
+            if c in ("\x00", "\xe0"):
+                code = msvcrt.getwch()
+                return {"H": "\x1b[A", "P": "\x1b[B"}.get(code)
+            return c
+        except Exception:  # pragma: no cover - no console available
+            return None
+
     def pollKey(self) -> Optional[str]:
         """Non-blocking check for a single keypress on stdin.
         Returns a single character, or '\x1b[A' for up-arrow, '\x1b[B' for down-arrow.
         """
+        if not HAS_POSIX_TTY:
+            return self._pollKeyWindows()
         try:
             if select.select([sys.stdin], [], [], 0)[0]:
                 c = sys.stdin.read(1)
@@ -479,6 +652,16 @@ class Dashboard:
             # middle content rather than slicing the panel in half.
             lines = lines[: budget - 1] + [lines[-1]]
 
+        if not (self.ansi and sys.stdout.isatty()):
+            # Console without VT processing (old Windows), or output going to
+            # a pipe: escape sequences would print as garbage, so print the
+            # frame once and let it scroll -- less pretty, still readable.
+            if self.isFirst:
+                sys.stdout.write("\n".join(lines) + "\n")
+                sys.stdout.flush()
+                self.isFirst = False
+            return
+
         if self.isFirst:
             sys.stdout.write("\033[2J\033[H")  # clear once, then overwrite
             self.isFirst = False
@@ -518,7 +701,7 @@ class Dashboard:
         header.add_row(
             f"NeatRL {_NEATRL_VERSION}",
             f"CPU: [cyan]{cpu:.1f}%[/cyan]",
-            f"{DT[0]}: [cyan]{gpu:.1f}%[/cyan]",
+            gpuCell(gpu),
             f"RAM: [cyan]{ram:.1f}%[/cyan]",
             gpuMemCell(vram),
         )
@@ -863,7 +1046,12 @@ class Dashboard:
         return cap.get()
 
     def close(self, message: str = "Training complete.") -> None:
-        if self.oldTerm is not None and self.fd is not None and os.isatty(self.fd):
+        if (
+            self.oldTerm is not None
+            and self.fd is not None
+            and HAS_POSIX_TTY
+            and os.isatty(self.fd)
+        ):
             termios.tcsetattr(self.fd, termios.TCSADRAIN, self.oldTerm)
         root = logging.getLogger()
         root.removeHandler(self.logHandler)
@@ -879,3 +1067,6 @@ class Dashboard:
         )
         sys.stdout.write("\n")
         sys.stdout.flush()
+        # Only after the final frame: showing it earlier would put the block
+        # cursor back in the middle of the panel.
+        self.showCursor()
