@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **PPO and PPO-RND train continuous action spaces with the built-in actor.**
+  `ActorNet` in `ppo_mlp`, `ppo_cnn`, `rnd_mlp` and `rnd_cnn` takes the action
+  space into account: a `Discrete` space keeps the categorical head, a `Box`
+  space gets a Normal head with a learnable `log_std` (the same actor as
+  `docs/cli/ppo.py` and the old `rnd.py`). `train_ppo(env_id="Pendulum-v1")`
+  used to die inside gymnasium with `IndexError: invalid index to scalar
+  variable` after the first rollout; it now trains, as do `ppo-cnn` and
+  `rnd-cnn` on `CarRacing-v3`. Discrete runs are unchanged -- `continuous`
+  defaults to False, so two-argument callers (including custom actor classes
+  and the docs scripts) keep working.
+- **`rnd_cnn` evaluation on a continuous environment** passed a `(1, action_dim)`
+  array to `env.step()`, which CarRacing reads as a single action and then
+  fails on `action[1]`. It now squeezes the batch dimension like the other
+  trainers.
+
 ## [2.5.4] - 2026-10-31
 
 ### Added

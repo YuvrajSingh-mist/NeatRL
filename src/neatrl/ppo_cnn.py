@@ -94,15 +94,19 @@ class ActorNet(nn.Module):
         self,
         state_space: Union[int, tuple[int, ...]],
         action_space: int,
+        continuous: bool = False,
     ) -> None:
         super().__init__()
 
+        self.continuous = continuous
         self.fc1 = observation_input_layer(state_space, 64)
         if isinstance(self.fc1, nn.Linear):
             layer_init(self.fc1)
         self.fc2 = layer_init(nn.Linear(64, 64))
         self.fc3 = layer_init(nn.Linear(64, 32))
         self.out = layer_init(nn.Linear(32, action_space))
+        if continuous:
+            self.log_std = nn.Parameter(torch.zeros(action_space))
 
     def forward(self, x: torch.Tensor) -> torch.distributions.Distribution:
         """Forward pass — returns network output(s)."""
@@ -110,10 +114,11 @@ class ActorNet(nn.Module):
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
 
-        logits = self.out(x)
-        probs = torch.nn.functional.softmax(logits, dim=-1)
-        dist = torch.distributions.Categorical(probs)
-        return dist
+        out = self.out(x)
+        if self.continuous:
+            return torch.distributions.Normal(out, self.log_std.exp())
+        probs = torch.nn.functional.softmax(out, dim=-1)
+        return torch.distributions.Categorical(probs)
 
     def get_action(
         self,
@@ -125,6 +130,11 @@ class ActorNet(nn.Module):
         action = dist.sample()
 
         log_prob = dist.log_prob(action)
+
+        if self.continuous:
+            # One log-prob per action dimension: sum them so a rollout stores a
+            # single scalar per step, like Categorical does.
+            log_prob = log_prob.sum(dim=-1)
 
         return action, log_prob, dist
 
@@ -441,6 +451,7 @@ def train_ppo_cnn(
         if isinstance(envs.single_action_space, gym.spaces.Discrete)
         else (action_space_n,)
     )
+    is_discrete_actions = isinstance(envs.single_action_space, gym.spaces.Discrete)
 
     logger.info(f"Observation Space: {obs_space_shape}, Action Space: {action_space_n}")
 
@@ -449,6 +460,12 @@ def train_ppo_cnn(
         # Use custom actor instance
         validate_policy_network_dimensions(actor_class, obs_space_shape, action_space_n)
         actor_network = actor_class.to(device)
+    elif actor_class is ActorNet:
+        # The built-in actor reads the action space: a Box space means the
+        # head outputs a Normal mean instead of categorical logits.
+        actor_network = actor_class(
+            obs_space_shape, action_space_n, continuous=not is_discrete_actions
+        ).to(device)
     else:
         # Use actor class
         actor_network = actor_class(obs_space_shape, action_space_n).to(device)
@@ -626,6 +643,11 @@ def train_ppo_cnn(
 
                 dist = actor_network(b_obs[mb_inds])
                 new_log_probs = dist.log_prob(b_actions[mb_inds])
+                new_log_probs = (
+                    new_log_probs.sum(dim=-1)
+                    if len(new_log_probs.shape) > 1
+                    else new_log_probs
+                )
                 logratio = new_log_probs - b_logprobs[mb_inds]
                 ratio = logratio.exp()
 
