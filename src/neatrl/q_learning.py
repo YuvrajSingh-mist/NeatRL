@@ -13,14 +13,13 @@ from dataclasses import dataclass
 import gymnasium as gym
 import numpy as np
 import wandb
-from tqdm import tqdm
 
 from .utils import configure_logging, get_logger
 
 logger = get_logger(__name__)
 
 try:
-    from .cli import Dashboard
+    from .cli import Dashboard, progress
 except ImportError:  # pragma: no cover - optional rich/psutil CLI extra
     Dashboard = None  # type: ignore[misc, assignment]
 
@@ -232,7 +231,7 @@ def train_q_learning(
             "Q-learning", Config.env_id or "custom", total_timesteps, config=Config
         )
 
-    for step in tqdm(range(total_timesteps), disable=True):
+    for step in progress(range(total_timesteps), disable=True):
         eps = epsilon_by_step(
             step, total_timesteps, start_e, end_e, exploration_fraction
         )

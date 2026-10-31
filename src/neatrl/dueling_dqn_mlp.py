@@ -16,9 +16,8 @@ import torch.optim as optim
 import wandb
 from gymnasium.wrappers import AtariPreprocessing, FrameStackObservation
 from stable_baselines3.common.buffers import ReplayBuffer
-from tqdm import tqdm
 
-from .cli import Dashboard
+from .cli import Dashboard, progress
 from .utils import configure_logging, get_logger, get_space_dims, setup_device
 from .utils.nn_utils import (
     calculate_param_norm,
@@ -390,7 +389,7 @@ def train_dueling_dqn(
             "Dueling-DQN", Config.env_id or "custom", total_timesteps, config=Config
         )
 
-    for step in tqdm(range(total_timesteps), disable=True):
+    for step in progress(range(total_timesteps), disable=True):
         step = step * n_envs
         eps = eps_decay(step, exploration_fraction)
         rnd = random.random()

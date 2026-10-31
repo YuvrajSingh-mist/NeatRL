@@ -6,8 +6,19 @@ is simply ``None`` and training runs with plain logging.
 """
 
 try:
-    from .dashboard import Dashboard
+    from .dashboard import Dashboard, dashboardActive, progress
 except ImportError:  # `rich` not installed: the dashboard is optional
+    from tqdm import tqdm as _tqdm
+
     Dashboard = None
 
-__all__ = ["Dashboard"]
+    def dashboardActive() -> bool:
+        return False
+
+    def progress(iterable, **kwargs):
+        """Plain tqdm, for when there is no dashboard to protect."""
+        kwargs.setdefault("disable", False)
+        return _tqdm(iterable, **kwargs)
+
+
+__all__ = ["Dashboard", "dashboardActive", "progress"]

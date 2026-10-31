@@ -15,9 +15,8 @@ import torch.nn as nn
 import torch.optim as optim
 import wandb
 from stable_baselines3.common.buffers import ReplayBuffer
-from tqdm import tqdm
 
-from .cli import Dashboard
+from .cli import Dashboard, progress
 from .utils import configure_logging, get_logger, setup_device
 from .utils.nn_utils import (
     ImageFeatures,
@@ -233,7 +232,7 @@ def evaluate(
     returns = []
     frames = []
 
-    for _ in tqdm(range(num_eval_eps), desc="Evaluating"):
+    for _ in progress(range(num_eval_eps), desc="Evaluating"):
         obs, _ = eval_env.reset()
         done = False
         rewards = 0.0
@@ -550,7 +549,7 @@ def train_td3_cnn(
     # Enable anomaly detection for debugging inplace operations
     torch.autograd.set_detect_anomaly(True)
 
-    for step in tqdm(range(Config.total_timesteps)):
+    for step in progress(range(Config.total_timesteps)):
         # Get action from actor network with exploration noise
         with torch.no_grad():
             action = actor_net.get_action(

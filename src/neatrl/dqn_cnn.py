@@ -24,9 +24,8 @@ import torch.nn as nn
 import torch.optim as optim
 import wandb
 from stable_baselines3.common.buffers import ReplayBuffer
-from tqdm import tqdm
 
-from .cli import Dashboard
+from .cli import Dashboard, progress
 from .utils import configure_logging, get_logger, setup_device
 from .utils.nn_utils import validate_q_network_dimensions
 
@@ -525,7 +524,7 @@ def train_dqn_cnn(
             config=Config,
         )
 
-    for step in tqdm(range(Config.total_timesteps)):
+    for step in progress(range(Config.total_timesteps)):
         eps = epsilon_at(step)
 
         if random.random() < eps:

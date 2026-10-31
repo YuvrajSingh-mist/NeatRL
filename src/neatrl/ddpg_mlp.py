@@ -15,9 +15,8 @@ import torch.nn as nn
 import torch.optim as optim
 import wandb
 from stable_baselines3.common.buffers import ReplayBuffer
-from tqdm import tqdm
 
-from .cli import Dashboard
+from .cli import Dashboard, progress
 from .utils import configure_logging, get_logger, get_space_dims, setup_device
 from .utils.nn_utils import (
     validate_critic_network_dimensions,
@@ -222,7 +221,7 @@ def evaluate(
     returns = []
     frames = []
 
-    for _ in tqdm(range(num_eval_eps), desc="Evaluating"):
+    for _ in progress(range(num_eval_eps), desc="Evaluating"):
         obs, _ = eval_env.reset()
         done = False
         rewards = 0.0
@@ -492,7 +491,7 @@ def train_ddpg(
             "DDPG", Config.env_id or "custom", Config.total_timesteps, config=Config
         )
 
-    for step in tqdm(range(Config.total_timesteps)):
+    for step in progress(range(Config.total_timesteps)):
         # Get action from actor network with exploration noise
         with torch.no_grad():
             action = actor_net(

@@ -25,9 +25,8 @@ import torch.nn as nn
 import torch.optim as optim
 import wandb
 from stable_baselines3.common.buffers import ReplayBuffer
-from tqdm import tqdm
 
-from .cli import Dashboard
+from .cli import Dashboard, progress
 from .dqn_mlp import LinearEpsilonDecay, QNet, evaluate, make_env
 from .utils import configure_logging, get_logger, get_space_dims, setup_device
 from .utils.nn_utils import calculate_param_norm, validate_q_network_dimensions
@@ -281,7 +280,7 @@ def train_double_dqn(
             config=Config,
         )
 
-    for step in tqdm(range(Config.total_timesteps)):
+    for step in progress(range(Config.total_timesteps)):
         eps = float(eps_decay(step, Config.exploration_fraction))
 
         if random.random() < eps:

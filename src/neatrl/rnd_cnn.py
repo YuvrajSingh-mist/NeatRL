@@ -15,9 +15,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import wandb
-from tqdm import tqdm
 
-from .cli import Dashboard
+from .cli import Dashboard, progress
 from .utils import configure_logging, get_logger, setup_device
 from .utils.nn_utils import (
     observation_input_layer,
@@ -312,7 +311,7 @@ def evaluate(
     returns = []
     frames = []
 
-    for _ in tqdm(range(num_eval_eps), desc="Evaluating"):
+    for _ in progress(range(num_eval_eps), desc="Evaluating"):
         obs, _ = eval_env.reset()
         done = False
         rewards = 0.0
@@ -659,7 +658,7 @@ def train_ppo_rnd_cnn(
             "RND-CNN", Config.env_id or "custom", Config.total_timesteps, config=Config
         )
 
-    for update in tqdm(
+    for update in progress(
         range(1, num_updates + 1), desc="Training Updates", disable=True
     ):
         # Annealing the rate if instructed to do so.

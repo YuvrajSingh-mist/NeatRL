@@ -124,6 +124,187 @@ class TestDashboardRendering:
         capsys.readouterr()
 
 
+class TestChartsView:
+    """The 'v' view is a two-column grid of every tracked metric."""
+
+    def _dash(self, algo="DoubleDQN"):
+        from neatrl.cli.dashboard import Dashboard
+
+        dash = Dashboard(algo, "CartPole-v1", 100_000)
+        for i in range(20):
+            dash.push_metrics(
+                ep_return=10.0 + i,
+                ep_length=100.0 + i,
+                total_loss=1e8 + i,
+                epsilon=1.0 - i / 20,
+                q_mean=-2.0 + i / 10,
+                buffer_fill=float(i),
+            )
+        return dash
+
+    def test_main_dash_has_no_sparkline_sections(self):
+        """Charts moved to the 'v' view; the summary panel must not carry them."""
+        dash = self._dash()
+        try:
+            frame = dash.renderDash(500, 3, {"td_loss": 1.2}, None, "")
+            assert "Universal Metrics" not in frame
+            assert "Metrics ──" not in frame
+        finally:
+            dash.close("done")
+
+    def test_main_dash_shows_progress(self):
+        """The tqdm bar is suppressed, so the frame carries the progress itself."""
+        dash = self._dash()
+        try:
+            frame = dash.renderDash(50_000, 3, {"td_loss": 1.2}, None, "")
+            assert "Progress" in frame
+            assert "50.0%" in frame
+        finally:
+            dash.close("done")
+
+    def test_charts_view_charts_every_metric(self):
+        dash = self._dash()
+        try:
+            frame = dash.renderChartsView()
+        finally:
+            dash.close("done")
+        for label in (
+            "Episode Return",
+            "Episode Length",
+            "Training Loss",
+            "Epsilon",
+            "Mean Q-value",
+            "Buffer Fill",
+        ):
+            assert label in frame, f"{label} has no chart"
+
+    def test_charts_view_is_two_columns(self):
+        """Two labels on one rendered line means the grid is two charts wide."""
+        import re
+
+        dash = self._dash()
+        try:
+            frame = re.sub(r"\x1b\[[0-9;]*m", "", dash.renderChartsView())
+        finally:
+            dash.close("done")
+        paired = [ln for ln in frame.splitlines() if "Return" in ln and "Length" in ln]
+        assert paired, f"no row held two charts:\n{frame}"
+
+    def test_charts_view_lists_a_new_metric_without_registration(self):
+        """Any pushed key is charted; the label table is optional metadata."""
+        dash = self._dash()
+        try:
+            dash.push_metrics(weird_new_metric=0.5)
+            frame = dash.renderChartsView()
+        finally:
+            dash.close("done")
+        assert "Weird New Metric" in frame
+
+    def test_charts_view_survives_empty_history(self):
+        from neatrl.cli.dashboard import Dashboard
+
+        dash = Dashboard("DQN", "CartPole-v1", 100)
+        try:
+            frame = dash.renderChartsView()
+            assert "No metrics recorded" in frame
+        finally:
+            dash.close("done")
+
+    def test_sps_is_charted(self):
+        """SPS is a series like any other, sampled by update()."""
+        import time
+
+        dash = self._dash()
+        try:
+            dash.t0 = time.time() - 10
+            dash.update(agent_steps=1000, epoch=1, losses={"td_loss": 1.0})
+            assert dash.history.get("sps"), "update() recorded no SPS sample"
+            assert "Steps / sec" in dash.renderChartsView()
+        finally:
+            dash.close("done")
+
+
+class TestChartScaling:
+    def test_bucket_averages_instead_of_striding(self):
+        """Striding made the chart jump; averaged buckets move by less."""
+        from neatrl.cli.charts import _bucket
+
+        values = list(range(100))
+        sampled = _bucket(values, 10)
+        assert len(sampled) == 10
+        # Each bucket is the mean of ten consecutive values, so the first is
+        # 4.5 rather than the strided 0.
+        assert sampled[0] == pytest.approx(4.5)
+        assert sampled[-1] == pytest.approx(94.5)
+
+    def test_bucket_keeps_short_series_intact(self):
+        from neatrl.cli.charts import _bucket
+
+        assert _bucket([1.0, 2.0, 3.0], 10) == [1.0, 2.0, 3.0]
+
+    def test_sparkline_is_exactly_width_wide(self):
+        import re
+
+        from neatrl.cli.charts import sparkline
+
+        for n in (0, 1, 5, 24, 500):
+            plain = re.sub(r"\[[^\]]*\]", "", sparkline(list(range(n)), width=24))
+            assert len(plain) == 24, f"{n} points rendered {len(plain)} columns"
+
+    def test_compact_shortens_big_numbers(self):
+        from neatrl.cli.charts import compact
+
+        assert compact(299886496.0, ".4f") == "299.9M"
+        assert compact(53479751680.0, ".4f") == "53.5B"
+        assert compact(28.0, ".2f") == "28.00"
+        assert compact(float("nan")) == "n/a"
+
+
+class TestProgressStandsAsideForTheDashboard:
+    """tqdm and the dashboard both write to the tty; only one may."""
+
+    def test_progress_is_a_no_op_while_the_dashboard_owns_a_tty(self, monkeypatch):
+        import io
+
+        from neatrl.cli.dashboard import Dashboard, dashboardActive
+
+        class TTY(io.StringIO):
+            def isatty(self):
+                return True
+
+        out, err = TTY(), TTY()
+        monkeypatch.setattr("sys.stdout", out)
+        monkeypatch.setattr("sys.stderr", err)
+
+        dash = Dashboard("DQN", "CartPole-v1", 1000)
+        try:
+            assert dashboardActive()
+            from neatrl.cli import progress
+
+            before = len(out.getvalue()) + len(err.getvalue())
+            assert list(progress(range(20))) == list(range(20))
+            drawn = len(out.getvalue()) + len(err.getvalue())
+            assert drawn == before, "tqdm drew over the frame"
+        finally:
+            dash.close("done")
+        assert not dashboardActive()
+
+    def test_progress_stays_enabled_without_a_dashboard(self, monkeypatch):
+        import io
+
+        from neatrl.cli import progress
+
+        class TTY(io.StringIO):
+            def isatty(self):
+                return True
+
+        out, err = TTY(), TTY()
+        monkeypatch.setattr("sys.stdout", out)
+        monkeypatch.setattr("sys.stderr", err)
+        list(progress(range(5)))
+        assert err.getvalue(), "tqdm was disabled with no dashboard to protect"
+
+
 class TestTrainersSkipDashboardWithoutTty:
     """Trainers must not flood stdout with ANSI frames when stdin/stdout is piped."""
 

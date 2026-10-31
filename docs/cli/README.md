@@ -170,6 +170,18 @@ The TUI replaces itself in place; it is not a scrolling log.
 | `v` | Toggle the charts view |
 | `l` / `c` / `v` again | Return to the dashboard |
 
+The dashboard keeps the summary, the loss values and a progress bar. Every
+time-series metric lives behind `v`, as a two-column grid: episode return and
+length, training loss, steps per second, then whatever the algorithm reports
+(`epsilon`, `q_mean`, `entropy`, `approx_kl`, …). A metric a trainer starts
+pushing gets a chart without any registration — the label table only supplies
+a nicer name and colour for the keys it recognises.
+
+While the dashboard is up it suppresses `tqdm`: two things writing to one
+terminal is what makes a progress bar flicker against a panel that repaints
+itself. The bar's numbers are in the frame instead, and `--steps` progress is
+the `Progress` row.
+
 Header fields:
 
 | Field | What it measures |

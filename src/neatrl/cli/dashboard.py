@@ -21,9 +21,10 @@ from rich.table import Table
 from rich.text import Text
 
 from .charts import (
-    dual_sparkline,
-    labeled_sparkline,
-    metric_bar,
+    METRICS,
+    chart_cell,
+    compact,
+    progress_bar,
 )
 from .history import HistoryTracker
 
@@ -63,7 +64,35 @@ except ImportError:
 LOGBUFSIZE = 500
 LOG_VISIBLE = 30
 HISTORY_MAXLEN = 120
-SPARKLINE_WIDTH = 24
+# Columns in the charts view's grid.
+CHART_COLUMNS = 2
+# Lines one chart occupies: the label row, the trace, and a spacer.
+CHART_CELL_LINES = 3
+
+
+# Live dashboards in this process. A trainer's tqdm bar and the dashboard both
+# write to the same tty, so the bar has to know to stay quiet -- see `progress`.
+_ACTIVE_DASHBOARDS = 0
+
+
+def dashboardActive() -> bool:
+    """True while a dashboard owns the screen."""
+    return _ACTIVE_DASHBOARDS > 0
+
+
+def progress(iterable, **kwargs):
+    """tqdm that stands aside while the dashboard is drawing.
+
+    The dashboard repaints the whole panel from the top on every frame; a tqdm
+    bar redraws its own line with a carriage return on every step. With both
+    writing, the bar lands inside the panel and is erased by the next frame --
+    that is the flicker. The frame already carries the same counters, so the
+    bar has nothing to add while the dashboard is up.
+    """
+    from tqdm import tqdm
+
+    kwargs.setdefault("disable", dashboardActive())
+    return tqdm(iterable, **kwargs)
 
 
 def enableAnsi() -> bool:
@@ -397,6 +426,16 @@ class Dashboard:
             self.hideCursor()
             atexit.register(self.showCursor)
 
+        # Only claim the screen when one is actually there. Under pytest or a
+        # pipe nothing is drawn, and silencing tqdm there would swallow a
+        # caller's own progress bars for the rest of the process.
+        self._ownsScreen = bool(self.ansi and sys.stdout.isatty())
+        if self._ownsScreen:
+            global _ACTIVE_DASHBOARDS
+            _ACTIVE_DASHBOARDS += 1
+        self._lastFrame: Optional[str] = None
+        self._lastSpsPush = 0.0
+
         # Log capture
         self.logBuf: deque[str] = deque(maxlen=LOGBUFSIZE)
         self.logHandler = LogCaptureHandler(self.logBuf)
@@ -598,6 +637,14 @@ class Dashboard:
             return
         self.lastRenderTime = now
 
+        # One SPS sample a second is enough to show the trend, and it keeps the
+        # series from being filled by 5 Hz samples of the same running average.
+        if agent_steps > 0 and now - self._lastSpsPush >= 1.0:
+            elapsed = now - self.t0
+            if elapsed > 0:
+                self.history.push("sps", agent_steps / elapsed)
+            self._lastSpsPush = now
+
         # Full clear on view switch — paired right before the render
         if self.isFirst:
             sys.stdout.write("\033[2J\033[H")
@@ -639,6 +686,11 @@ class Dashboard:
         the origin for good, so every later frame lands lower than the previous
         one and whole panels accumulate in the scrollback.
         """
+        if rendered == self._lastFrame and not self.isFirst:
+            # Nothing changed, so repainting would only flicker.
+            return
+        self._lastFrame = rendered
+
         cols, rows = self._viewport()
         # Leave a column spare: a line exactly as wide as the terminal wraps and
         # costs an extra row, which reintroduces the same drift.
@@ -729,32 +781,14 @@ class Dashboard:
         lossTable.add_column("[cyan]Losses[/cyan]", style="bright_white", min_width=20)
         lossTable.add_column("[cyan]Value[/cyan]", style="white", min_width=10)
         for name, val in losses.items():
-            lossTable.add_row(name, f"{val:.4f}")
+            # A diverged TD loss prints as 299886496.0000, which both overflows
+            # the column and says nothing below the leading digits.
+            lossTable.add_row(name, compact(float(val), ".4f"))
 
         monitor = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
         monitor.add_column(min_width=30)
         monitor.add_column(min_width=34)
         monitor.add_row(summary, lossTable)
-
-        # --- Universal charts: Episode Return + Episode Length sparklines ---
-        universalLines: list[str] = []
-        ep_returns = self.history.get("ep_return")
-        ep_lengths = self.history.get("ep_length")
-        if ep_returns:
-            universalLines.append(
-                labeled_sparkline(
-                    "Episode Return", ep_returns, SPARKLINE_WIDTH, "green"
-                )
-            )
-        if ep_lengths:
-            universalLines.append(
-                labeled_sparkline(
-                    "Episode Length", ep_lengths, SPARKLINE_WIDTH, "yellow"
-                )
-            )
-
-        # --- Algo-specific charts ---
-        algoLines = self._renderAlgoCharts()
 
         # --- Eval stats ---
         bottom: Optional[Table] = None
@@ -784,25 +818,9 @@ class Dashboard:
         frame.add_row(header)
         frame.add_row(monitor)
 
-        # Universal charts section
-        if universalLines:
-            chartBody = Text()
-            chartBody.append_text(
-                Text.from_markup("[bold cyan]── Universal Metrics ──[/bold cyan]\n")
-            )
-            for line in universalLines:
-                chartBody.append_text(Text.from_markup(line + "\n"))
-            frame.add_row(chartBody)
-
-        # Algo-specific charts section
-        if algoLines:
-            algoBody = Text()
-            algoBody.append_text(
-                Text.from_markup(f"[bold cyan]── {self.algo} Metrics ──[/bold cyan]\n")
-            )
-            for line in algoLines:
-                algoBody.append_text(Text.from_markup(line + "\n"))
-            frame.add_row(algoBody)
+        # The progress bar replaces the tqdm bar the dashboard suppresses; it
+        # is the one number a training run is watched for.
+        frame.add_row(self._progressRow(agent_steps))
 
         # Bottom row: eval stats (left) + model params (right)
         if message or bottom is not None:
@@ -825,220 +843,87 @@ class Dashboard:
             self.console.print(frame)
         return cap.get()
 
-    def _renderAlgoCharts(self) -> list[str]:
-        """Render algorithm-specific sparkline charts based on self.algo."""
-        lines: list[str] = []
-        algo = self.algo.lower()
+    def chartMetrics(self) -> tuple[list[str], list[str]]:
+        """Universal and algorithm-specific metric keys that hold data.
 
-        # ── DQN / Dueling-DQN ──
-        if algo in ("dqn", "dueling-dqn"):
-            eps = self.history.get("epsilon")
-            if eps:
-                lines.append(
-                    labeled_sparkline("Epsilon (ε)", eps, SPARKLINE_WIDTH, "magenta")
+        Every series in the history gets a chart, so a trainer that starts
+        pushing a new metric needs no change here -- `METRICS` only supplies
+        the label, colour and format for the keys it knows.
+        """
+        present = self.history.all_metrics()
+        universalKeys = ["ep_return", "ep_length", "total_loss", "sps"]
+        universal = [m for m in universalKeys if m in present]
+        algo = [m for m in METRICS if m in present and m not in universal]
+        algo += [m for m in present if m not in universal and m not in algo]
+        return universal, algo
+
+    def _chartCellWidth(self) -> int:
+        """Width of one chart column, borders and padding removed."""
+        return max(16, (self.console.width - 8) // CHART_COLUMNS)
+
+    def _chartGrid(self, metrics: list[str], cell: int) -> Table:
+        """Two charts per row, each two lines tall: label+value, then the trace."""
+        grid = Table(box=None, show_header=False, padding=(0, 1))
+        for _ in range(CHART_COLUMNS):
+            grid.add_column(no_wrap=True)
+        for i in range(0, len(metrics), CHART_COLUMNS):
+            cells = [
+                Text.from_markup(
+                    "\n".join(chart_cell(name, self.history.get(name), cell))
                 )
+                for name in metrics[i : i + CHART_COLUMNS]
+            ]
+            while len(cells) < CHART_COLUMNS:
+                cells.append(Text(""))
+            if i:
+                grid.add_row(Text(""), Text(""))
+            grid.add_row(*cells)
+        return grid
 
-            q_mean = self.history.get("q_mean")
-            if q_mean:
-                lines.append(
-                    labeled_sparkline("Mean Q-value", q_mean, SPARKLINE_WIDTH, "blue")
-                )
-
-            buf_fill = self.history.latest("buffer_fill")
-            if buf_fill is not None:
-                lines.append(metric_bar("Buffer fill %", buf_fill, 100.0, 12, "green"))
-
-        # ── PPO ──
-        elif algo == "ppo":
-            entropy = self.history.get("entropy")
-            if entropy:
-                lines.append(
-                    labeled_sparkline("Entropy", entropy, SPARKLINE_WIDTH, "yellow")
-                )
-
-            clip_frac = self.history.get("clip_fraction")
-            if clip_frac:
-                lines.append(
-                    labeled_sparkline(
-                        "Clip Fraction", clip_frac, SPARKLINE_WIDTH, "red", fmt=".3f"
-                    )
-                )
-
-            kl = self.history.get("approx_kl")
-            if kl:
-                lines.append(
-                    labeled_sparkline(
-                        "KL Divergence", kl, SPARKLINE_WIDTH, "magenta", fmt=".4f"
-                    )
-                )
-
-            val_loss = self.history.get("value_loss")
-            if val_loss:
-                lines.append(
-                    labeled_sparkline("Value Loss", val_loss, SPARKLINE_WIDTH, "blue")
-                )
-
-        # ── SAC ──
-        elif algo == "sac":
-            alpha = self.history.get("alpha")
-            if alpha:
-                lines.append(
-                    labeled_sparkline(
-                        "Alpha (entropy)", alpha, SPARKLINE_WIDTH, "yellow", fmt=".4f"
-                    )
-                )
-
-            q1 = self.history.get("q1_mean")
-            q2 = self.history.get("q2_mean")
-            if q1 and q2:
-                dual = dual_sparkline(q1, q2, SPARKLINE_WIDTH, "cyan", "magenta")
-                v1 = q1[-1] if q1 else 0
-                v2 = q2[-1] if q2 else 0
-                lines.append(f"  {'Q1/Q2 Mean':<18} {dual}  {v1:>7.2f}:{v2:<7.2f}")
-
-            actor_loss = self.history.get("actor_loss")
-            if actor_loss:
-                lines.append(
-                    labeled_sparkline(
-                        "Actor Loss", actor_loss, SPARKLINE_WIDTH, "green"
-                    )
-                )
-
-        # ── Universal loss sparkline ──
-        loss_vals = self.history.get("total_loss")
-        if loss_vals and len(loss_vals) >= 2:
-            lines.append(
-                labeled_sparkline(
-                    "Training Loss", loss_vals, SPARKLINE_WIDTH, "red", fmt=".4f"
-                )
-            )
-
-        return lines
+    def _progressRow(self, agent_steps: int) -> str:
+        """Progress through the run, shown in place of the suppressed tqdm bar."""
+        width = max(12, min(40, self.console.width - 52))
+        bar = progress_bar(agent_steps, self.totalTimesteps, width)
+        return (
+            f"  [dim]Progress[/dim]  {bar}  "
+            f"[dim]{abbrev(agent_steps)} / {abbrev(self.totalTimesteps)}[/dim]"
+        )
 
     def renderChartsView(self) -> str:
-        """Dedicated full-screen charts view with larger sparklines."""
+        """Full-screen grid of every tracked metric, two charts per row."""
         header = Table(box=None, show_header=False, padding=(0, 1))
         header.add_column(style="bold cyan", min_width=22)
         header.add_column(style="white")
         header.add_row(
             f"NeatRL {_NEATRL_VERSION}  [{self.algo}]  [yellow][CHARTS][/yellow]  [dim][v: back][/dim]",
-            f"Steps: {abbrev(self.lastAgentSteps)}  |  History: {HISTORY_MAXLEN} pts",
+            f"Steps: {abbrev(self.lastAgentSteps)}"
+            f"  |  {len(self.history.all_metrics())} metrics",
         )
 
-        body = Text()
-        wide = SPARKLINE_WIDTH + 12  # wider sparklines for detail view
-
-        # ── Universal ──
-        body.append_text(
-            Text.from_markup("[bold cyan]══ Universal Metrics ══[/bold cyan]\n\n")
-        )
-        ep_ret = self.history.get("return")
-        if ep_ret:
-            body.append_text(
-                Text.from_markup(
-                    labeled_sparkline("Episode Return", ep_ret, wide, "green") + "\n"
-                )
-            )
-        ep_len = self.history.get("ep_length")
-        if ep_len:
-            body.append_text(
-                Text.from_markup(
-                    labeled_sparkline("Episode Length", ep_len, wide, "yellow") + "\n"
-                )
-            )
-        loss = self.history.get("total_loss")
-        if loss:
-            body.append_text(
-                Text.from_markup(
-                    labeled_sparkline("Training Loss", loss, wide, "red", fmt=".4f")
-                    + "\n"
-                )
-            )
-
-        # ── Algo-specific ──
-        algo = self.algo.lower()
-        body.append_text(
-            Text.from_markup(f"\n[bold cyan]══ {self.algo} Metrics ══[/bold cyan]\n\n")
-        )
-
-        if algo in ("dqn", "dueling-dqn"):
-            eps = self.history.get("epsilon")
-            if eps:
-                body.append_text(
-                    Text.from_markup(
-                        labeled_sparkline("Epsilon (ε)", eps, wide, "magenta") + "\n"
-                    )
-                )
-            q_mean = self.history.get("q_mean")
-            if q_mean:
-                body.append_text(
-                    Text.from_markup(
-                        labeled_sparkline("Mean Q-value", q_mean, wide, "blue") + "\n"
-                    )
-                )
-            buf = self.history.latest("buffer_fill")
-            if buf is not None:
-                body.append_text(
-                    Text.from_markup(
-                        metric_bar("Buffer fill %", buf, 100, 20, "green") + "\n"
-                    )
-                )
-
-        elif algo == "ppo":
-            for name, color, fmt_str in [
-                ("entropy", "yellow", ".3f"),
-                ("clip_fraction", "red", ".3f"),
-                ("approx_kl", "magenta", ".4f"),
-                ("value_loss", "blue", ".4f"),
-            ]:
-                vals = self.history.get(name)
-                if vals:
-                    body.append_text(
-                        Text.from_markup(
-                            labeled_sparkline(
-                                name.replace("_", " ").title(),
-                                vals,
-                                wide,
-                                color,
-                                fmt_str,
-                            )
-                            + "\n"
-                        )
-                    )
-
-        elif algo == "sac":
-            alpha = self.history.get("alpha")
-            if alpha:
-                body.append_text(
-                    Text.from_markup(
-                        labeled_sparkline(
-                            "Alpha (entropy)", alpha, wide, "yellow", ".4f"
-                        )
-                        + "\n"
-                    )
-                )
-            q1 = self.history.get("q1_mean")
-            q2 = self.history.get("q2_mean")
-            if q1 and q2:
-                dual = dual_sparkline(q1, q2, wide, "cyan", "magenta")
-                body.append_text(
-                    Text.from_markup(
-                        f"  {'Q1 / Q2 Mean':<18} {dual}  {q1[-1]:>7.2f} : {q2[-1]:<7.2f}\n"
-                    )
-                )
-            actor_loss = self.history.get("actor_loss")
-            if actor_loss:
-                body.append_text(
-                    Text.from_markup(
-                        labeled_sparkline("Actor Loss", actor_loss, wide, "green")
-                        + "\n"
-                    )
-                )
+        universal, algo = self.chartMetrics()
+        cell = self._chartCellWidth()
+        # Whatever the viewport fits: two chart lines plus a spacer per grid
+        # row, minus the panel border, header, section titles and key hint.
+        budget = max((self.viewportRows or 30) - 8, 6)
+        slots = max(CHART_COLUMNS, (budget // CHART_CELL_LINES) * CHART_COLUMNS)
+        universal = universal[:slots]
+        algo = algo[: max(CHART_COLUMNS, slots - len(universal))]
 
         frame = Table(box=box.ROUNDED, show_header=False, padding=(0, 1), expand=False)
         frame.add_column()
         frame.add_row(header)
-        frame.add_row(body)
+        if universal:
+            frame.add_row(Text(""))
+            frame.add_row(Text.from_markup("[bold cyan]── Universal Metrics ──[/]"))
+            frame.add_row(self._chartGrid(universal, cell))
+        if algo:
+            if universal:
+                frame.add_row(Text(""))
+            frame.add_row(Text.from_markup(f"[bold cyan]── {self.algo} Metrics ──[/]"))
+            frame.add_row(self._chartGrid(algo, cell))
+        if not (universal or algo):
+            frame.add_row(Text("No metrics recorded yet.", style="dim"))
+        frame.add_row(Text(""))
         frame.add_row("[dim]press [b]v[/b] back  [b]l[/b] logs  [b]c[/b] config[/dim]")
 
         with self.console.capture() as cap:
@@ -1046,6 +931,10 @@ class Dashboard:
         return cap.get()
 
     def close(self, message: str = "Training complete.") -> None:
+        if getattr(self, "_ownsScreen", False):
+            global _ACTIVE_DASHBOARDS
+            _ACTIVE_DASHBOARDS = max(_ACTIVE_DASHBOARDS - 1, 0)
+            self._ownsScreen = False
         if (
             self.oldTerm is not None
             and self.fd is not None
@@ -1058,6 +947,11 @@ class Dashboard:
         for h in self.savedHandlers:
             root.addHandler(h)
         self.savedHandlers.clear()
+        # Bypass the frame throttle. The closing frame carries the final
+        # counters and the completion message; rendering it less than 0.2 s
+        # after the previous frame used to swallow it entirely, leaving the
+        # panel frozen mid-run.
+        self.lastRenderTime = 0.0
         self.update(
             agent_steps=self.totalTimesteps,
             epoch=self.lastEpoch,

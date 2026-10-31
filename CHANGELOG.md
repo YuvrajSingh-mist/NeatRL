@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.5.6] - 2026-10-31
+
+### Fixed
+- **The progress bar no longer flickers against the dashboard.** A trainer's
+  `tqdm` bar and the dashboard both wrote to the same terminal, so the bar was
+  drawn inside the panel and painted over by the next frame. Every trainer now
+  iterates with `neatrl.cli.progress`, which is tqdm while no dashboard is
+  drawing and silent once one is -- the frame carries the same counters. The
+  dashboard gained a `Progress` row so nothing is lost, and it skips a frame
+  that is byte-identical to the last one.
+- **Sparklines no longer shimmer.** They down-sampled by striding, which
+  re-picked every column whenever one value arrived; buckets are averaged now,
+  so a trace moves by a fraction of a value per frame.
+- **The closing frame is actually drawn.** Rendering it within 0.2 s of the
+  previous frame hit the throttle, so a finished run could leave the panel
+  frozen mid-run with its completion message dropped.
+- **Diverged losses fit their column.** A TD loss of 299886496.0 printed as
+  `299886496.0000`; values past 1e4 are abbreviated (`299.9M`, `53.5B`).
+
+### Changed
+- **Charts moved out of the main dashboard into the `v` view**, which is now a
+  two-column grid: episode return and length, training loss, steps per second,
+  then whatever the algorithm reports (`epsilon`, `q_mean`, `entropy`,
+  `approx_kl`, ...). Any metric a trainer pushes gets a chart without being
+  registered; `charts.METRICS` only supplies a nicer label, colour and number
+  format. The grid drops charts that do not fit the terminal height instead of
+  spilling past the panel.
+
 ## [2.5.5] - 2026-10-31
 
 ### Fixed

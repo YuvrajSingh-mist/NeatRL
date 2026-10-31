@@ -20,9 +20,8 @@ from gymnasium.wrappers import (
     NormalizeObservation,
     NormalizeReward,
 )
-from tqdm import tqdm
 
-from .cli import Dashboard
+from .cli import Dashboard, progress
 from .utils import configure_logging, get_logger, get_space_dims, setup_device
 from .utils.nn_utils import (
     validate_policy_network_dimensions,
@@ -464,7 +463,7 @@ def train_reinforce(
             "REINFORCE", Config.env_id or "custom", Config.total_episodes, config=Config
         )
 
-    for step in tqdm(range(updates), disable=True):
+    for step in progress(range(updates), disable=True):
         global_step = step * Config.n_envs
         obs, _ = env.reset()
         rewards = []
