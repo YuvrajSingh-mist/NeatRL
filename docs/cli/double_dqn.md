@@ -16,6 +16,8 @@ overestimation that plain DQN inherits from its own target.
 ## Run it
 
 ```bash
+pip install neatrl
+
 neatrl train double-dqn                          # CartPole-v1
 neatrl train double-dqn CartPole-v1 --steps 200000
 neatrl train double-dqn-cnn                      # ALE/Pong-v5

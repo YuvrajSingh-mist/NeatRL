@@ -16,6 +16,8 @@ extended to continuous actions.
 ## Run it
 
 ```bash
+pip install neatrl
+
 neatrl train ddpg                          # Pendulum-v1
 neatrl train ddpg Pendulum-v1 --steps 50000
 neatrl train ddpg HalfCheetah-v4           # needs neatrl[mujoco]

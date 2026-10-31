@@ -16,6 +16,8 @@ the raw return.
 ## Run it
 
 ```bash
+pip install neatrl
+
 neatrl train a2c                        # CartPole-v1
 neatrl train a2c CartPole-v1 --steps 200000
 neatrl train a2c LunarLander-v3

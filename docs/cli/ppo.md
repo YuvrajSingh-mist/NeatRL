@@ -16,6 +16,8 @@ policy.
 ## Run it
 
 ```bash
+pip install neatrl
+
 neatrl train ppo                        # CartPole-v1 (discrete)
 neatrl train ppo CartPole-v1 --steps 200000
 neatrl train ppo Pendulum-v1            # continuous, Gaussian head

@@ -22,6 +22,8 @@ or its CNN sibling instead. There is no `q-learning-cnn` alias for that reason.
 ### CLI
 
 ```bash
+pip install neatrl
+
 neatrl train q-learning                            # FrozenLake-v1
 neatrl train q-learning FrozenLake-v1 --steps 20000
 neatrl train q-learning Taxi-v4

@@ -16,6 +16,8 @@ for DDPG's overestimation and fragility.
 ## Run it
 
 ```bash
+pip install neatrl
+
 neatrl train td3                          # Pendulum-v1
 neatrl train td3 Pendulum-v1 --steps 50000
 neatrl train td3 HalfCheetah-v4           # needs neatrl[mujoco]

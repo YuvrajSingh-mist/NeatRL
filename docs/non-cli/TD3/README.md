@@ -25,6 +25,8 @@ Note: TD3 is designed for continuous action spaces. For discrete action environm
 ### CLI
 
 ```bash
+pip install neatrl
+
 neatrl train td3 Pendulum-v1
 neatrl train td3-cnn ALE/Breakout-v5
 ```

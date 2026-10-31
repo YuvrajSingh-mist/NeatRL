@@ -18,6 +18,8 @@ Note: DDPG is designed for continuous action spaces. For discrete action environ
 ### CLI
 
 ```bash
+pip install neatrl
+
 neatrl train ddpg Pendulum-v1
 neatrl train ddpg-cnn ALE/Breakout-v5
 ```

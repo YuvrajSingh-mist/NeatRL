@@ -31,6 +31,8 @@ The derivation and the Atari evidence are in
 ### CLI
 
 ```bash
+pip install neatrl
+
 neatrl train double-dqn CartPole-v1
 neatrl train double-dqn LunarLander-v3 --steps 300000
 neatrl train double-dqn-cnn ALE/Pong-v5

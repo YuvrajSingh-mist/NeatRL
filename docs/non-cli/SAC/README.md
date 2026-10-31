@@ -7,6 +7,8 @@ This guide shows you how to use NeatRL's SAC implementation for continuous and d
 ### CLI
 
 ```bash
+pip install neatrl
+
 neatrl train sac Pendulum-v1
 neatrl train sac-cnn ALE/Breakout-v5
 ```

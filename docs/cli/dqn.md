@@ -15,6 +15,8 @@ against a frozen target network.
 ## Run it
 
 ```bash
+pip install neatrl
+
 neatrl train dqn                        # CartPole-v1, the default
 neatrl train dqn CartPole-v1 --steps 200000
 neatrl train dqn MountainCar-v0

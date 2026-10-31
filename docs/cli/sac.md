@@ -16,6 +16,8 @@ continuous control.
 ## Run it
 
 ```bash
+pip install neatrl
+
 neatrl train sac                           # Pendulum-v1
 neatrl train sac Pendulum-v1 --steps 50000
 neatrl train sac HalfCheetah-v4            # needs neatrl[mujoco]

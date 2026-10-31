@@ -16,6 +16,8 @@ an intrinsic exploration bonus added to the environment reward.
 ## Run it
 
 ```bash
+pip install neatrl
+
 neatrl train rnd                           # CliffWalking-v1
 neatrl train rnd CliffWalking-v1 --steps 100000
 neatrl train rnd CartPole-v1

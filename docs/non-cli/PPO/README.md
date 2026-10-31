@@ -7,6 +7,8 @@ This guide shows you how to use NeatRL's PPO implementation for reinforcement le
 ### CLI
 
 ```bash
+pip install neatrl
+
 neatrl train ppo CartPole-v1
 neatrl train ppo-cnn ALE/Breakout-v5
 ```

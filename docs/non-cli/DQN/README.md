@@ -7,6 +7,8 @@ This guide shows you how to use NeatRL's DQN implementation.
 ### CLI
 
 ```bash
+pip install neatrl
+
 neatrl train dqn CartPole-v1
 neatrl train dqn LunarLander-v3
 neatrl train dqn MountainCar-v0

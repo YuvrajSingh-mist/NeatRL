@@ -15,6 +15,8 @@ by its Monte Carlo return, and step uphill on expected reward.
 ## Run it
 
 ```bash
+pip install neatrl
+
 neatrl train reinforce                     # CartPole-v1
 neatrl train reinforce CartPole-v1 --steps 1000    # 1000 EPISODES
 neatrl train reinforce-cnn                 # ALE/Pong-v5

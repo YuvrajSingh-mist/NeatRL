@@ -7,6 +7,8 @@ This guide shows you how to use NeatRL's RND implementation, which combines PPO 
 ### CLI
 
 ```bash
+pip install neatrl
+
 neatrl train rnd CliffWalking-v1
 neatrl train rnd-cnn ALE/Breakout-v5
 ```

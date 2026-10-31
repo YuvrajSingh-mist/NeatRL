@@ -15,6 +15,8 @@ the value of a state is learned without evaluating every action from it.
 ## Run it
 
 ```bash
+pip install neatrl
+
 neatrl train dueling-dqn                        # CliffWalking-v1
 neatrl train dueling-dqn CartPole-v1 --steps 100000
 neatrl train dueling-dqn-cnn                    # ALE/Pong-v5

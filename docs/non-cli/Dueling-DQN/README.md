@@ -7,6 +7,8 @@ This guide shows you how to use NeatRL's Dueling DQN implementation, which separ
 ### CLI
 
 ```bash
+pip install neatrl
+
 neatrl train dueling-dqn CartPole-v1
 neatrl train dueling-dqn LunarLander-v3 --steps 300000
 ```

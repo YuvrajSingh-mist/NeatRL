@@ -7,6 +7,8 @@ This guide shows you how to use NeatRL's REINFORCE algorithm implementation.
 ### CLI
 
 ```bash
+pip install neatrl
+
 neatrl train reinforce CartPole-v1
 neatrl train reinforce-cnn ALE/Breakout-v5
 ```
