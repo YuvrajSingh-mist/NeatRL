@@ -81,9 +81,7 @@ class Config:
     num_eval_eps: int = 3
     log_gradients: bool = False
     env_wrapper: Optional[Callable[[gym.Env], gym.Env]] = None
-    device: Union[str, torch.device] = torch.device(
-        "cuda" if torch.cuda.is_available() else "cpu"
-    )
+    device: Union[str, torch.device] = "auto"  # "auto", "cpu", "cuda", or "mps"
 
 
 class QNetCNN(nn.Module):

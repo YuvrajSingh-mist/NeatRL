@@ -72,7 +72,7 @@ class Config:
     normalize_obs: bool = True  # Whether to normalize observations
     normalize_reward: bool = False  # Whether to normalize rewards
     log_gradients: bool = True  # Whether to log gradient norms to W&B
-    device: str = "cpu"  # Device for training: "auto", "cpu", "cuda", or "cuda:0" etc.
+    device: str = "auto"  # "auto", "cpu", "cuda", or "mps"
     custom_agent: Optional[nn.Module] = None  # Custom neural network class or instance
     env: Optional[gym.Env] = None  # Optional pre-created environment
 
@@ -476,12 +476,7 @@ def train_ppo_rnd_cnn(
     random.seed(Config.seed)
     np.random.seed(Config.seed)
     torch.manual_seed(Config.seed)
-    if Config.device == "auto":
-        device = torch.device(  # type: ignore[assignment]
-            "cuda" if torch.cuda.is_available() else "cpu"
-        )
-    else:
-        device = setup_device(Config.device, Config.seed)  # type: ignore[assignment]
+    device = setup_device(Config.device, Config.seed)  # type: ignore[assignment]
 
     # Create environments - check for pre-created env first, then default
     if env is not None:
@@ -731,7 +726,7 @@ def train_ppo_rnd_cnn(
 
             done = np.logical_or(terminated, truncated)
 
-            extrinsic_reward = torch.tensor(reward).to(device)
+            extrinsic_reward = torch.tensor(reward, dtype=torch.float32, device=device)
             rewards_storage[step] = extrinsic_reward
             next_obs = torch.Tensor(new_obs).to(device)
             next_done = torch.Tensor(done).to(device)

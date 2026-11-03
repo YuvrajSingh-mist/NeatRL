@@ -79,9 +79,7 @@ class Config:
     use_wandb: bool = True
     wandb_project: str = "cleanRL"
     wandb_entity: str = ""
-    device: Union[str, torch.device] = torch.device(
-        "cuda" if torch.cuda.is_available() else "cpu"
-    )
+    device: Union[str, torch.device] = "auto"  # "auto", "cpu", "cuda", or "mps"
 
 
 def double_dqn_target(

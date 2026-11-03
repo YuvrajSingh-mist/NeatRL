@@ -69,9 +69,7 @@ class Config:
     atari_wrapper: bool = False
     n_envs: int = 1
     capture_video: bool = False
-    device: Union[str, torch.device] = torch.device(
-        "cuda" if torch.cuda.is_available() else "cpu"
-    )
+    device: Union[str, torch.device] = "auto"  # "auto", "cpu", "cuda", or "mps"
     # Custom agent
     custom_agent: Optional[Union[nn.Module, type]] = (
         None  # Custom neural network class or instance
