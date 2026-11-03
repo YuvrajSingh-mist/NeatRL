@@ -12,6 +12,7 @@ from neatrl.utils import (
     configure_logging,
     get_logger,
     get_space_dims,
+    resolve_device_string,
     setup_device,
     validate_critic_network_dimensions,
     validate_dueling_q_network_dimensions,
@@ -122,6 +123,67 @@ class TestSetupDevice:
     def test_returns_torch_device_type(self):
         dev = setup_device("cpu")
         assert isinstance(dev, torch.device)
+
+
+class TestAutoDevice:
+    """``"auto"`` must resolve to the best backend and never raise."""
+
+    def test_auto_is_the_default(self):
+        import inspect
+
+        sig = inspect.signature(setup_device)
+        assert sig.parameters["device"].default == "auto"
+
+    def test_auto_never_raises(self):
+        dev = setup_device("auto")
+        assert isinstance(dev, torch.device)
+        assert dev.type in {"cpu", "cuda", "mps"}
+
+    def test_auto_matches_availability(self, monkeypatch):
+        import neatrl.utils as utils
+
+        monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+        monkeypatch.setattr(utils, "_mps_usable", lambda: True)
+        # CUDA wins over MPS when both are present.
+        assert resolve_device_string("auto") == "cuda"
+
+    def test_auto_prefers_mps_without_cuda(self, monkeypatch):
+        import neatrl.utils as utils
+
+        monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+        monkeypatch.setattr(utils, "_mps_usable", lambda: True)
+        assert resolve_device_string("auto") == "mps"
+        assert setup_device("auto").type == "mps"
+
+    def test_auto_falls_back_to_cpu(self, monkeypatch):
+        import neatrl.utils as utils
+
+        monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+        monkeypatch.setattr(utils, "_mps_usable", lambda: False)
+        assert resolve_device_string("auto") == "cpu"
+        assert setup_device("auto").type == "cpu"
+
+    def test_explicit_choice_is_not_overridden(self):
+        # An explicit "cpu" must stay "cpu" even on GPU-capable hardware.
+        assert resolve_device_string("cpu") == "cpu"
+        assert resolve_device_string(torch.device("cpu")) == "cpu"
+
+    def test_explicit_mps_falls_back_when_unusable(self, monkeypatch):
+        import neatrl.utils as utils
+
+        if utils._mps_usable():
+            pytest.skip("MPS usable — fallback not triggered")
+        monkeypatch.setattr(utils, "_mps_usable", lambda: False)
+        assert setup_device("mps").type == "cpu"
+
+    def test_config_defaults_resolve_without_error(self):
+        """Every trainer's Config default must be a resolvable value."""
+        from neatrl.a2c_cnn import Config as A2CConfig
+        from neatrl.dqn_mlp import Config as DQNConfig
+        from neatrl.ppo_mlp import Config as PPOConfig
+
+        for cfg in (A2CConfig, DQNConfig, PPOConfig):
+            assert setup_device(cfg.device).type in {"cpu", "cuda", "mps"}
 
 
 # ─── calculate_param_norm ────────────────────────────────────────────────────

@@ -68,7 +68,7 @@ class Config:
     normalize_obs: bool = False  # Whether to normalize observations
     normalize_reward: bool = False  # Whether to normalize rewards
     log_gradients: bool = False  # Whether to log gradient norms to W&B
-    device: str = "cpu"  # Device for training: "auto", "cpu", "cuda", or "cuda:0" etc.
+    device: str = "auto"  # "auto", "cpu", "cuda", or "mps"
     custom_agent: Optional[nn.Module] = None  # Custom neural network class or instance
     env: Optional[gym.Env] = None  # Optional pre-created environment
 

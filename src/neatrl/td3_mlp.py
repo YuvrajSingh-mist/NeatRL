@@ -78,7 +78,7 @@ class Config:
     n_envs: int = 1  # Number of parallel environments for data collection
     max_grad_norm: float = 0.5  # Maximum gradient norm for gradient clipping
     log_gradients: bool = True  # Whether to log gradient norms to W&B
-    device: str = "cpu"  # Device for training: "auto", "cpu", "cuda", or "cuda:0" etc.
+    device: str = "auto"  # "auto", "cpu", "cuda", or "mps"
 
 
 class ActorNet(nn.Module):
