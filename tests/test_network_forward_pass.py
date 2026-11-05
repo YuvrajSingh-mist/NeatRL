@@ -115,6 +115,23 @@ class TestDuelingDQNNetworks:
         assert hasattr(net, "adv") and isinstance(net.adv, nn.Module)
         assert hasattr(net, "values") and isinstance(net.values, nn.Module)
 
+    def test_dueling_qnet_mean_subtraction(self):
+        from neatrl.dueling_dqn_mlp import DuelingQNet
+
+        net = DuelingQNet(OBS_DISC, ACT_DISC, subtract_mean=True)
+        q_values, values, adv, _ = net(_rand(OBS_DISC))
+        centered_adv = adv - adv.mean(dim=1, keepdim=True)
+        assert torch.allclose(q_values, values + centered_adv, atol=1e-5)
+        # The aggregation forces mean_a A_eff(s,a) = 0, so mean_a Q = V.
+        assert torch.allclose(q_values.mean(dim=1), values.squeeze(1), atol=1e-5)
+
+    def test_dueling_qnet_no_mean_subtraction(self):
+        from neatrl.dueling_dqn_mlp import DuelingQNet
+
+        net = DuelingQNet(OBS_DISC, ACT_DISC, subtract_mean=False)
+        q_values, values, adv, _ = net(_rand(OBS_DISC))
+        assert torch.allclose(q_values, values + adv, atol=1e-5)
+
 
 # ─── PPO ─────────────────────────────────────────────────────────────────────
 

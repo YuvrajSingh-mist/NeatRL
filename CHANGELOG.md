@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **`adv_mean_subtraction=False` turns off the mean-advantage subtraction.**
+  `train_dueling_dqn` and `DuelingQNet` gained a switch for the ablation the
+  paper's identifiability argument is about: with it on (the default, and the
+  only behaviour before this release) `Q = V + A - mean_a A(s,a)`; with it off
+  the aggregation is plain `Q = V + A`, which leaves `V` and `A` shifted by an
+  arbitrary per-state constant. Both streams then receive the identical
+  gradient from the TD loss, so the split stops carrying information even
+  though the run still converges. Exposed on the Python API as
+  `adv_mean_subtraction=` and on the net as `DuelingQNet(..., subtract_mean=)`;
+  the CLI does not take it, since it exists to reproduce a control condition
+  rather than to train better agents.
+
 ## [2.5.6] - 2026-10-31
 
 ### Fixed

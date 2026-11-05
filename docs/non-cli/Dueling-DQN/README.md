@@ -151,6 +151,22 @@ Final Q-values:
 Q(s,a) = V(s) + A(s,a) - mean(A(s,a'))
 ```
 
+The subtraction is what makes the split identifiable. Without it, `V` and `A`
+are only defined up to a constant: any shift can slide from one into the other
+and `Q` never moves, so the TD loss hands both streams the identical gradient
+and the two heads stop meaning anything even though the agent still converges.
+
+`subtract_mean` controls this and defaults to `True`, the paper's rule. Pass
+`adv_mean_subtraction=False` to train the control condition:
+
+```python
+model = train_dueling_dqn(
+    env_id="CartPole-v1",
+    total_timesteps=50000,
+    adv_mean_subtraction=False,   # plain Q = V + A, no mean centering
+)
+```
+
 This helps the agent distinguish between states that are generally good or bad (value function) and which actions are better in those states (advantage function).
 
 ## Experiment Tracking with Weights & Biases

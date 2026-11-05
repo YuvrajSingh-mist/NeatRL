@@ -24,3 +24,7 @@ neatrl train dueling-dqn-cnn ALE/Breakout-v5
 ```
 
 Full reference: [CLI](README.md) · [algorithm](../non-cli/Dueling-DQN/README.md)
+
+The mean-advantage subtraction is not a CLI flag: `train_dueling_dqn` takes it
+as `adv_mean_subtraction=False`, which trains the plain `Q = V + A` control
+condition. See the [algorithm docs](../non-cli/Dueling-DQN/README.md).

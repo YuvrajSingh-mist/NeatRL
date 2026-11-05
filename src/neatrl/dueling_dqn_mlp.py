@@ -72,6 +72,8 @@ class Config:
     capture_video: bool = False
     device: Union[str, torch.device] = "auto"  # "auto", "cpu", "cuda", or "mps"
     custom_agent: Optional[Any] = None  # Custom neural network class or instance
+    # Ablation switch: True is the paper's Q = V + A - mean(A).
+    adv_mean_subtraction: bool = True
 
     # Logging & saving
     use_wandb: bool = True
@@ -88,8 +90,13 @@ class DuelingQNet(nn.Module):
     `(4, 84, 84)` frame as four inputs and never match the flattened batch.
     """
 
-    def __init__(self, state_space, action_space):
+    def __init__(self, state_space, action_space, subtract_mean=True):
         super().__init__()
+        # Dueling DQN (Wang et al., 2016) subtracts the mean advantage so that
+        # V is identifiable: Q = V + A - mean_a A.  With subtract_mean=False the
+        # aggregation is plain Q = V + A, which leaves V/A shifted by an
+        # arbitrary per-state constant.  Kept as a switch for ablation studies.
+        self.subtract_mean = subtract_mean
         logger.info(f"State space: {state_space}, Action space: {action_space}")
 
         # Image observations get a conv trunk; flat ones keep the MLP.
@@ -115,8 +122,11 @@ class DuelingQNet(nn.Module):
         feat = self.features(x)
         values = self.values(feat)
         adv = self.adv(feat)
-        # Dueling architecture: Q = V + A - mean(A)
-        q_values = values + adv - adv.mean(dim=1, keepdim=True)
+        # Dueling architecture: Q = V + A - mean(A) (or plain V + A).
+        if self.subtract_mean:
+            q_values = values + adv - adv.mean(dim=1, keepdim=True)
+        else:
+            q_values = values + adv
         return q_values, values, adv, feat
 
 
@@ -276,6 +286,7 @@ def train_dueling_dqn(
     n_envs=Config.n_envs,
     device=Config.device,
     grid_env=Config.grid_env,
+    adv_mean_subtraction=Config.adv_mean_subtraction,
 ):
     """Train a Dueling DQN agent on a Gymnasium environment.
 
@@ -347,8 +358,12 @@ def train_dueling_dqn(
         else:
             raise ValueError("agent must be an instance of nn.Module")
     else:
-        q_network = DuelingQNet(obs_shape, action_shape).to(device)
-        target_net = DuelingQNet(obs_shape, action_shape).to(device)
+        q_network = DuelingQNet(
+            obs_shape, action_shape, subtract_mean=adv_mean_subtraction
+        ).to(device)
+        target_net = DuelingQNet(
+            obs_shape, action_shape, subtract_mean=adv_mean_subtraction
+        ).to(device)
 
     target_net.load_state_dict(q_network.state_dict())
     optimizer = optim.Adam(q_network.parameters(), lr=lr)
