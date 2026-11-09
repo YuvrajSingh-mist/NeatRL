@@ -1,0 +1,17 @@
+{
+  "name": "neatrl",
+  "private": true,
+  "description": "Developer entry point for the NeatRL docs site and in-browser playground.",
+  "license": "Apache-2.0",
+  "scripts": {
+    "launch": "node scripts/site.mjs launch",
+    "start": "node scripts/site.mjs launch",
+    "dev": "node scripts/site.mjs launch",
+    "serve": "node scripts/site.mjs serve",
+    "routes": "node scripts/site.mjs routes",
+    "og": "node scripts/site.mjs og"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
