@@ -29,18 +29,20 @@ docs: venv
 build: install-dev lint format
 	uv run python -m build
 
-# Publish to PyPI. Credentials come from .env (gitignored); see
-# scripts/publish.sh, which also runs the tests first.
+# Publishing is not wired into the Makefile any more: scripts/publish.sh and
+# scripts/bump_version.py are local-only (see .gitignore). Build with
+# `make build`, then upload with `uv run twine upload dist/*`.
 upload:
-	./scripts/publish.sh
+	@echo "scripts/publish.sh is not tracked; run 'make build' then 'twine upload dist/*'." >&2
+	@exit 1
 
 publish: upload
 
-# Bump, then publish: `make release V=2.6.0`
+# Bump the version in pyproject.toml by hand, then build and upload. The
+# bump helper (scripts/bump_version.py) is local-only.
 release:
-	@test -n "$(V)" || (echo "usage: make release V=2.6.0" >&2; exit 1)
-	@$(PYTHON) scripts/bump_version.py $(V)
-	$(MAKE) publish
+	@echo "scripts/bump_version.py is not tracked; edit pyproject.toml, then 'make build'." >&2
+	@exit 1
 
 # Upgrade the tools installed on this machine from PyPI, which is what users
 # are told to run: `pip install --upgrade neatrl`.

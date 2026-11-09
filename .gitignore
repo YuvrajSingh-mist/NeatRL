@@ -4,6 +4,12 @@ list_mujoco_envs.py
 TMRL/
 NeatRL-Website/
 
+# One-off research and release scratch under scripts/. Only script the CI job and
+# the npm launcher actually call stay tracked; everything else is local-only.
+scripts/*
+!scripts/check_docs.py
+!scripts/site.mjs
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

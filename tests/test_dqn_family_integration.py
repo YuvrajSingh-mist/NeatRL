@@ -10,8 +10,9 @@ path in the trainers:
 Both plain DQN and Double DQN are trained in each case so a regression in the
 bootstrap target or in the env plumbing is caught for both.
 
-Full coverage (all 18 env/trainer pairs) lives in ``scripts/check_dqn_family.py``;
-this module keeps one representative env per type so the suite stays fast.
+Full coverage (all 18 env/trainer pairs) once lived in ``scripts/check_dqn_family.py``;
+that sweep is local-only now, so this module is the tracked reference and keeps
+one representative env per type so the suite stays fast.
 """
 
 import numpy as np
