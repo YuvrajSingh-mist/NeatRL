@@ -163,7 +163,7 @@ and the two heads stop meaning anything even though the agent still converges.
 model = train_dueling_dqn(
     env_id="CartPole-v1",
     total_timesteps=50000,
-    adv_mean_subtraction=False,   # plain Q = V + A, no mean centering
+    adv_mean_subtraction=False,  # plain Q = V + A, no mean centering
 )
 ```
 
