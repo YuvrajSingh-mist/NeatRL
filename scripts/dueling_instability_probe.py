@@ -44,6 +44,7 @@ from stable_baselines3.common.buffers import ReplayBuffer  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dueling_qva_experiment as exp  # noqa: E402
+
 from neatrl.dueling_dqn_mlp import DuelingQNet  # noqa: E402
 
 
@@ -139,7 +140,11 @@ def train_probe(
 
     for step in range(total_timesteps):
         eps = exp.linear_epsilon(
-            step, hp["start_e"], hp["end_e"], total_timesteps, hp["exploration_fraction"]
+            step,
+            hp["start_e"],
+            hp["end_e"],
+            total_timesteps,
+            hp["exploration_fraction"],
         )
         if random.random() < eps:
             action = env.action_space.sample()
@@ -208,13 +213,11 @@ def train_probe(
                         if online.subtract_mean
                         else a_leaf
                     )
-                    q_leaf = (v_leaf + a_used).gather(
-                        1, data.actions.to(device)
-                    ).squeeze()
-                    out_loss = torch.nn.functional.mse_loss(q_leaf, td_target)
-                    gout_v, gout_a = torch.autograd.grad(
-                        out_loss, [v_leaf, a_leaf]
+                    q_leaf = (
+                        (v_leaf + a_used).gather(1, data.actions.to(device)).squeeze()
                     )
+                    out_loss = torch.nn.functional.mse_loss(q_leaf, td_target)
+                    gout_v, gout_a = torch.autograd.grad(out_loss, [v_leaf, a_leaf])
                 series["step"].append(step)
                 series["loss"].append(float(loss.item()))
                 series["gout_v"].append(float(gout_v.norm()))
@@ -295,16 +298,28 @@ def main() -> None:
 
     out = {}
     for variant, subtract in [("standard", True), ("no_mean", False)]:
-        print(f"training {variant} ({args.steps} steps, log every {args.log_every})",
-              flush=True)
+        print(
+            f"training {variant} ({args.steps} steps, log every {args.log_every})",
+            flush=True,
+        )
         out[variant] = train_probe(
-            args.env_id, subtract, args.steps, args.seed, hp, probe,
-            args.log_every, atari, device,
+            args.env_id,
+            subtract,
+            args.steps,
+            args.seed,
+            hp,
+            probe,
+            args.log_every,
+            atari,
+            device,
         )
         d = out[variant]
-        print(f"  final grad norm {d['grad_total'][-1]:.4g}, "
-              f"max|V| {d['max_abs_V'][-1]:.4g}, "
-              f"max|A| {d['max_abs_A'][-1]:.4g}", flush=True)
+        print(
+            f"  final grad norm {d['grad_total'][-1]:.4g}, "
+            f"max|V| {d['max_abs_V'][-1]:.4g}, "
+            f"max|A| {d['max_abs_A'][-1]:.4g}",
+            flush=True,
+        )
 
     out["env_id"] = args.env_id
     out["steps"] = args.steps

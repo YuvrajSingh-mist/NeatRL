@@ -54,13 +54,20 @@ def cell(env_id: str, seed: int, steps: int, log_every: int, device: str) -> str
         except Exception:
             pass
     cmd = [
-        sys.executable, str(PROBE),
-        "--env-id", env_id,
-        "--steps", str(steps),
-        "--log-every", str(log_every),
-        "--seed", str(seed),
-        "--device", device,
-        "--out-dir", str(d),
+        sys.executable,
+        str(PROBE),
+        "--env-id",
+        env_id,
+        "--steps",
+        str(steps),
+        "--log-every",
+        str(log_every),
+        "--seed",
+        str(seed),
+        "--device",
+        device,
+        "--out-dir",
+        str(d),
     ]
     t0 = time.time()
     r = subprocess.run(cmd, capture_output=True, text=True)
@@ -78,9 +85,12 @@ def main() -> None:
     p.add_argument("--device", default="mps")
     p.add_argument("--envs", nargs="*", default=None)
     p.add_argument("--seeds", nargs="*", type=int, default=None)
-    p.add_argument("--out", default=None,
-                   help="Output root (default runs/dueling_grad_sweep). Point "
-                        "this elsewhere to re-measure into a fresh cache.")
+    p.add_argument(
+        "--out",
+        default=None,
+        help="Output root (default runs/dueling_grad_sweep). Point "
+        "this elsewhere to re-measure into a fresh cache.",
+    )
     args = p.parse_args()
 
     global OUT
@@ -92,8 +102,11 @@ def main() -> None:
     grid = [(e, s) for e in envs for s in seeds]
     OUT.mkdir(parents=True, exist_ok=True)
 
-    print(f"{len(grid)} cells, {args.workers} workers, "
-          f"{args.steps} steps each, device={args.device}", flush=True)
+    print(
+        f"{len(grid)} cells, {args.workers} workers, "
+        f"{args.steps} steps each, device={args.device}",
+        flush=True,
+    )
     t0 = time.time()
     with cf.ThreadPoolExecutor(max_workers=args.workers) as pool:
         futs = {
