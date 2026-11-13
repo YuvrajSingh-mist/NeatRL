@@ -4,7 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.5.7] - 2026-11-13
+
 ### Added
+- **`advantage=False` on A2C drops the baseline.** `train_a2c` and
+  `train_a2c_cnn` take an `advantage` flag (default `True`, previous
+  behaviour). With it on the actor is weighted by `A = G − V(s)`; with it off
+  the actor is weighted by the raw Monte Carlo return `G` — classic
+  actor-critic / REINFORCE-with-critic, no baseline. The critic always
+  regresses onto `G` either way. Shared helper: `actor_policy_weight`.
 - **`adv_mean_subtraction=False` turns off the mean-advantage subtraction.**
   `train_dueling_dqn` and `DuelingQNet` gained a switch for the ablation the
   paper's identifiability argument is about: with it on (the default, and the

@@ -225,7 +225,7 @@ and a Python guide (arguments, networks, example scripts):
   - Ornstein-Uhlenbeck noise for exploration
   - Support for exact continuous action spaces
 
-- **A2C** (Advantage Actor-Critic) - Synchronous actor-critic algorithm
+- **A2C** (Actor-Critic) - Synchronous actor-critic; optional `advantage=` baseline
   - Advantage function for reduced variance
   - Support for both discrete and continuous action spaces
   - Parallel environment training with vectorized environments

@@ -1,8 +1,9 @@
 # A2C — `neatrl train a2c`
 
-Advantage Actor-Critic: an actor picks actions, a critic scores them, and the
-advantage `A = r + γV(s') − V(s)` gives the actor a lower-variance signal than
-the raw return.
+Actor-Critic: an actor picks actions, a critic scores states. By default the
+actor is weighted by the Monte Carlo advantage `A = G − V(s)`; the Python API
+also accepts `advantage=False` to weight by the raw return `G` instead (no
+baseline). The CLI always uses the default (`advantage=True`).
 
 | | |
 |---|---|

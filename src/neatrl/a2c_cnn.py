@@ -1,4 +1,10 @@
-"""Advantage Actor-Critic (A2C) with CNN networks for visual Gymnasium environments."""
+"""Actor-Critic (A2C) with CNN networks for visual Gymnasium environments.
+
+By default the actor is weighted by the advantage ``A = G - V(s)``. Pass
+``advantage=False`` to drop the baseline and weight by the raw return ``G``
+instead — the classic actor-critic / REINFORCE-with-critic form. The critic
+always regresses onto ``G`` either way.
+"""
 
 import os
 import random
@@ -42,6 +48,9 @@ class Config:
     # A2C & Agent settings
     lr: float = 2e-3  # Learning rate for optimizer
     gamma: float = 0.99  # Discount factor for rewards
+    # When True (default) the actor is weighted by A = G - V(s). When False the
+    # actor is weighted by the raw return G — no baseline / advantage.
+    advantage: bool = True
     VALUE_COEFF: float = (
         0.5  # Value loss coefficient in total loss (not used in pure A2C)
     )
@@ -82,6 +91,20 @@ def layer_init(
     torch.nn.init.orthogonal_(layer.weight, std)  # type: ignore[arg-type]
     torch.nn.init.constant_(layer.bias, bias_const)  # type: ignore[arg-type]
     return layer
+
+
+def actor_policy_weight(
+    returns: torch.Tensor, values: torch.Tensor, advantage: bool
+) -> torch.Tensor:
+    """Weight for the policy-gradient update.
+
+    ``advantage=True`` (default A2C) returns the detached baseline-subtracted
+    advantage ``G - V(s)``. ``advantage=False`` returns the detached raw return
+    ``G`` — the classic actor update with no baseline.
+    """
+    if advantage:
+        return (returns - values).detach()
+    return returns.detach()
 
 
 class ActorNet(nn.Module):
@@ -312,11 +335,16 @@ def train_a2c_cnn(
     normalize_obs: bool = Config.normalize_obs,
     normalize_reward: bool = Config.normalize_reward,
     device: str = Config.device,
+    advantage: bool = Config.advantage,
 ) -> nn.Module:
     """Train a CNN-based A2C agent on pixel observations.
 
     Pass either ``env_id`` or ``env``. Hyperparameters match the signature.
     Returns the trained network ready for inference.
+
+    ``advantage=True`` (default) weights the actor by ``A = G - V(s)``.
+    ``advantage=False`` weights it by the raw return ``G`` (no baseline).
+    The critic always regresses onto ``G``.
     """
     # Update Config with passed arguments
     Config.env_id = env_id if env is None else env.spec.id  # type: ignore[union-attr]
@@ -337,6 +365,7 @@ def train_a2c_cnn(
     Config.save_every = save_every
     Config.atari_wrapper = atari_wrapper
     Config.log_gradients = log_gradients
+    Config.advantage = advantage
     Config.num_eval_episodes = num_eval_episodes
     Config.anneal_lr = anneal_lr
     Config.normalize_obs = normalize_obs
@@ -564,8 +593,9 @@ def train_a2c_cnn(
             rt = rewards_tensor[t] + rt * Config.gamma  # type: ignore[assignment]
             returns[t] = rt
 
-        # Calculate advantages (no normalization in pure A2C)
-        advantages = (returns - values_tensor).detach()
+        # Policy weight: A = G - V when advantage=True, else the raw return G.
+        # No normalization either way (pure A2C).
+        advantages = actor_policy_weight(returns, values_tensor, Config.advantage)
 
         # Flatten for batch processing
         b_logprobs = log_probs_tensor.flatten()
@@ -574,7 +604,7 @@ def train_a2c_cnn(
         b_advantages = advantages.flatten()
 
         # A2C Update - Single pass through data
-        # Actor Loss: policy gradient with advantage
+        # Actor Loss: policy gradient weighted by advantage or raw return
         policy_loss = -(b_logprobs * b_advantages).mean()
 
         # Add entropy bonus if enabled

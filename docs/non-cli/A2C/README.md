@@ -1,14 +1,18 @@
-# A2C (Advantage Actor-Critic)
+# A2C (Actor-Critic)
 
-A2C is an on-policy actor-critic algorithm that uses advantage estimates to reduce variance in policy gradient updates. This implementation includes both standard A2C for vector observations and CNN-based A2C for image observations.
+A2C is an on-policy actor-critic algorithm. By default it weights the actor by
+the advantage `A = G − V(s)` to cut variance in the policy gradient; pass
+`advantage=False` to drop the baseline and weight by the raw return `G`
+instead. Both the MLP trainer (vector observations) and the CNN trainer
+(image observations) take the same flag.
 
-Note: A2C works with both discrete and continuous action spaces.
+Note: the built-in actor is discrete / `Categorical` only.
 
 ## Features
 
 - **Standard A2C**: For environments with vector observations (e.g., Acrobot, CartPole)
 - **CNN A2C**: For environments with image observations (e.g., CarRacing, Atari games)
-- **Advantage Estimation**: Uses Monte Carlo returns for advantage calculation
+- **Optional advantage baseline**: `advantage=True` (default) uses `A = G − V(s)`; `advantage=False` uses raw `G`
 - **Separate Optimizers**: Independent optimization for actor and critic networks
 - **W&B Integration**: Built-in logging and video recording
 - **Episode-based Updates**: Pure on-policy learning with full episode rollouts
@@ -33,7 +37,11 @@ neatrl train a2c-cnn CarRacing-v3
 ```python
 from neatrl.a2c_mlp import train_a2c
 
+# default — advantage actor-critic (A = G − V)
 train_a2c(env_id="Acrobot-v1", total_timesteps=500000, lr=3e-4, use_wandb=True)
+
+# classic actor-critic — no baseline (weight by G)
+train_a2c(env_id="CartPole-v1", advantage=False, use_wandb=False)
 ```
 
 ### CNN A2C (Image Observations)
@@ -49,6 +57,7 @@ train_a2c_cnn(
     env_wrapper=car_racing_wrapper,
     actor_class=ActorNet,
     critic_class=CriticNet,
+    advantage=True,  # set False to drop the V(s) baseline
 )
 ```
 
@@ -86,6 +95,7 @@ train_a2c_cnn(
 | `total_timesteps` | 1000000 | Total timesteps for training |
 | `lr` | 2e-3 | Learning rate |
 | `gamma` | 0.99 | Discount factor |
+| `advantage` | True | Weight actor by `A = G − V(s)`; `False` uses raw return `G` |
 | `VALUE_COEFF` | 0.5 | Value loss coefficient |
 | `num_eval_episodes` | 10 | Number of evaluation episodes |
 | `max_grad_norm` | 0.0 | Maximum gradient norm for clipping (0.0 to disable) |
@@ -111,24 +121,26 @@ train_a2c_cnn(
 
 ## Algorithm Details
 
-A2C uses the following update rule:
+Returns `G` are Monte Carlo estimates from the rollout. The critic always
+regresses onto them. The actor weight depends on `advantage`:
 
-Policy Loss:
-```
-L_policy = -mean(log_prob * advantage)
-```
+**`advantage=True` (default)**
 
-Value Loss:
 ```
-L_value = MSE(value_estimate, monte_carlo_return)
-```
-
-Advantages:
-```
-A(s,a) = Q(s,a) - V(s) = Return - V(s)
+A_t = G_t − V(s_t)
+L_policy = −mean(log π(a_t|s_t) · A_t)
+L_value  = MSE(V(s_t), G_t)
 ```
 
-Returns are computed using Monte Carlo estimation from full episode rollouts.
+**`advantage=False`**
+
+```
+L_policy = −mean(log π(a_t|s_t) · G_t)
+L_value  = MSE(V(s_t), G_t)
+```
+
+With the flag off the critic still trains, but its prediction is not subtracted
+from `G` for the actor update.
 
 ## Example Scripts
 
