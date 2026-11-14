@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.5.8] - 2026-11-14
+
+### Added
+- **A2C trains continuous action spaces with the built-in actor.** Same pattern
+  as PPO / PPO-RND: `ActorNet` in `a2c_mlp` and `a2c_cnn` takes
+  `continuous=`; a `Box` space gets a Normal head with learnable `log_std`, a
+  `Discrete` space keeps the categorical head. `train_a2c(env_id="Pendulum-v1")`
+  and `train_a2c_cnn(env_id="CarRacing-v3")` no longer raise. ALE registration
+  is wired the same way as the DQN / REINFORCE trainers
+  (`pip install "neatrl[atari]"` / `"neatrl[box2d]"`).
+
+### Fixed
+- **`train_a2c` never incremented `global_step`**, so `--steps` / early-stop
+  against the timestep budget was a no-op and short runs ballooned into full
+  episode counts × `total_timesteps` updates. Matches `train_a2c_cnn`.
+- **A2C Atari `atari_wrapper=True`** now builds ALE envs with `frameskip=1`
+  (DQN-style) so `AtariPreprocessing` does not double-skip.
+
 ## [2.5.7] - 2026-11-13
 
 ### Added

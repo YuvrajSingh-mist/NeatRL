@@ -82,7 +82,7 @@ which lists its default environment and the commands that run it.
 | [Double DQN](double_dqn.md) | [`double-dqn`](double_dqn.md) · [`double-dqn-cnn`](double_dqn.md) | `CartPole-v1` · `ALE/Pong-v5` | vector · Atari | discrete | `neatrl.double_dqn_mlp.train_double_dqn` · `neatrl.double_dqn_cnn.train_double_dqn_cnn` |
 | [Dueling DQN](dueling_dqn.md) | [`dueling-dqn`](dueling_dqn.md) · [`dueling-dqn-cnn`](dueling_dqn.md) | `CliffWalking-v1` · `ALE/Pong-v5` | vector · Atari | discrete | `neatrl.dueling_dqn_mlp.train_dueling_dqn` (both; `atari_wrapper=True` for CNN) |
 | [REINFORCE](reinforce.md) | [`reinforce`](reinforce.md) · [`reinforce-cnn`](reinforce.md) | `CartPole-v1` · `ALE/Pong-v5` | vector · Atari | discrete | `neatrl.reinforce_mlp.train_reinforce` · `neatrl.reinforce_cnn.train_reinforce_cnn` |
-| [A2C](a2c.md) | [`a2c`](a2c.md) · [`a2c-cnn`](a2c.md) | `CartPole-v1` · `ALE/Pong-v5` | vector · Atari | discrete | `neatrl.a2c_mlp.train_a2c` · `neatrl.a2c_cnn.train_a2c_cnn` |
+| [A2C](a2c.md) | [`a2c`](a2c.md) · [`a2c-cnn`](a2c.md) | `CartPole-v1` · `Pendulum-v1` · `CarRacing-v3` · `ALE/Pong-v5` | vector · image · Atari | discrete · continuous | `neatrl.a2c_mlp.train_a2c` · `neatrl.a2c_cnn.train_a2c_cnn` |
 | [PPO](ppo.md) | [`ppo`](ppo.md) · [`ppo-cnn`](ppo.md) | `CartPole-v1` · `ALE/Pong-v5` | vector · Atari | discrete + continuous | `neatrl.ppo_mlp.train_ppo` · `neatrl.ppo_cnn.train_ppo_cnn` |
 | [RND](rnd.md) | [`rnd`](rnd.md) · [`rnd-cnn`](rnd.md) | `CliffWalking-v1` · `ALE/Pong-v5` | vector · Atari | discrete + continuous | `neatrl.rnd_mlp.train_ppo_rnd` · `neatrl.rnd_cnn.train_ppo_rnd_cnn` |
 | [DDPG](ddpg.md) | [`ddpg`](ddpg.md) · [`ddpg-cnn`](ddpg.md) | `Pendulum-v1` · `CarRacing-v3` | vector · Box2D | continuous | `neatrl.ddpg_mlp.train_ddpg` · `neatrl.ddpg_cnn.train_ddpg_cnn` |
@@ -92,7 +92,7 @@ which lists its default environment and the commands that run it.
 `ppo` and `rnd` read the action space from the environment: a `Discrete` space
 gets a categorical head, a `Box` space a Gaussian one, so `Pendulum-v1` and
 `CartPole-v1` both run with no extra flags. Everything else is fixed — the
-DQN family, REINFORCE and A2C are discrete-only, DDPG, TD3 and SAC are
+DQN family and REINFORCE are discrete-only; A2C/PPO/RND handle both; DDPG, TD3 and SAC are
 continuous-only. `q-learning` is tabular and has no CNN sibling, so it only
 accepts discrete environments with small observation spaces.
 

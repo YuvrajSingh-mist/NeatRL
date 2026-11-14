@@ -6,7 +6,8 @@ the advantage `A = G − V(s)` to cut variance in the policy gradient; pass
 instead. Both the MLP trainer (vector observations) and the CNN trainer
 (image observations) take the same flag.
 
-Note: the built-in actor is discrete / `Categorical` only.
+Note: the built-in actor matches PPO — `Discrete` → categorical head,
+`Box` → Normal head with a learnable `log_std`.
 
 ## Features
 

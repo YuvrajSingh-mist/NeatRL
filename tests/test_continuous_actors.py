@@ -18,6 +18,8 @@ BUILTIN_ACTORS = [
     ("neatrl.ppo_cnn", "ActorNet", 4),
     ("neatrl.rnd_mlp", "ActorNet", 4),
     ("neatrl.rnd_cnn", "ActorNet", 4),
+    ("neatrl.a2c_mlp", "ActorNet", 4),
+    ("neatrl.a2c_cnn", "ActorNet", 4),
 ]
 IDS = [f"{m.split('.')[-1]}.{c}" for m, c, _ in BUILTIN_ACTORS]
 
@@ -75,6 +77,7 @@ def test_actor_defaults_to_discrete():
     [
         ("train_ppo", "Pendulum-v1", "CartPole-v1"),
         ("train_ppo_rnd", "Pendulum-v1", "CartPole-v1"),
+        ("train_a2c", "Pendulum-v1", "CartPole-v1"),
     ],
 )
 def test_default_actor_trains_both_action_spaces(trainer, continuous, discrete):
@@ -82,13 +85,34 @@ def test_default_actor_trains_both_action_spaces(trainer, continuous, discrete):
 
     fn = getattr(importlib.import_module("neatrl"), trainer)
     for env_id in (continuous, discrete):
-        fn(
-            env_id=env_id,
-            total_timesteps=1024,
-            n_envs=2,
-            max_steps=64,
-            use_wandb=False,
-            capture_video=False,
-            eval_every=100000,
-            save_every=100000,
-        )
+        kwargs = {
+            "env_id": env_id,
+            "total_timesteps": 1024,
+            "use_wandb": False,
+            "capture_video": False,
+            "eval_every": 100000,
+            "save_every": 100000,
+        }
+        # PPO / RND take n_envs + max_steps; A2C only takes n_envs (episode rollouts).
+        if trainer != "train_a2c":
+            kwargs.update(n_envs=2, max_steps=64)
+        else:
+            kwargs.update(n_envs=1)
+        fn(**kwargs)
+
+
+def test_a2c_cnn_trains_continuous_carracing():
+    """CarRacing is Box actions + image obs — the continuous CNN path."""
+    from neatrl import train_a2c_cnn
+
+    train_a2c_cnn(
+        env_id="CarRacing-v3",
+        total_timesteps=512,
+        use_wandb=False,
+        capture_video=False,
+        eval_every=100000,
+        save_every=100000,
+        atari_wrapper=False,
+        num_eval_episodes=1,
+        n_envs=1,
+    )

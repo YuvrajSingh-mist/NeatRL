@@ -4,6 +4,10 @@ By default the actor is weighted by the advantage ``A = G - V(s)``. Pass
 ``advantage=False`` to drop the baseline and weight by the raw return ``G``
 instead — the classic actor-critic / REINFORCE-with-critic form. The critic
 always regresses onto ``G`` either way.
+
+The built-in ``ActorNet`` reads the action space the same way PPO does: a
+``Discrete`` space keeps a categorical head, a ``Box`` space gets a Normal
+head with a learnable ``log_std``.
 """
 
 import os
@@ -32,6 +36,13 @@ from .utils.nn_utils import (
 from .utils.wrappers import OneHotWrapper
 
 logger = get_logger(__name__)
+
+try:
+    import ale_py  # type: ignore[import-untyped]
+
+    gym.register_envs(ale_py)
+except ImportError:
+    pass
 
 
 # ===== CONFIGURATION =====
@@ -114,15 +125,19 @@ class ActorNet(nn.Module):
         self,
         state_space: Union[int, tuple[int, ...]],
         action_space: int,
+        continuous: bool = False,
     ) -> None:
         super().__init__()
 
+        self.continuous = continuous
         self.fc1 = observation_input_layer(state_space, 32)
         if isinstance(self.fc1, nn.Linear):
             layer_init(self.fc1)
         self.fc2 = layer_init(nn.Linear(32, 32))
         self.fc3 = layer_init(nn.Linear(32, 16))
         self.out = layer_init(nn.Linear(16, action_space))
+        if continuous:
+            self.log_std = nn.Parameter(torch.zeros(action_space))
 
     def forward(self, x: torch.Tensor) -> torch.distributions.Distribution:
         """Forward pass — returns network output(s)."""
@@ -130,10 +145,11 @@ class ActorNet(nn.Module):
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
 
-        logits = self.out(x)
-        probs = torch.nn.functional.softmax(logits, dim=-1)
-        dist = torch.distributions.Categorical(probs)
-        return dist
+        out = self.out(x)
+        if self.continuous:
+            return torch.distributions.Normal(out, self.log_std.exp())
+        probs = torch.nn.functional.softmax(out, dim=-1)
+        return torch.distributions.Categorical(probs)
 
     def get_action(
         self,
@@ -141,8 +157,15 @@ class ActorNet(nn.Module):
     ) -> tuple[torch.Tensor, torch.Tensor, torch.distributions.Distribution]:
         """Sample an action and return it with log-probability and optional entropy."""
         dist = self.forward(x)
+
         action = dist.sample()
+
         log_prob = dist.log_prob(action)
+
+        if self.continuous:
+            # One log-prob per action dimension: sum them so a rollout stores a
+            # single scalar per step, like Categorical does.
+            log_prob = log_prob.sum(dim=-1)
 
         return action, log_prob, dist
 
@@ -187,7 +210,12 @@ def make_env(
 
         else:
             # Create new environment
-            env_to_use = gym.make(env_id, render_mode=render_mode)
+            make_kwargs: dict = {"render_mode": render_mode}
+            if atari_wrapper:
+                # AtariPreprocessing does its own frame skipping.
+                make_kwargs["frameskip"] = 1
+                make_kwargs["repeat_action_probability"] = 0.0
+            env_to_use = gym.make(env_id, **make_kwargs)
 
         env_to_use = gym.wrappers.RecordEpisodeStatistics(env_to_use)
         if Config.normalize_reward:
@@ -441,6 +469,7 @@ def train_a2c_cnn(
         if isinstance(envs.single_action_space, gym.spaces.Discrete)
         else envs.single_action_space.shape[0]  # type: ignore[index]
     )
+    is_discrete_actions = isinstance(envs.single_action_space, gym.spaces.Discrete)
 
     logger.info(f"Observation Space: {obs_space_shape}, Action Space: {action_space_n}")
 
@@ -453,6 +482,12 @@ def train_a2c_cnn(
             action_space_n,
         )
         actor_network = actor_class.to(device)
+    elif actor_class is ActorNet:
+        # The built-in actor reads the action space: a Box space means the
+        # head outputs a Normal mean instead of categorical logits.
+        actor_network = actor_class(
+            obs_space_shape, action_space_n, continuous=not is_discrete_actions
+        ).to(device)
     else:
         # Use actor class
         actor_network = actor_class(obs_space_shape, action_space_n).to(device)

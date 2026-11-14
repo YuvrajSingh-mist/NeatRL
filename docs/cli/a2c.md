@@ -5,6 +5,11 @@ actor is weighted by the Monte Carlo advantage `A = G − V(s)`; the Python API
 also accepts `advantage=False` to weight by the raw return `G` instead (no
 baseline). The CLI always uses the default (`advantage=True`).
 
+Discrete and continuous action spaces both work: the built-in actor picks a
+categorical head for `Discrete` and a Normal head for `Box`, same as PPO.
+`a2c-cnn` on `CarRacing-v3` is continuous; `a2c` on `LunarLander-v3` is
+discrete (`pip install "neatrl[box2d]"`). Atari needs `pip install "neatrl[atari]"`.
+
 | | |
 |---|---|
 | Aliases | `a2c` · `a2c-cnn` |
