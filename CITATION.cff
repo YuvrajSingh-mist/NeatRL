@@ -27,6 +27,7 @@ preferred-citation:
   authors:
     - family-names: Singh
       given-names: Yuvraj
+      orcid: "https://orcid.org/0009-0005-4120-555X"
   year: 2026
   url: "https://github.com/YuvrajSingh-mist/NeatRL"
   howpublished: "\\url{https://github.com/YuvrajSingh-mist/NeatRL}"
